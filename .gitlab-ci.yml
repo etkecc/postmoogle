@@ -1,0 +1,30 @@
+stages:
+  - test
+  - release
+
+lint:
+  stage: test
+  only: ['main']
+  image: registry.gitlab.com/etke.cc/base
+  script:
+    - make lint
+
+unit:
+  stage: test
+  only: ['main']
+  image: registry.gitlab.com/etke.cc/base
+  script:
+    - make test
+
+docker:
+  stage: release
+  only: ['main', 'tags']
+  services:
+    - docker:dind
+  image: jdrouet/docker-with-buildx:stable
+  before_script:
+    - apk --no-cache add make
+  script:
+    - make login docker
+  tags:
+    - docker
