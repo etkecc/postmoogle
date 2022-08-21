@@ -3,6 +3,7 @@ module gitlab.com/etke.cc/postmoogle
 go 1.18
 
 require (
+	github.com/emersion/go-smtp v0.15.0
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/lib/pq v1.10.6
 	github.com/mattn/go-sqlite3 v1.14.14
@@ -14,7 +15,6 @@ require (
 
 require (
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21 // indirect
-	github.com/emersion/go-smtp v0.15.0 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect

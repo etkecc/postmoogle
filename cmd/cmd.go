@@ -16,7 +16,6 @@ import (
 	"gitlab.com/etke.cc/postmoogle/bot"
 	"gitlab.com/etke.cc/postmoogle/config"
 	"gitlab.com/etke.cc/postmoogle/smtp"
-	"maunium.net/go/mautrix/id"
 )
 
 var (
@@ -40,12 +39,10 @@ func main() {
 	initShutdown(quit)
 	defer recovery()
 
-	smtp.NewServer(cfg.Domain, map[string]id.RoomID{}, cfg.Port)
-	log.Debug("starting matrix bot...")
-	err := mxb.Start()
-	if err != nil {
+	go startBot()
+	if err := smtp.Start(cfg.Domain, cfg.Port, cfg.LogLevel, mxb); err != nil {
 		//nolint:gocritic
-		log.Fatal("cannot start the bot: %v", err)
+		log.Fatal("SMTP server crashed: %v", err)
 	}
 
 	<-quit
@@ -98,6 +95,15 @@ func initShutdown(quit chan struct{}) {
 
 		shutdown()
 	}()
+}
+
+func startBot() {
+	log.Debug("starting matrix bot...")
+	err := mxb.Start()
+	if err != nil {
+		//nolint:gocritic
+		log.Fatal("cannot start the bot: %v", err)
+	}
 }
 
 func shutdown() {

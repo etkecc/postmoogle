@@ -4,7 +4,7 @@ An Email to Matrix bridge
 
 ## Features / Roadmap / TODO
 
-- [ ] SMTP server
+- [x] SMTP server
 - [ ] SMTP client
 - [x] Matrix bot
 - [x] Configuration in room's account data

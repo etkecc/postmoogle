@@ -1,23 +1,26 @@
 package smtp
 
 import (
-	"log"
-	"os"
+	"context"
 	"time"
 
 	"github.com/emersion/go-smtp"
-	"maunium.net/go/mautrix/id"
+	"github.com/getsentry/sentry-go"
+	"gitlab.com/etke.cc/go/logger"
 )
 
 type backend struct {
+	log    *logger.Logger
 	domain string
-	rooms  map[string]id.RoomID
+	client Client
 }
 
 func (b *backend) newSession() *session {
 	return &session{
+		ctx:    sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
+		log:    b.log,
 		domain: b.domain,
-		rooms:  b.rooms,
+		client: b.client,
 	}
 }
 
@@ -29,22 +32,21 @@ func (b *backend) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, err
 	return b.newSession(), nil
 }
 
-func NewServer(domain string, mapping map[string]id.RoomID, port string) *smtp.Server {
+func Start(domain, port, loglevel string, client Client) error {
+	log := logger.New("smtp.", loglevel)
 	be := &backend{
+		log:    log,
 		domain: domain,
-		rooms:  mapping,
+		client: client,
 	}
 	s := smtp.NewServer(be)
 	s.Addr = ":" + port
 	s.Domain = domain
 	s.AuthDisabled = true
-	s.ReadTimeout = 360 * time.Second
-	s.WriteTimeout = 360 * time.Second
+	s.ReadTimeout = 10 * time.Second
+	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = 63 * 1024
-	s.MaxRecipients = 50
-	s.Debug = os.Stdout
 
-	log.Println("Starting SMTP server")
-	log.Fatal(s.ListenAndServe())
-	return s
+	log.Info("Starting SMTP server on %s:%s", domain, port)
+	return s.ListenAndServe()
 }

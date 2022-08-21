@@ -2,21 +2,27 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/getsentry/sentry-go"
 	"gitlab.com/etke.cc/go/logger"
 	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/event"
+	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 )
 
 // Bot represents matrix bot
 type Bot struct {
-	prefix string
-	domain string
-	log    *logger.Logger
-	lp     *linkpearl.Linkpearl
+	prefix  string
+	domain  string
+	rooms   map[string]id.RoomID
+	roomsmu *sync.Mutex
+	log     *logger.Logger
+	lp      *linkpearl.Linkpearl
 }
 
 // New creates a new matrix bot
@@ -52,6 +58,10 @@ func (b *Bot) Start() error {
 	if err := b.migrate(); err != nil {
 		return err
 	}
+	ctx := sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone())
+	if err := b.syncRooms(ctx); err != nil {
+		return err
+	}
 	if err := b.lp.GetClient().SetPresence(event.PresenceOnline); err != nil {
 		return err
 	}
@@ -59,6 +69,39 @@ func (b *Bot) Start() error {
 	b.initSync()
 	b.log.Info("Postmoogle has been started")
 	return b.lp.GetClient().Sync()
+}
+
+// Send email to matrix room
+func (b *Bot) Send(from, to, subject, body string) error {
+	roomID, ok := b.rooms[to]
+	if !ok || roomID == "" {
+		return errors.New("room not found")
+	}
+
+	var text strings.Builder
+	text.WriteString("From: ")
+	text.WriteString(from)
+	text.WriteString("\n\n")
+	text.WriteString("# ")
+	text.WriteString(subject)
+	text.WriteString("\n\n")
+	text.WriteString(format.HTMLToMarkdown(body))
+
+	content := format.RenderMarkdown(text.String(), true, true)
+	_, err := b.lp.Send(roomID, content)
+	return err
+}
+
+// GetMappings returns mapping of mailbox = room
+func (b *Bot) GetMappings(ctx context.Context) (map[string]id.RoomID, error) {
+	if len(b.rooms) == 0 {
+		err := b.syncRooms(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return b.rooms, nil
 }
 
 // Stop the bot
