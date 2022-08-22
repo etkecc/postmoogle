@@ -6,7 +6,7 @@ var defaultConfig = &Config{
 	Port:     "25",
 	Prefix:   "!pm",
 	DB: DB{
-		DSN:     "/tmp/postmoogle.db",
+		DSN:     "local.db",
 		Dialect: "sqlite3",
 	},
 	Sentry: Sentry{

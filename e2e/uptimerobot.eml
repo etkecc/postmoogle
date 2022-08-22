@@ -1,0 +1,268 @@
+Return-Path: <alert@uptimerobot.com>
+Delivered-To: test@localhost
+Received: from mp12.migadu.com ([2001:41d0:8:6d80::])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
+	by ms2.migadu.com with LMTPS
+	id AFCBC0JA/2IjvAAAThjiIw
+	(envelope-from <alert@uptimerobot.com>)
+	for <test@localhost>; Fri, 19 Aug 2022 09:48:18 +0200
+Received: from aspmx1.migadu.com ([2001:41d0:8:6d80::])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
+	by mp12.migadu.com with LMTPS
+	id AGRUC0JA/2KpWQAAauVa8A
+	(envelope-from <alert@uptimerobot.com>)
+	for <test@localhost>; Fri, 19 Aug 2022 09:48:18 +0200
+Received: from mail2.uptimerobot.com (mail2.uptimerobot.com [216.144.250.150])
+	(using TLSv1.2 with cipher DHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+	(No client certificate requested)
+	by aspmx1.migadu.com (Postfix) with ESMTPS id 892E821C17
+	for <test@localhost>; Fri, 19 Aug 2022 09:48:17 +0200 (CEST)
+dkim-signature:v=1; c=relaxed/relaxed; h=content-type:from:to:subject:message-id:content-transfer-encoding:date:mime-version;
+ d=uptimerobot.com; s=mail2; a=rsa-sha256;
+ bh=wgbGkwTvf0iMf6GWyq4eRri7/0akAM3yIzjn52Vvm6M=;
+ b=oeLExxHN3oEy4uoeSTxwDqFfC/xKOCtY7AY1OKR9P3AoV3Pw+iu8rNeAjDh9ySL5p
+ FibtVl9XjOyECSQpumHo27sqVaR0IO/bqBxlJRxfBw07gA/q1JmlDtryQeaV1vM3s7p
+ t2Rs2fdYdw2s2RYBEjP+6SqtL6vUq1rUSB+4YRtLk1cuiXIjDa3vYuuT2NioIxEo2dk
+ oUuvPW8jRXdE2gnmdUSZ42Hy8uX7Wr9ScAo8j/xNiFTWDPqD/u9IpHMDuVlKDfWhEgm
+ 1YoT9ZDcJJ13JZN29ugY4u1tV+vu8k3NfLnPptqUif0S+b0lIPKTcu1af4nvZmjdEFZ
+ rbt3Rn4Og==;
+Received: from [127.0.0.1] ([52.70.84.165]) by uptimerobot.com with
+ MailEnable ESMTPA; Fri, 19 Aug 2022 07:48:20 +0000
+Content-Type: text/html; charset=utf-8
+From: UptimeRobot <alert@uptimerobot.com>
+To: test@localhost
+Subject: Monitor is UP: Buscarron
+Message-ID: <1660895293792.132971@uptimerobot.com>
+Content-Transfer-Encoding: quoted-printable
+Date: Fri, 19 Aug 2022 07:48:13 +0000
+MIME-Version: 1.0
+X-Migadu-Flow: FLOW_IN
+X-Migadu-To: test@localhost
+X-Migadu-Country: US
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=etke.cc;
+	s=key1; t=1660895298;
+	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+	 to:to:cc:mime-version:mime-version:content-type:content-type:
+	 content-transfer-encoding:content-transfer-encoding:dkim-signature;
+	bh=wgbGkwTvf0iMf6GWyq4eRri7/0akAM3yIzjn52Vvm6M=;
+	b=e6P3Be4Nf/cfOFkwt4r94xgp1JzsnT8WANfGuRU7VOfioRm6VHzpYOFJWlFXqwhxspk2lo
+	m6GaPjyQtJrSiYkcQWtUb9K/K2Y6r7JEb9IziyIvqzKQ2l/K5OPwX/nA2mDKYuTe4PR2/V
+	/Ec/zBKosuHKuBsyw35mFLF3uLJHyddpuYRdLhIM6qeksXC4bXQek1UtWSQ/P11MwFZ5DM
+	bSKU20djOMjYu0qE7xXa7/Zj78SnL08VKFLjo5OAboeDZZYfpdMh5Z0YWGPt4QkZWi9AON
+	fa49qfUYJwai1RVxKpuNhync6KjKv+8ceSgw+8ySwz85xwyKSIae9ZZ8NekouA==
+ARC-Seal: i=1; s=key1; d=etke.cc; t=1660895298; a=rsa-sha256; cv=none;
+	b=FgLD30AkdygNHpzdD9OdIjqeCDr/dOxB0bsn8zk9Et5Ips1OmxbZIAs/bK71BAc3vefpnk
+	kxm63eFhABQZoI8TjoOtwE2lW2wOSmaoovFxUOqCSh7RO2mXD3wLX9OGeqbP+cTNdaYTab
+	lkClWxCQ2+mRABQw7YPHVt81IVcC2FzOBx8IXIlJrHTJ7C9J+yLRXIXqoZ0un0n6msASnh
+	q7nsXWc+U6M8aGTPHUVm5ur3muqIIaLBSHkDHfCjIAAxOObw0P01VhpjE4EiWM8d9hch7+
+	f8efT+7d/BwnIQy4C5gnhyAMtzaFN52MDlFtGAo/1Vba9yuByaf+1f8umwChSg==
+ARC-Authentication-Results: i=1;
+	aspmx1.migadu.com;
+	dkim=pass header.d=uptimerobot.com header.s=mail2 header.b=oeLExxHN;
+	dmarc=pass (policy=quarantine) header.from=uptimerobot.com;
+	spf=pass (aspmx1.migadu.com: domain of alert@uptimerobot.com designates 216.144.250.150 as permitted sender) smtp.mailfrom=alert@uptimerobot.com
+X-Migadu-Spam-Score: -7.21
+Authentication-Results: aspmx1.migadu.com;
+	dkim=pass header.d=uptimerobot.com header.s=mail2 header.b=oeLExxHN;
+	dmarc=pass (policy=quarantine) header.from=uptimerobot.com;
+	spf=pass (aspmx1.migadu.com: domain of alert@uptimerobot.com designates 216.144.250.150 as permitted sender) smtp.mailfrom=alert@uptimerobot.com
+X-Migadu-Queue-Id: 892E821C17
+X-Spam-Score: -7.21
+X-Migadu-Scanner: scn0.migadu.com
+
+<html>
+    <head>
+          <meta name=3D"viewport" =
+content=3D"width=3Ddevice-width">
+          <meta http-equiv=3D"Content-Typ=
+e" content=3D"text/html; charset=3DUTF-8">
+          <title>Monitor is  UP =
+: Buscarron
+          </title>
+    </head>
+    <body style=3D"font-family: =
+'Roboto', Arial, sans-serif; color: #131a26; background: #fefefe; =
+line-height: 1.3em;">
+      <div style=3D"font-family: 'Roboto', Arial, =
+sans-serif; color: #131a26; background: #fefefe; box-sizing: border-box; =
+line-height: 1.3em;">
+        <div style=3D"background: #131a26; padding: =
+45px 15px;">
+          <div style=3D"max-width: 600px; margin: 0 auto;">
+            <table style=3D" width: 100%; font-size: 14px; color: #ffffff;"=
+ width=3D"100%">
+              <tbody style=3D"">
+                <tr =
+style=3D"">
+                  <td width=3D"180" style=3D" font-size: =
+36px;">
+                    <a href=3D"https://uptimerobot.com/dashboard?=
+utm_source=3DalertMessage&utm_medium=3Demail&utm_campaign=3Dup-comment-free=
+&utm_content=3DheaderLogo#mainDashboard" style=3D" color: #3bd671 !=
+important;"><img src=3D"https://cdn.mcauto-images-production.sendgrid.=
+net/3e8054f26aace367/6a696f89-4c68-4736-83c3-c08df64e1a0d/549x79.png" =
+alt=3D"UptimeRobot" width=3D"180" style=3D" max-width: 180px; display: =
+inline-block;"></a>
+                  </td>
+                  <td style=3D"=
+ text-align: right; font-size: 12px;" align=3D"right">
+                    <a href=3D"https://uptimerobot.com/dashboard?=
+utm_source=3DalertMessage&utm_medium=3Demail&utm_campaign=3Dup-comment-free=
+&utm_content=3DheaderLink#791612149" style=3D" color: #3bd671 !important; =
+text-decoration: none;">Go to monitor &rarr;</a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div>
+              <h1 style=3D"font-size: 36px; color: =
+#ffffff; margin-top: 45px; margin-bottom: 10px; line-height: 28px;">
+                Buscarron is <span style=3D"color:#3bd671">up</span>.
+              </h1>
+            </div>
+          </div>
+        </div>
+        <div style=3D"max-width: 600px; margin: 30px auto 0 auto; padding: =
+0 10px;">
+
+          <div style=3D"background: #ffffff; border-radius: 6px;=
+ box-shadow: 0 20px 40px 0 rgba(0,0,0,0.1); padding: 25px; border: 1px =
+solid #efefef; font-size: 14px; margin-bottom: 25px;">
+            <div>
+              <p style=3D"line-height: 20px;">Hello etke.cc,</p>
+                <p style=3D"line-height: 20px;">The latest incident has =
+been resolved and your monitor is up again. Good job!</p>
+            </div>
+
+            <div style=3D"padding: 20px; =
+background-color: #f9f9f9; border-radius: 6px; margin-top: 25px; =
+line-height: 16px;">
+
+              <div style=3D"font-size: 12px; color: =
+#687790;">Monitor name</div>
+              <h2 style=3D"font-size: 14px; =
+margin-bottom: 5px; margin-top: 3px;">Buscarron</h2>
+              <hr style=3D"border: 1px solid #dedede; border-bottom: 0; =
+margin: 10px 0;">
+
+              <div style=3D"color: #687790; font-size: =
+12px;">Checked URL</div>
+              <h2 style=3D"font-size: 14px; =
+margin-bottom: 5px; margin-top: 3px; line-height: 16px;"><code>
+                <a href=3D"https://buscarron.etke.cc/_health" =
+style=3D"color: #131a26 !important; text-decoration: none !=
+important;">https://buscarron.etke.cc/_health</a></code></h2>
+              <hr style=3D"border: 1px solid #dedede; border-bottom: 0; =
+margin: 10px 0;">
+
+              <div style=3D"color: #687790; font-size: =
+12px;">Root cause</div>
+              <h2 style=3D"font-size: 14px; =
+margin-bottom: 5px; margin-top: 3px;">
+                  HTTP 502 - Bad =
+Gateway
+              </h2>
+              <hr style=3D"border: 1px solid =
+#dedede; border-bottom: 0; margin: 10px 0;">
+
+              <div =
+style=3D"font-size: 12px; color: #687790;">Incident started at</div>
+              <h2 style=3D"font-size: 14px; margin-bottom: 5px; margin-top:=
+ 3px;">2022-08-19 10:43:14</h2>
+              <hr style=3D"border: 1px =
+solid #dedede; border-bottom: 0; margin: 10px 0;">
+
+              <div style=3D"font-size: 12px; color: #687790;">Resolved =
+at</div>
+              <h2 style=3D"font-size: 14px; margin-bottom: 5px; =
+margin-top: 3px;">2022-08-19 10:48:13</h2>
+              <hr =
+style=3D"border: 1px solid #dedede; border-bottom: 0; margin: 10px 0;">
+
+              <div style=3D"font-size: 12px; color: =
+#687790;">Duration</div>
+              <h2 style=3D"font-size: 14px; =
+margin-bottom: 5px; margin-top: 3px;">4 minutes and 59 seconds</h2>
+
+              <div style=3D"text-align: center; padding: 15px 0;">
+                <table>
+                  <tr>
+                    <td>
+                      <table border=3D"0" cellspacing=3D"0" =
+cellpadding=3D"0">
+                          <tr>
+                         =
+     <td align=3D"left" style=3D"border-radius: 25px; background-color: =
+#3bd671; text-align: center;">
+                                  <a =
+href=3D"https://uptimerobot.com/dashboard?incidentId=3D130160577&utm_source=
+=3DalertMessage&utm_medium=3Demail&utm_campaign=3Dup-comment-free&utm_conte=
+nt=3DviewIncident#mainDashboard" target=3D"_blank" style=3D"font-size: =
+16px; color: #ffffff !important; font-weight: bold; text-decoration: =
+none;border-radius: 25px; padding: 12px 25px; border: 1px solid #3bd671; =
+display: inline-block;">View incident details</a>
+                         =
+     </td>
+                          </tr>
+                      </table>
+                    </td>
+                    <td align=3D"left" =
+style=3D"border-radius: 25px; text-align: center; padding-left: 10px;">
+                        <a href=3D"https://uptimerobot.com/dashboard?=
+incidentId=3D130160577&utm_source=3DalertMessage&utm_medium=3Demail&utm_cam=
+paign=3Dup-comment-free&utm_content=3DcommentIncident#mainDashboard" =
+target=3D"_blank" style=3D"font-size: 16px; color: #3bd671 !important; =
+font-weight: bold; text-decoration: none; border-radius: 25px; padding: =
+12px 25px; border: 1px solid #3bd671; display: inline-block;">Comment =
+incident</a>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+            </div>
+          </div>
+
+<div style=3D'margin-bottom: 25px;'>
+  <table style=3D'width: 100%;'>
+    <tr>
+      <td
+        style=3D'background: #131a26; color: #ffffff; border-radius: 6px; =
+box-shadow: 0 20px 40px 0 rgba(0,0,0,0.1); padding: 25px; border: 1px solid=
+ #efefef; font-size: 14px; border: 0;'>
+<h2>
+  <strong style=3D"color: =
+orange;">TIP:</strong> Resolve incidents, write a post mortem, rinse and =
+repeat!
+</h2>
+<p>
+  Comment the incidents, so you can analyze what happened=
+, when and why, to overcome the issues in the future. <strong><a =
+href=3D"https://uptimerobot.com/dashboard?incidentId=3D130160577&utm_source=
+=3DalertMessage&utm_medium=3Demail&utm_campaign=3DupCommentFree&utm_content=
+=3DupsellCTA" style=3D"color: #3bd671;">Find out more</a>
+</p>
+
+</td>
+              </tr>
+            </table>
+          </div>
+          <div style=3D"border-top: 1px solid #dedede; font-size: 12px; =
+color: #687790; text-align: center; padding: 25px 0;">
+              This email was sent by
+              <a =
+href=3D"https://uptimerobot.com/?utm_source=3DalertMessage&utm_medium=3Dema=
+il&utm_campaign=3Dup-comment-free&utm_content=3DfooterLink" style=3D"color:=
+ #3bd671 !important;">UptimeRobot</a>.
+
+              You can update your =
+alert preferences in the  <a href=3D"https://uptimerobot.com/dashboard?=
+utm_source=3DalertMessage&utm_medium=3Demail&utm_campaign=3Dup-comment-free=
+&utm_content=3DfooterSetting" style=3D" color: #3bd671 !=
+important;">dashboard</a>.
+          </div>
+        </div>
+      </div>
+  </body>
+</html>
+

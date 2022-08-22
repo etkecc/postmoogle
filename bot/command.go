@@ -33,7 +33,7 @@ func (b *Bot) parseCommand(message string) []string {
 		return nil
 	}
 
-	message = strings.Replace(message, b.prefix+" ", "", 1)
+	message = strings.TrimSpace(strings.Replace(message, b.prefix, "", 1))
 	return strings.Split(message, " ")
 }
 

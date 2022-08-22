@@ -4,11 +4,13 @@ An Email to Matrix bridge
 
 ## Features / Roadmap / TODO
 
+- [ ] **BUG**: no auto invites
 - [x] SMTP server
 - [ ] SMTP client
 - [x] Matrix bot
 - [x] Configuration in room's account data
-- [ ] Receive emails to matrix rooms
+- [x] Receive emails to matrix rooms
+- [ ] Receive attachments
 - [ ] Map email threads to matrix threads
 - [ ] Reply to matrix thread sends reply into email thread
 - [ ] Send a message to matrix room with special format to send a new email
@@ -34,3 +36,14 @@ env vars
 * **POSTMOOGLE_DB_DIALECT** - database dialect (postgres, sqlite3)
 
 You can find default values in [config/defaults.go](config/defaults.go)
+
+## Development
+
+### Prerequisites
+
+* [ssmtp](https://wiki.archlinux.org/title/SSMTP)
+* configured mailbox `test@localhost`
+
+### Testing
+
+Run `send` script of the `e2e` dir with example emails

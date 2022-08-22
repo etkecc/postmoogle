@@ -6,7 +6,9 @@ import (
 
 	"github.com/emersion/go-smtp"
 	"github.com/getsentry/sentry-go"
+	"github.com/jhillyerd/enmime"
 	"gitlab.com/etke.cc/go/logger"
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 type session struct {
@@ -33,13 +35,14 @@ func (s *session) Rcpt(to string) error {
 		s.log.Error("cannot get mappings: %v", err)
 		return err
 	}
-	_, ok := mappings[to]
+	s.log.Debug("mappings: %v", mappings)
+	_, ok := mappings[utils.Mailbox(to)]
 	if !ok {
 		s.log.Debug("mapping for %s not found", to)
 		return smtp.ErrAuthRequired
 	}
 
-	if Domain(to) != s.domain {
+	if utils.Hostname(to) != s.domain {
 		s.log.Debug("wrong domain of %s", to)
 		return smtp.ErrAuthRequired
 	}
@@ -50,12 +53,16 @@ func (s *session) Rcpt(to string) error {
 }
 
 func (s *session) Data(r io.Reader) error {
-	b, err := io.ReadAll(r)
+	parser := enmime.NewParser()
+	env, err := parser.ReadEnvelope(r)
 	if err != nil {
-		s.log.Error("cannot read data: %v", err)
 		return err
 	}
-	return s.client.Send(s.from, s.to, "", string(b))
+	text := env.Text
+	if env.HTML != "" {
+		text = env.HTML
+	}
+	return s.client.Send(s.from, s.to, env.GetHeader("Subject"), text)
 }
 
 func (s *session) Reset() {}

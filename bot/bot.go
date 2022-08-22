@@ -10,6 +10,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"gitlab.com/etke.cc/go/logger"
 	"gitlab.com/etke.cc/linkpearl"
+	"gitlab.com/etke.cc/postmoogle/utils"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
@@ -28,10 +29,11 @@ type Bot struct {
 // New creates a new matrix bot
 func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string) *Bot {
 	return &Bot{
-		prefix: prefix,
-		domain: domain,
-		log:    log,
-		lp:     lp,
+		roomsmu: &sync.Mutex{},
+		prefix:  prefix,
+		domain:  domain,
+		log:     log,
+		lp:      lp,
 	}
 }
 
@@ -73,7 +75,7 @@ func (b *Bot) Start() error {
 
 // Send email to matrix room
 func (b *Bot) Send(from, to, subject, body string) error {
-	roomID, ok := b.rooms[to]
+	roomID, ok := b.rooms[utils.Mailbox(to)]
 	if !ok || roomID == "" {
 		return errors.New("room not found")
 	}

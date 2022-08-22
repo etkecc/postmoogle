@@ -2,6 +2,7 @@ package smtp
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/emersion/go-smtp"
@@ -46,6 +47,9 @@ func Start(domain, port, loglevel string, client Client) error {
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = 63 * 1024
+	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
+		s.Debug = os.Stdout
+	}
 
 	log.Info("Starting SMTP server on %s:%s", domain, port)
 	return s.ListenAndServe()

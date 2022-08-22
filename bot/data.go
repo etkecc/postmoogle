@@ -58,5 +58,6 @@ func (b *Bot) getSettings(ctx context.Context, roomID id.RoomID) (*settings, err
 func (b *Bot) setSettings(ctx context.Context, roomID id.RoomID, cfg *settings) error {
 	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("setSettings"))
 	defer span.Finish()
+
 	return b.lp.GetClient().SetRoomAccountData(roomID, settingskey, cfg)
 }
