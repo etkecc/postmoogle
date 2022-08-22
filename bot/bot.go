@@ -76,8 +76,8 @@ func (b *Bot) Start() error {
 
 // Send email to matrix room
 func (b *Bot) Send(ctx context.Context, from, to, subject, body string, files []*utils.File) error {
-	roomID, ok := b.rooms[utils.Mailbox(to)]
-	if !ok || roomID == "" {
+	roomID, ok := b.GetMapping(ctx, utils.Mailbox(to))
+	if !ok {
 		return errors.New("room not found")
 	}
 
@@ -117,15 +117,16 @@ func (b *Bot) Send(ctx context.Context, from, to, subject, body string, files []
 }
 
 // GetMappings returns mapping of mailbox = room
-func (b *Bot) GetMappings(ctx context.Context) (map[string]id.RoomID, error) {
+func (b *Bot) GetMapping(ctx context.Context, mailbox string) (id.RoomID, bool) {
 	if len(b.rooms) == 0 {
 		err := b.syncRooms(ctx)
 		if err != nil {
-			return nil, err
+			return "", false
 		}
 	}
 
-	return b.rooms, nil
+	roomID, ok := b.rooms[mailbox]
+	return roomID, ok
 }
 
 // Stop the bot

@@ -30,20 +30,15 @@ func (s *session) Mail(from string, opts smtp.MailOptions) error {
 
 func (s *session) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
-	mappings, err := s.client.GetMappings(s.ctx)
-	if err != nil {
-		s.log.Error("cannot get mappings: %v", err)
-		return err
-	}
-	s.log.Debug("mappings: %v", mappings)
-	_, ok := mappings[utils.Mailbox(to)]
-	if !ok {
-		s.log.Debug("mapping for %s not found", to)
-		return smtp.ErrAuthRequired
-	}
 
 	if utils.Hostname(to) != s.domain {
 		s.log.Debug("wrong domain of %s", to)
+		return smtp.ErrAuthRequired
+	}
+
+	_, ok := s.client.GetMapping(s.ctx, utils.Mailbox(to))
+	if !ok {
+		s.log.Debug("mapping for %s not found", to)
 		return smtp.ErrAuthRequired
 	}
 

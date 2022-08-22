@@ -70,7 +70,7 @@ func (b *Bot) setMailbox(ctx context.Context, evt *event.Event, mailbox string) 
 	defer span.Finish()
 
 	mailbox = utils.Mailbox(mailbox)
-	existingID, ok := b.rooms[mailbox]
+	existingID, ok := b.GetMapping(ctx, mailbox)
 	if ok && existingID != "" && existingID != evt.RoomID {
 		content := format.RenderMarkdown("Mailbox "+mailbox+"@"+b.domain+" already taken", true, true)
 		content.MsgType = event.MsgNotice

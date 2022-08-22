@@ -9,6 +9,6 @@ import (
 
 // Client interface to send emails
 type Client interface {
-	GetMappings(context.Context) (map[string]id.RoomID, error)
+	GetMapping(context.Context, string) (id.RoomID, bool)
 	Send(ctx context.Context, from, mailbox, subject, body string, files []*utils.File) error
 }
