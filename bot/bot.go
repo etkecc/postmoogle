@@ -64,13 +64,10 @@ func (b *Bot) Start() error {
 	if err := b.syncRooms(ctx); err != nil {
 		return err
 	}
-	if err := b.lp.GetClient().SetPresence(event.PresenceOnline); err != nil {
-		return err
-	}
 
 	b.initSync()
 	b.log.Info("Postmoogle has been started")
-	return b.lp.GetClient().Sync()
+	return b.lp.Start()
 }
 
 // Send email to matrix room
