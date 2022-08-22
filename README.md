@@ -2,16 +2,21 @@
 
 An Email to Matrix bridge
 
-## Features / Roadmap / TODO
+## Roadmap
 
-- [ ] **BUG**: no auto invites
+### Receive
+
 - [x] SMTP server
-- [ ] SMTP client
 - [x] Matrix bot
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms
+- [ ] **BUG**: no auto invites
 - [ ] Receive attachments
 - [ ] Map email threads to matrix threads
+
+### Send
+
+- [ ] SMTP client
 - [ ] Reply to matrix thread sends reply into email thread
 - [ ] Send a message to matrix room with special format to send a new email
 
