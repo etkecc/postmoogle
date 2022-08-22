@@ -46,7 +46,7 @@ func Start(domain, port, loglevel string, client Client) error {
 	s.AuthDisabled = true
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
-	s.MaxMessageBytes = 63 * 1024
+	s.MaxMessageBytes = 128 * 1024
 	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
 		s.Debug = os.Stdout
 	}

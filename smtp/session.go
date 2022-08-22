@@ -52,17 +52,36 @@ func (s *session) Rcpt(to string) error {
 	return nil
 }
 
+func (s *session) parseAttachments(parts []*enmime.Part) []*utils.File {
+	files := make([]*utils.File, 0, len(parts))
+	for _, attachment := range parts {
+		for _, err := range attachment.Errors {
+			s.log.Warn("attachment error: %v", err)
+		}
+		file := utils.NewFile(attachment.FileName, attachment.ContentType, attachment.Content)
+		files = append(files, file)
+	}
+
+	return files
+}
+
 func (s *session) Data(r io.Reader) error {
 	parser := enmime.NewParser()
-	env, err := parser.ReadEnvelope(r)
+	eml, err := parser.ReadEnvelope(r)
 	if err != nil {
 		return err
 	}
-	text := env.Text
-	if env.HTML != "" {
-		text = env.HTML
+	text := eml.Text
+	if eml.HTML != "" {
+		text = eml.HTML
 	}
-	return s.client.Send(s.from, s.to, env.GetHeader("Subject"), text)
+
+	attachments := s.parseAttachments(eml.Attachments)
+	inlines := s.parseAttachments(eml.Inlines)
+	files := make([]*utils.File, 0, len(attachments)+len(inlines))
+	files = append(files, attachments...)
+	files = append(files, inlines...)
+	return s.client.Send(s.ctx, s.from, s.to, eml.GetHeader("Subject"), text, files)
 }
 
 func (s *session) Reset() {}

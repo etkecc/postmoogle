@@ -71,7 +71,7 @@ func (b *Bot) Start() error {
 }
 
 // Send email to matrix room
-func (b *Bot) Send(from, to, subject, body string) error {
+func (b *Bot) Send(ctx context.Context, from, to, subject, body string, files []*utils.File) error {
 	roomID, ok := b.rooms[utils.Mailbox(to)]
 	if !ok || roomID == "" {
 		return errors.New("room not found")
@@ -88,7 +88,28 @@ func (b *Bot) Send(from, to, subject, body string) error {
 
 	content := format.RenderMarkdown(text.String(), true, true)
 	_, err := b.lp.Send(roomID, content)
-	return err
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		req := file.Convert()
+		resp, err := b.lp.GetClient().UploadMedia(req)
+		if err != nil {
+			b.Error(ctx, roomID, "cannot upload file %s: %v", req.FileName, err)
+			continue
+		}
+		_, err = b.lp.Send(roomID, &event.MessageEventContent{
+			MsgType: event.MsgFile,
+			Body:    req.FileName,
+			URL:     resp.ContentURI.CUString(),
+		})
+		if err != nil {
+			b.Error(ctx, roomID, "cannot send uploaded file %s: %v", req.FileName, err)
+		}
+	}
+
+	return nil
 }
 
 // GetMappings returns mapping of mailbox = room

@@ -10,8 +10,7 @@ An Email to Matrix bridge
 - [x] Matrix bot
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms
-- [ ] **BUG**: no auto invites
-- [ ] Receive attachments
+- [x] Receive attachments (untested)
 - [ ] Map email threads to matrix threads
 
 ### Send
