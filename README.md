@@ -1,4 +1,6 @@
-# Postmoogle
+# Postmoogle [![Matrix](https://img.shields.io/matrix/postmoogle:etke.cc?logo=matrix&style=for-the-badge)](https://matrix.to/#/#postmoogle:etke.cc)[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/etkecc) [![coverage report](https://gitlab.com/etke.cc/postmoogle/badges/main/coverage.svg)](https://gitlab.com/etke.cc/postmoogle/-/commits/main) [![Go Report Card](https://goreportcard.com/badge/gitlab.com/etke.cc/postmoogle)](https://goreportcard.com/report/gitlab.com/etke.cc/postmoogle) [![Go Reference](https://pkg.go.dev/badge/gitlab.com/etke.cc/postmoogle.svg)](https://pkg.go.dev/gitlab.com/etke.cc/postmoogle)
+
+> [more about that name](https://finalfantasy.fandom.com/wiki/The_Little_Postmoogle_That_Could)
 
 An Email to Matrix bridge
 
@@ -26,7 +28,7 @@ env vars
 ### mandatory
 
 * **POSTMOOGLE_HOMESERVER** - homeserver url, eg: `https://matrix.example.com`
-* **POSTMOOGLE_LOGIN** - user login/localpart, eg: `scheduler`
+* **POSTMOOGLE_LOGIN** - user login/localpart, eg: `moogle`
 * **POSTMOOGLE_PASSWORD** - user password
 * **POSTMOOGLE_DOMAIN** - SMTP domain to listen for new emails
 * **POSTMOOGLE_PORT** - SMTP port to listen for new emails
@@ -41,13 +43,6 @@ env vars
 
 You can find default values in [config/defaults.go](config/defaults.go)
 
-## Development
+## Where to get
 
-### Prerequisites
-
-* [ssmtp](https://wiki.archlinux.org/title/SSMTP)
-* configured mailbox `test@localhost`
-
-### Testing
-
-Run `send` script of the `e2e` dir with example emails
+[docker registry](https://gitlab.com/etke.cc/postmoogle/container_registry), [etke.cc](https://etke.cc)
