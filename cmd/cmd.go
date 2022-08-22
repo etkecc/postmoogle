@@ -81,7 +81,7 @@ func initBot(cfg *config.Config) {
 		// nolint // Fatal = panic, not os.Exit()
 		log.Fatal("cannot initialize matrix bot: %v", err)
 	}
-	mxb = bot.New(lp, mxlog, cfg.Prefix, cfg.Domain)
+	mxb = bot.New(lp, mxlog, cfg.Prefix, cfg.Domain, cfg.NoOwner, cfg.Federation)
 	log.Debug("bot has been created")
 }
 

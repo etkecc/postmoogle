@@ -17,6 +17,8 @@ func New() *Config {
 		Domain:       env.String("domain", defaultConfig.Domain),
 		Port:         env.String("port", defaultConfig.Port),
 		NoEncryption: env.Bool("noencryption"),
+		NoOwner:      env.Bool("noowner"),
+		Federation:   env.Bool("federation"),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		Sentry: Sentry{
 			DSN:        env.String("sentry.dsn", defaultConfig.Sentry.DSN),

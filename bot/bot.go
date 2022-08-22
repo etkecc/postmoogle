@@ -18,22 +18,26 @@ import (
 
 // Bot represents matrix bot
 type Bot struct {
-	prefix  string
-	domain  string
-	rooms   map[string]id.RoomID
-	roomsmu *sync.Mutex
-	log     *logger.Logger
-	lp      *linkpearl.Linkpearl
+	noowner    bool
+	federation bool
+	prefix     string
+	domain     string
+	rooms      map[string]id.RoomID
+	roomsmu    *sync.Mutex
+	log        *logger.Logger
+	lp         *linkpearl.Linkpearl
 }
 
 // New creates a new matrix bot
-func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string) *Bot {
+func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string, noowner, federation bool) *Bot {
 	return &Bot{
-		roomsmu: &sync.Mutex{},
-		prefix:  prefix,
-		domain:  domain,
-		log:     log,
-		lp:      lp,
+		noowner:    noowner,
+		federation: federation,
+		roomsmu:    &sync.Mutex{},
+		prefix:     prefix,
+		domain:     domain,
+		log:        log,
+		lp:         lp,
 	}
 }
 

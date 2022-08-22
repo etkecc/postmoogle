@@ -12,6 +12,7 @@ import (
 
 var commands = map[string]string{
 	"mailbox": "Get or set mailbox of that room",
+	"owner":   "Get or set owner of that room",
 	"help":    "Get help",
 }
 
@@ -20,9 +21,16 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []str
 		return
 	}
 
+	// ignore requests over federation if disabled
+	if !b.federation && evt.Sender.Homeserver() != b.lp.GetClient().UserID.Homeserver() {
+		return
+	}
+
 	switch command[0] {
 	case "help":
 		b.sendHelp(ctx, evt.RoomID)
+	case "owner":
+		b.handleOwner(ctx, evt, command)
 	case "mailbox":
 		b.handleMailbox(ctx, evt, command)
 	}

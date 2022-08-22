@@ -86,6 +86,13 @@ func (b *Bot) setMailbox(ctx context.Context, evt *event.Event, mailbox string) 
 	if cfg == nil {
 		cfg = &settings{}
 	}
+
+	if !cfg.Allowed(b.noowner, evt.Sender) {
+		b.Error(span.Context(), evt.RoomID, "you don't have permission to do that")
+		return
+	}
+
+	cfg.Owner = evt.Sender
 	cfg.Mailbox = mailbox
 	err = b.setSettings(span.Context(), evt.RoomID, cfg)
 	if err != nil {

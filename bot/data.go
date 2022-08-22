@@ -14,6 +14,20 @@ var migrations = []string{}
 // settings of a room
 type settings struct {
 	Mailbox string
+	Owner   id.UserID
+}
+
+// Allowed checks if change is allowed
+func (s *settings) Allowed(noowner bool, userID id.UserID) bool {
+	if noowner {
+		return true
+	}
+
+	if s.Owner == "" {
+		return true
+	}
+
+	return s.Owner == userID
 }
 
 func (b *Bot) migrate() error {

@@ -16,6 +16,10 @@ type Config struct {
 	LogLevel string
 	// NoEncryption disabled encryption support
 	NoEncryption bool
+	// NoOwner allows room settings change by any participant
+	NoOwner bool
+	// Federation allows usage of Postmoogle by users from other homeservers
+	Federation bool
 	// Prefix for commands
 	Prefix string
 	// MaxSize of an email (including attachments)
