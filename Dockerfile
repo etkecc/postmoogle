@@ -1,24 +1,20 @@
 FROM registry.gitlab.com/etke.cc/base AS builder
 
-WORKDIR /scheduler
+WORKDIR /postmoogle
 COPY . .
-RUN make build && \
-    git clone https://gitlab.com/etke.cc/int/ansible-injector.git && \
-    cd ansible-injector && \
-    make build
+RUN make build
 
 FROM alpine:latest
 
-ENV SCHEDULER_DB_DSN /data/scheduler.db
+ENV POSTMOOGLE_DB_DSN /data/postmoogle.db
 
-RUN apk --no-cache add ca-certificates tzdata olm ansible-core && update-ca-certificates && \
-    adduser -D -g '' scheduler && \
-    mkdir /data && chown -R scheduler /data
+RUN apk --no-cache add ca-certificates tzdata olm && \
+    adduser -D -g '' postmoogle && \
+    mkdir /data && chown -R postmoogle /data
 
-COPY --from=builder /scheduler/scheduler /bin/scheduler
-COPY --from=builder /scheduler/ansible-injector/ansible-injector /bin/ansible-injector
+COPY --from=builder /postmoogle/postmoogle /bin/postmoogle
 
-USER scheduler
+USER postmoogle
 
-ENTRYPOINT ["/bin/scheduler"]
+ENTRYPOINT ["/bin/postmoogle"]
 
