@@ -33,6 +33,11 @@ func (b *Bot) parseCommand(message string) []string {
 		return nil
 	}
 
+	index := strings.LastIndex(message, b.prefix)
+	if index == -1 {
+		return nil
+	}
+
 	message = strings.TrimSpace(strings.Replace(message, b.prefix, "", 1))
 	return strings.Split(message, " ")
 }

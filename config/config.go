@@ -13,9 +13,11 @@ func New() *Config {
 		Homeserver:   env.String("homeserver", defaultConfig.Homeserver),
 		Login:        env.String("login", defaultConfig.Login),
 		Password:     env.String("password", defaultConfig.Password),
+		Prefix:       env.String("prefix", defaultConfig.Prefix),
 		Domain:       env.String("domain", defaultConfig.Domain),
 		Port:         env.String("port", defaultConfig.Port),
 		NoEncryption: env.Bool("noencryption"),
+		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		Sentry: Sentry{
 			DSN:        env.String("sentry.dsn", defaultConfig.Sentry.DSN),
 			SampleRate: env.Int("sentry.rate", defaultConfig.Sentry.SampleRate),

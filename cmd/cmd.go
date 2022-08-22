@@ -40,7 +40,7 @@ func main() {
 	defer recovery()
 
 	go startBot()
-	if err := smtp.Start(cfg.Domain, cfg.Port, cfg.LogLevel, mxb); err != nil {
+	if err := smtp.Start(cfg.Domain, cfg.Port, cfg.LogLevel, cfg.MaxSize, mxb); err != nil {
 		//nolint:gocritic
 		log.Fatal("SMTP server crashed: %v", err)
 	}

@@ -33,7 +33,7 @@ func (b *backend) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, err
 	return b.newSession(), nil
 }
 
-func Start(domain, port, loglevel string, client Client) error {
+func Start(domain, port, loglevel string, maxSize int, client Client) error {
 	log := logger.New("smtp.", loglevel)
 	be := &backend{
 		log:    log,
@@ -46,7 +46,7 @@ func Start(domain, port, loglevel string, client Client) error {
 	s.AuthDisabled = true
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
-	s.MaxMessageBytes = 128 * 1024
+	s.MaxMessageBytes = maxSize * 1024 * 1024
 	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
 		s.Debug = os.Stdout
 	}

@@ -18,6 +18,8 @@ type Config struct {
 	NoEncryption bool
 	// Prefix for commands
 	Prefix string
+	// MaxSize of an email (including attachments)
+	MaxSize int
 
 	// DB config
 	DB DB

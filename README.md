@@ -12,7 +12,7 @@ An Email to Matrix bridge
 - [x] Matrix bot
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms
-- [x] Receive attachments (untested)
+- [x] Receive attachments
 - [ ] Map email threads to matrix threads
 
 ### Send
@@ -40,6 +40,7 @@ env vars
 * **POSTMOOGLE_LOGLEVEL** - log level
 * **POSTMOOGLE_DB_DSN** - database connection string
 * **POSTMOOGLE_DB_DIALECT** - database dialect (postgres, sqlite3)
+* **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
 
 You can find default values in [config/defaults.go](config/defaults.go)
 
