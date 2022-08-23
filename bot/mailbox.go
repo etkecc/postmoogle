@@ -54,7 +54,7 @@ func (b *Bot) getMailbox(ctx context.Context, evt *event.Event) {
 	}
 
 	if cfg.Mailbox == "" {
-		b.Error(span.Context(), evt.RoomID, "mailbox name is not set")
+		b.Notice(span.Context(), evt.RoomID, "mailbox name is not set")
 		return
 	}
 
@@ -87,7 +87,7 @@ func (b *Bot) setMailbox(ctx context.Context, evt *event.Event, mailbox string) 
 	}
 
 	if !cfg.Allowed(b.noowner, evt.Sender) {
-		b.Error(span.Context(), evt.RoomID, "you don't have permission to do that")
+		b.Notice(span.Context(), evt.RoomID, "you don't have permission to do that")
 		return
 	}
 
