@@ -10,10 +10,11 @@ import (
 	"github.com/getsentry/sentry-go"
 	"gitlab.com/etke.cc/go/logger"
 	"gitlab.com/etke.cc/linkpearl"
-	"gitlab.com/etke.cc/postmoogle/utils"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 // Bot represents matrix bot
@@ -61,10 +62,9 @@ func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args 
 
 // Notice sends a notice message to the matrix room
 func (b *Bot) Notice(ctx context.Context, roomID id.RoomID, message string, args ...interface{}) {
-	_, err := b.lp.Send(roomID, &event.MessageEventContent{
-		MsgType: event.MsgNotice,
-		Body:    fmt.Sprintf(message, args...),
-	})
+	content := format.RenderMarkdown(fmt.Sprintf(message, args...), true, true)
+	content.MsgType = event.MsgNotice
+	_, err := b.lp.Send(roomID, &content)
 	if err != nil {
 		if sentry.HasHubOnContext(ctx) {
 			sentry.GetHubFromContext(ctx).CaptureException(err)
@@ -96,10 +96,17 @@ func (b *Bot) Send(ctx context.Context, from, to, subject, plaintext, html strin
 		return errors.New("room not found")
 	}
 
+	settings, err := b.getSettings(ctx, roomID)
+	if err != nil {
+		b.Error(ctx, roomID, "cannot get settings: %v", err)
+	}
+
 	var text strings.Builder
-	text.WriteString("From: ")
-	text.WriteString(from)
-	text.WriteString("\n\n")
+	if !utils.Bool(settings.Get("nosender")) {
+		text.WriteString("From: ")
+		text.WriteString(from)
+		text.WriteString("\n\n")
+	}
 	text.WriteString("# ")
 	text.WriteString(subject)
 	text.WriteString("\n\n")
@@ -110,7 +117,7 @@ func (b *Bot) Send(ctx context.Context, from, to, subject, plaintext, html strin
 	}
 
 	content := format.RenderMarkdown(text.String(), true, true)
-	_, err := b.lp.Send(roomID, content)
+	_, err = b.lp.Send(roomID, content)
 	if err != nil {
 		return err
 	}

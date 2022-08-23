@@ -53,7 +53,7 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(gitlab.com/etke.cc/int/scheduler)
+      - prefix(gitlab.com/etke.cc/postmoogle)
     section-separators:
       - newLine
 linters:
