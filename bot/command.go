@@ -11,9 +11,10 @@ import (
 )
 
 var commands = map[string]string{
-	"mailbox": "Get or set mailbox of that room",
-	"owner":   "Get or set owner of that room",
-	"help":    "Get help",
+	"mailbox":             "Get or set mailbox of that room",
+	"owner":               "Get or set owner of that room",
+	"hide-sender-address": "Get or set the `hide-sender-address` setting (controls if the sender's email address is displayed or not; default `false`)",
+	"help":                "Get help",
 }
 
 func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []string) {
@@ -33,6 +34,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []str
 		b.handleOwner(ctx, evt, command)
 	case "mailbox":
 		b.handleMailbox(ctx, evt, command)
+	case "hide-sender-address":
+		b.handleHideSenderAddress(ctx, evt, command)
 	}
 }
 

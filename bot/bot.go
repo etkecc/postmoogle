@@ -89,17 +89,24 @@ func (b *Bot) Send(ctx context.Context, from, to, subject, body string, files []
 		return errors.New("room not found")
 	}
 
+	settings, err := b.getSettings(ctx, roomID)
+	if err != nil {
+		return err
+	}
+
 	var text strings.Builder
-	text.WriteString("From: ")
-	text.WriteString(from)
-	text.WriteString("\n\n")
+	if !settings.HideSenderAddress {
+		text.WriteString("From: ")
+		text.WriteString(from)
+		text.WriteString("\n\n")
+	}
 	text.WriteString("# ")
 	text.WriteString(subject)
 	text.WriteString("\n\n")
 	text.WriteString(format.HTMLToMarkdown(body))
 
 	content := format.RenderMarkdown(text.String(), true, true)
-	_, err := b.lp.Send(roomID, content)
+	_, err = b.lp.Send(roomID, content)
 	if err != nil {
 		return err
 	}
