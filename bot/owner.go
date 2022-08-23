@@ -28,7 +28,7 @@ func (b *Bot) getOwner(ctx context.Context, evt *event.Event) {
 	}
 
 	if cfg.Owner == "" {
-		b.Error(span.Context(), evt.RoomID, "owner is not set yet")
+		b.Notice(span.Context(), evt.RoomID, "owner is not set yet")
 		return
 	}
 
@@ -52,7 +52,7 @@ func (b *Bot) setOwner(ctx context.Context, evt *event.Event, owner string) {
 	}
 
 	if !cfg.Allowed(b.noowner, evt.Sender) {
-		b.Error(span.Context(), evt.RoomID, "you don't have permission to do that")
+		b.Notice(span.Context(), evt.RoomID, "you don't have permission to do that")
 		return
 	}
 

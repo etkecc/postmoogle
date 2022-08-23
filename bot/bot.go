@@ -59,6 +59,14 @@ func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args 
 	}
 }
 
+// Notice sends a notice message to the matrix room
+func (b *Bot) Notice(ctx context.Context, roomID id.RoomID, message string, args ...interface{}) {
+	b.lp.Send(roomID, &event.MessageEventContent{
+		MsgType: event.MsgNotice,
+		Body:    fmt.Sprintf(message, args...),
+	})
+}
+
 // Start performs matrix /sync
 func (b *Bot) Start() error {
 	if err := b.migrate(); err != nil {
