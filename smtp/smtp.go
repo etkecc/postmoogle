@@ -3,8 +3,9 @@ package smtp
 import (
 	"context"
 
-	"gitlab.com/etke.cc/postmoogle/utils"
 	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 // Client interface to send emails

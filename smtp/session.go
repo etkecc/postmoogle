@@ -8,6 +8,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/jhillyerd/enmime"
 	"gitlab.com/etke.cc/go/logger"
+
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 

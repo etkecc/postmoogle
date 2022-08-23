@@ -13,9 +13,10 @@ const settingskey = "cc.etke.postmoogle.settings"
 
 var migrations = []string{}
 
+// settings of a room
 type settings map[string]string
 
-// settingsStruct of a room
+// settingsOld of a room
 type settingsOld struct {
 	Mailbox  string
 	Owner    id.UserID
