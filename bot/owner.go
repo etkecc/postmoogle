@@ -23,7 +23,8 @@ func (b *Bot) getOwner(ctx context.Context, evt *event.Event) {
 
 	cfg, err := b.getSettings(span.Context(), evt.RoomID)
 	if err != nil {
-		b.Error(span.Context(), evt.RoomID, "owner is not set yet")
+		b.log.Warn("cannot get settings: %v", err)
+		b.Error(span.Context(), evt.RoomID, "failed to retrieve settings")
 		return
 	}
 
@@ -48,6 +49,8 @@ func (b *Bot) setOwner(ctx context.Context, evt *event.Event, owner string) {
 	cfg, err := b.getSettings(span.Context(), evt.RoomID)
 	if err != nil {
 		b.log.Warn("cannot get settings: %v", err)
+		b.Error(span.Context(), evt.RoomID, "failed to retrieve settings")
+		return
 	}
 
 	if !cfg.Allowed(b.noowner, evt.Sender) {
