@@ -66,17 +66,13 @@ func (s *session) Data(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	text := eml.Text
-	if eml.HTML != "" {
-		text = eml.HTML
-	}
 
 	attachments := s.parseAttachments(eml.Attachments)
 	inlines := s.parseAttachments(eml.Inlines)
 	files := make([]*utils.File, 0, len(attachments)+len(inlines))
 	files = append(files, attachments...)
 	files = append(files, inlines...)
-	return s.client.Send(s.ctx, s.from, s.to, eml.GetHeader("Subject"), text, files)
+	return s.client.Send(s.ctx, s.from, s.to, eml.GetHeader("Subject"), eml.Text, eml.HTML, files)
 }
 
 func (s *session) Reset() {}
