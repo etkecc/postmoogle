@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"strings"
 
 	"github.com/getsentry/sentry-go"
 	"maunium.net/go/mautrix/id"
@@ -65,6 +66,15 @@ func (b *Bot) getSettings(ctx context.Context, roomID id.RoomID) (settings, erro
 
 	var config settings
 	err := b.lp.GetClient().GetRoomAccountData(roomID, settingskey, &config)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "M_NOT_FOUND") {
+			// Suppress `M_NOT_FOUND (HTTP 404): Room account data not found` errors.
+			// Until some settings are explicitly set, we don't store any.
+			// In such cases, just return a default (empty) settings object.
+			err = nil
+		}
+	}
 
 	return config, err
 }
