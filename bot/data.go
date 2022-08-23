@@ -14,9 +14,9 @@ var migrations = []string{}
 
 // settings of a room
 type settings struct {
-	Mailbox           string
-	Owner             id.UserID
-	HideSenderAddress bool
+	Mailbox  string
+	Owner    id.UserID
+	NoSender bool
 }
 
 // Allowed checks if change is allowed

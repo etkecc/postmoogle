@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/getsentry/sentry-go"
 	"gitlab.com/etke.cc/postmoogle/utils"
@@ -105,109 +104,6 @@ func (b *Bot) setMailbox(ctx context.Context, evt *event.Event, mailbox string) 
 	b.roomsmu.Unlock()
 
 	content := format.RenderMarkdown("Mailbox of this room set to **"+cfg.Mailbox+"@"+b.domain+"**", true, true)
-	content.MsgType = event.MsgNotice
-	_, err = b.lp.Send(evt.RoomID, content)
-	if err != nil {
-		b.Error(span.Context(), evt.RoomID, "cannot send message: %v", err)
-	}
-}
-
-func (b *Bot) handleHideSenderAddress(ctx context.Context, evt *event.Event, command []string) {
-	getter := func(entity settings) bool {
-		return entity.HideSenderAddress
-	}
-
-	setter := func(entity *settings, value bool) error {
-		entity.HideSenderAddress = value
-		return nil
-	}
-
-	b.handleBooleanConfigurationKey(ctx, evt, command, "hide-sender-address", getter, setter)
-}
-
-func (b *Bot) handleBooleanConfigurationKey(
-	ctx context.Context,
-	evt *event.Event,
-	command []string,
-	configKey string,
-	getter func(entity settings) bool,
-	setter func(entity *settings, value bool) error,
-) {
-	if len(command) == 1 {
-		b.getBooleanConfigurationKey(ctx, evt, configKey, getter, setter)
-		return
-	}
-
-	b.setBooleanConfigurationKey(ctx, evt, configKey, command[1], getter, setter)
-}
-
-func (b *Bot) getBooleanConfigurationKey(
-	ctx context.Context,
-	evt *event.Event,
-	configKey string,
-	getter func(entity settings) bool,
-	setter func(entity *settings, value bool) error,
-) {
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName(fmt.Sprintf("getBooleanConfigurationKey.%s", configKey)))
-	defer span.Finish()
-
-	cfg, err := b.getSettings(span.Context(), evt.RoomID)
-	if err != nil {
-		b.log.Warn("cannot get %s settings: %v", evt.RoomID, err)
-		return
-	}
-
-	value := getter(cfg)
-
-	content := format.RenderMarkdown(fmt.Sprintf("`%s` configuration setting for this room is currently set to `%v`", configKey, value), true, true)
-	content.MsgType = event.MsgNotice
-	_, err = b.lp.Send(evt.RoomID, content)
-	if err != nil {
-		b.Error(span.Context(), evt.RoomID, "cannot send message: %v", err)
-	}
-}
-
-func (b *Bot) setBooleanConfigurationKey(
-	ctx context.Context,
-	evt *event.Event,
-	configKey string,
-	value string,
-	getter func(entity settings) bool,
-	setter func(entity *settings, value bool) error,
-) {
-	var actualValue bool
-	if value == "true" {
-		actualValue = true
-	} else if value == "false" {
-		actualValue = false
-	} else {
-		b.Notice(ctx, evt.RoomID, "you are supposed to send a true or false value")
-		return
-	}
-
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName(fmt.Sprintf("setBooleanConfigurationKey.%s", configKey)))
-	defer span.Finish()
-
-	cfg, err := b.getSettings(span.Context(), evt.RoomID)
-	if err != nil {
-		b.Error(span.Context(), evt.RoomID, "failed to retrieve setting: %v", err)
-		return
-	}
-
-	if !cfg.Allowed(b.noowner, evt.Sender) {
-		b.Notice(span.Context(), evt.RoomID, "you don't have permission to do that")
-		return
-	}
-
-	setter(&cfg, actualValue)
-
-	err = b.setSettings(span.Context(), evt.RoomID, cfg)
-	if err != nil {
-		b.Error(span.Context(), evt.RoomID, "cannot update settings: %v", err)
-		return
-	}
-
-	content := format.RenderMarkdown(fmt.Sprintf("`%s` configuration setting for this room has been set to `%v`", configKey, actualValue), true, true)
 	content.MsgType = event.MsgNotice
 	_, err = b.lp.Send(evt.RoomID, content)
 	if err != nil {

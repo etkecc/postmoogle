@@ -98,11 +98,11 @@ func (b *Bot) Send(ctx context.Context, from, to, subject, plaintext, html strin
 
 	settings, err := b.getSettings(ctx, roomID)
 	if err != nil {
-		return err
+		b.Error(ctx, roomID, "cannot get settings: %v", err)
 	}
 
 	var text strings.Builder
-	if !settings.HideSenderAddress {
+	if !settings.NoSender {
 		text.WriteString("From: ")
 		text.WriteString(from)
 		text.WriteString("\n\n")
