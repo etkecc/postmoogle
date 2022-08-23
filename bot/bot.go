@@ -90,7 +90,7 @@ func (b *Bot) Start() error {
 }
 
 // Send email to matrix room
-func (b *Bot) Send(ctx context.Context, from, to, subject, body string, files []*utils.File) error {
+func (b *Bot) Send(ctx context.Context, from, to, subject, plaintext, html string, files []*utils.File) error {
 	roomID, ok := b.GetMapping(ctx, utils.Mailbox(to))
 	if !ok {
 		return errors.New("room not found")
@@ -103,7 +103,11 @@ func (b *Bot) Send(ctx context.Context, from, to, subject, body string, files []
 	text.WriteString("# ")
 	text.WriteString(subject)
 	text.WriteString("\n\n")
-	text.WriteString(format.HTMLToMarkdown(body))
+	if html != "" {
+		text.WriteString(format.HTMLToMarkdown(html))
+	} else {
+		text.WriteString(plaintext)
+	}
 
 	content := format.RenderMarkdown(text.String(), true, true)
 	_, err := b.lp.Send(roomID, content)
