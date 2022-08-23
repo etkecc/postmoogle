@@ -18,7 +18,7 @@ type settings struct {
 }
 
 // Allowed checks if change is allowed
-func (s *settings) Allowed(noowner bool, userID id.UserID) bool {
+func (s settings) Allowed(noowner bool, userID id.UserID) bool {
 	if noowner {
 		return true
 	}
@@ -59,17 +59,17 @@ func (b *Bot) migrate() error {
 	return nil
 }
 
-func (b *Bot) getSettings(ctx context.Context, roomID id.RoomID) (*settings, error) {
+func (b *Bot) getSettings(ctx context.Context, roomID id.RoomID) (settings, error) {
 	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("getSettings"))
 	defer span.Finish()
 
 	var config settings
 	err := b.lp.GetClient().GetRoomAccountData(roomID, settingskey, &config)
 
-	return &config, err
+	return config, err
 }
 
-func (b *Bot) setSettings(ctx context.Context, roomID id.RoomID, cfg *settings) error {
+func (b *Bot) setSettings(ctx context.Context, roomID id.RoomID, cfg settings) error {
 	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("setSettings"))
 	defer span.Finish()
 
