@@ -138,7 +138,7 @@ func (b *Bot) handleBooleanConfigurationKey(
 		return
 	}
 
-	b.setBooleanConfigurationKey(ctx, evt, command[1], configKey, getter, setter)
+	b.setBooleanConfigurationKey(ctx, evt, configKey, command[1], getter, setter)
 }
 
 func (b *Bot) getBooleanConfigurationKey(
@@ -170,8 +170,8 @@ func (b *Bot) getBooleanConfigurationKey(
 func (b *Bot) setBooleanConfigurationKey(
 	ctx context.Context,
 	evt *event.Event,
-	value string,
 	configKey string,
+	value string,
 	getter func(entity settings) bool,
 	setter func(entity *settings, value bool) error,
 ) {
