@@ -61,6 +61,31 @@ func (b *Bot) migrate() error {
 	return nil
 }
 
+func (b *Bot) syncRooms(ctx context.Context) error {
+	b.roomsmu.Lock()
+	defer b.roomsmu.Unlock()
+	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("syncRooms"))
+	defer span.Finish()
+
+	resp, err := b.lp.GetClient().JoinedRooms()
+	if err != nil {
+		return err
+	}
+	b.rooms = make(map[string]id.RoomID, len(resp.JoinedRooms))
+	for _, roomID := range resp.JoinedRooms {
+		cfg, serr := b.getSettings(span.Context(), roomID)
+		if serr != nil {
+			b.log.Warn("cannot get %s settings: %v", roomID, err)
+			continue
+		}
+		if cfg.Mailbox != "" {
+			b.rooms[cfg.Mailbox] = roomID
+		}
+	}
+
+	return nil
+}
+
 func (b *Bot) getSettings(ctx context.Context, roomID id.RoomID) (settings, error) {
 	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("getSettings"))
 	defer span.Finish()

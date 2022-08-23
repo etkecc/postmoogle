@@ -7,33 +7,7 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
-	"maunium.net/go/mautrix/id"
 )
-
-func (b *Bot) syncRooms(ctx context.Context) error {
-	b.roomsmu.Lock()
-	defer b.roomsmu.Unlock()
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("syncRooms"))
-	defer span.Finish()
-
-	resp, err := b.lp.GetClient().JoinedRooms()
-	if err != nil {
-		return err
-	}
-	b.rooms = make(map[string]id.RoomID, len(resp.JoinedRooms))
-	for _, roomID := range resp.JoinedRooms {
-		cfg, serr := b.getSettings(span.Context(), roomID)
-		if serr != nil {
-			b.log.Warn("cannot get %s settings: %v", roomID, err)
-			continue
-		}
-		if cfg.Mailbox != "" {
-			b.rooms[cfg.Mailbox] = roomID
-		}
-	}
-
-	return nil
-}
 
 func (b *Bot) handleMailbox(ctx context.Context, evt *event.Event, command []string) {
 	if len(command) == 1 {
