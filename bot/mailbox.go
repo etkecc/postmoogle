@@ -49,8 +49,7 @@ func (b *Bot) getMailbox(ctx context.Context, evt *event.Event) {
 
 	cfg, err := b.getSettings(span.Context(), evt.RoomID)
 	if err != nil {
-		b.log.Warn("cannot get %s settings: %v", evt.RoomID, err)
-		b.Error(span.Context(), evt.RoomID, "failed to retrieve settings")
+		b.Error(span.Context(), evt.RoomID, "failed to retrieve setting: %v", err)
 		return
 	}
 
@@ -83,8 +82,7 @@ func (b *Bot) setMailbox(ctx context.Context, evt *event.Event, mailbox string) 
 	}
 	cfg, err := b.getSettings(span.Context(), evt.RoomID)
 	if err != nil {
-		b.log.Warn("cannot get settings: %v", err)
-		b.Error(span.Context(), evt.RoomID, "failed to retrieve settings")
+		b.Error(span.Context(), evt.RoomID, "failed to retrieve setting: %v", err)
 		return
 	}
 
