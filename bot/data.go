@@ -66,7 +66,6 @@ func (b *Bot) getSettings(ctx context.Context, roomID id.RoomID) (settings, erro
 
 	var config settings
 	err := b.lp.GetClient().GetRoomAccountData(roomID, settingskey, &config)
-
 	if err != nil {
 		if strings.Contains(err.Error(), "M_NOT_FOUND") {
 			// Suppress `M_NOT_FOUND (HTTP 404): Room account data not found` errors.
