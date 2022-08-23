@@ -31,11 +31,11 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []str
 	case "help":
 		b.sendHelp(ctx, evt.RoomID)
 	case "owner":
-		b.handleOwner(ctx, evt, command)
+		b.handleOption(ctx, evt, command)
 	case "mailbox":
-		b.handleMailbox(ctx, evt, command)
+		b.handleOption(ctx, evt, command)
 	case "nosender":
-		b.handleNoSender(ctx, evt, command)
+		b.handleOption(ctx, evt, command)
 	}
 }
 

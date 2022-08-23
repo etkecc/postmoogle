@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/getsentry/sentry-go"
@@ -12,8 +13,10 @@ const settingskey = "cc.etke.postmoogle.settings"
 
 var migrations = []string{}
 
-// settings of a room
-type settings struct {
+type settings map[string]string
+
+// settingsStruct of a room
+type settingsOld struct {
 	Mailbox  string
 	Owner    id.UserID
 	NoSender bool
@@ -25,11 +28,22 @@ func (s settings) Allowed(noowner bool, userID id.UserID) bool {
 		return true
 	}
 
-	if s.Owner == "" {
+	owner := s.Get("owner")
+	if owner == "" {
 		return true
 	}
 
-	return s.Owner == userID
+	return owner == userID.String()
+}
+
+// Get option
+func (s settings) Get(key string) string {
+	return s[strings.ToLower(strings.TrimSpace(key))]
+}
+
+// Set option
+func (s settings) Set(key, value string) {
+	s[strings.ToLower(strings.TrimSpace(key))] = value
 }
 
 func (b *Bot) migrate() error {
@@ -73,17 +87,42 @@ func (b *Bot) syncRooms(ctx context.Context) error {
 	}
 	b.rooms = make(map[string]id.RoomID, len(resp.JoinedRooms))
 	for _, roomID := range resp.JoinedRooms {
+		b.migrateSettings(span.Context(), roomID)
 		cfg, serr := b.getSettings(span.Context(), roomID)
 		if serr != nil {
 			b.log.Warn("cannot get %s settings: %v", roomID, err)
 			continue
 		}
-		if cfg.Mailbox != "" {
-			b.rooms[cfg.Mailbox] = roomID
+		mailbox := cfg.Get("mailbox")
+		if mailbox != "" {
+			b.rooms[mailbox] = roomID
 		}
 	}
 
 	return nil
+}
+
+// TODO: remove after migration
+func (b *Bot) migrateSettings(ctx context.Context, roomID id.RoomID) {
+	var config settingsOld
+	err := b.lp.GetClient().GetRoomAccountData(roomID, settingskey, &config)
+	if err != nil {
+		// any error = no need to migrate
+		return
+	}
+
+	if config.Mailbox == "" {
+		return
+	}
+	cfg := settings{}
+	cfg.Set("mailbox", config.Mailbox)
+	cfg.Set("owner", config.Owner.String())
+	cfg.Set("nosender", strconv.FormatBool(config.NoSender))
+
+	err = b.setSettings(ctx, roomID, cfg)
+	if err != nil {
+		b.log.Error("cannot migrate settings: %v", err)
+	}
 }
 
 func (b *Bot) getSettings(ctx context.Context, roomID id.RoomID) (settings, error) {
