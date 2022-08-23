@@ -61,10 +61,17 @@ func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args 
 
 // Notice sends a notice message to the matrix room
 func (b *Bot) Notice(ctx context.Context, roomID id.RoomID, message string, args ...interface{}) {
-	b.lp.Send(roomID, &event.MessageEventContent{
+	_, err := b.lp.Send(roomID, &event.MessageEventContent{
 		MsgType: event.MsgNotice,
 		Body:    fmt.Sprintf(message, args...),
 	})
+	if err != nil {
+		if sentry.HasHubOnContext(ctx) {
+			sentry.GetHubFromContext(ctx).CaptureException(err)
+		} else {
+			sentry.CaptureException(err)
+		}
+	}
 }
 
 // Start performs matrix /sync
