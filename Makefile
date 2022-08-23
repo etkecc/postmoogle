@@ -49,5 +49,5 @@ login:
 
 # docker build
 docker:
-	docker build -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG} .
-	docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+	docker buildx create --use
+	docker buildx build --platform linux/arm/v7,linux/arm64/v8,linux/amd64 --push -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG} .
