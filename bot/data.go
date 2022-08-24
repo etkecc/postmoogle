@@ -6,8 +6,9 @@ import (
 	"strings"
 
 	"github.com/getsentry/sentry-go"
-	"gitlab.com/etke.cc/postmoogle/utils"
 	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 const settingskey = "cc.etke.postmoogle.settings"
