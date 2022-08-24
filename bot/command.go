@@ -18,7 +18,7 @@ var (
 	commands = map[string]string{
 		// special commands
 		"help": "Get help",
-		"stop": "Disable bridge for that room",
+		"stop": "Disable bridge for that room and clear all configuration",
 
 		// options commands
 		"mailbox":   "Get or set mailbox of that room",
