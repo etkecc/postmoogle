@@ -15,17 +15,57 @@ import (
 
 type sanitizerFunc func(string) string
 
+type commandDefinition struct {
+	key         string
+	description string
+}
+
+type commandList []commandDefinition
+
+func (c commandList) get(key string) (*commandDefinition, bool) {
+	for _, command := range c {
+		if command.key == key {
+			return &command, true
+		}
+	}
+	return nil, false
+}
+
 var (
-	commands = utils.List{
+	commands = commandList{
 		// special commands
-		{K: "help", V: "Show this help message"},
-		{K: "stop", V: "Disable bridge for the room and clear all configuration"},
+		{
+			key:         "help",
+			description: "Show this help message",
+		},
+		{
+			key:         "stop",
+			description: "Disable bridge for the room and clear all configuration",
+		},
 
 		// options commands
-		{K: optionMailbox, V: "Get or set mailbox of the room"},
-		{K: optionOwner, V: "Get or set owner of the room"},
-		{K: optionNoSender, V: fmt.Sprintf("Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)", optionNoSender)},
-		{K: optionNoSubject, V: fmt.Sprintf("Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)", optionNoSubject)},
+		{
+			key:         optionMailbox,
+			description: "Get or set mailbox of the room",
+		},
+		{
+			key:         optionOwner,
+			description: "Get or set owner of the room",
+		},
+		{
+			key: optionNoSender,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
+				optionNoSender,
+			),
+		},
+		{
+			key: optionNoSubject,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
+				optionNoSubject,
+			),
+		},
 	}
 
 	// sanitizers is map of option name => sanitizer function
@@ -37,7 +77,7 @@ var (
 )
 
 func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []string) {
-	if _, ok := commands.Get(command[0]); !ok {
+	if _, ok := commands.get(command[0]); !ok {
 		return
 	}
 
@@ -76,13 +116,13 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 
 	var msg strings.Builder
 	msg.WriteString("the following commands are supported:\n\n")
-	commands.ForEach(func(command, description string) {
+	for _, command := range commands {
 		msg.WriteString("* **")
-		msg.WriteString(command)
+		msg.WriteString(command.key)
 		msg.WriteString("** - ")
-		msg.WriteString(description)
+		msg.WriteString(command.description)
 		msg.WriteString("\n")
-	})
+	}
 
 	content := format.RenderMarkdown(msg.String(), true, true)
 	content.MsgType = event.MsgNotice
