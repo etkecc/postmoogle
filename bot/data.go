@@ -13,6 +13,13 @@ import (
 
 const settingskey = "cc.etke.postmoogle.settings"
 
+const (
+	optionOwner     = "owner"
+	optionMailbox   = "mailbox"
+	optionNoSender  = "nosender"
+	optionNoSubject = "nosubject"
+)
+
 var migrations = []string{}
 
 // settings of a room
@@ -31,7 +38,7 @@ func (s settings) Allowed(noowner bool, userID id.UserID) bool {
 		return true
 	}
 
-	owner := s.Get("owner")
+	owner := s.Owner()
 	if owner == "" {
 		return true
 	}
@@ -50,12 +57,20 @@ func (s settings) Get(key string) string {
 	return value
 }
 
+func (s settings) Mailbox() string {
+	return s.Get(optionMailbox)
+}
+
+func (s settings) Owner() string {
+	return s.Get(optionOwner)
+}
+
 func (s settings) NoSender() bool {
-	return utils.Bool(s.Get("nosender"))
+	return utils.Bool(s.Get(optionNoSender))
 }
 
 func (s settings) NoSubject() bool {
-	return utils.Bool(s.Get("nosubject"))
+	return utils.Bool(s.Get(optionNoSubject))
 }
 
 // Set option
@@ -110,7 +125,7 @@ func (b *Bot) syncRooms(ctx context.Context) error {
 			b.log.Warn("cannot get %s settings: %v", roomID, err)
 			continue
 		}
-		mailbox := cfg.Get("mailbox")
+		mailbox := cfg.Mailbox()
 		if mailbox != "" {
 			b.rooms[mailbox] = roomID
 		}
@@ -132,9 +147,9 @@ func (b *Bot) migrateSettings(ctx context.Context, roomID id.RoomID) {
 		return
 	}
 	cfg := settings{}
-	cfg.Set("mailbox", config.Mailbox)
-	cfg.Set("owner", config.Owner.String())
-	cfg.Set("nosender", strconv.FormatBool(config.NoSender))
+	cfg.Set(optionMailbox, config.Mailbox)
+	cfg.Set(optionOwner, config.Owner.String())
+	cfg.Set(optionNoSender, strconv.FormatBool(config.NoSender))
 
 	err = b.setSettings(ctx, roomID, cfg)
 	if err != nil {
