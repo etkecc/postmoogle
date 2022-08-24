@@ -161,7 +161,7 @@ func (b *Bot) getSettings(ctx context.Context, roomID id.RoomID) (settings, erro
 	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("getSettings"))
 	defer span.Finish()
 
-	var config settings
+	config := settings{}
 	err := b.lp.GetClient().GetRoomAccountData(roomID, settingskey, &config)
 	if err != nil {
 		if strings.Contains(err.Error(), "M_NOT_FOUND") {
