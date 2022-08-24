@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/getsentry/sentry-go"
@@ -18,20 +19,26 @@ var (
 	commands = map[string]string{
 		// special commands
 		"help": "Get help",
-		"stop": "Disable bridge for that room and clear all configuration",
+		"stop": "Disable bridge for the room and clear all configuration",
 
 		// options commands
-		"mailbox":   "Get or set mailbox of that room",
-		"owner":     "Get or set owner of that room",
-		"nosender":  "Get or set `nosender` of that room (`true` - hide email sender; `false` - show email sender)",
-		"nosubject": "Get or set `nosubject` of that room (`true` - hide email subject; `false` - show email subject)",
+		optionMailbox: "Get or set mailbox of the room",
+		optionOwner:   "Get or set owner of the room",
+		optionNoSender: fmt.Sprintf(
+			"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
+			optionNoSender,
+		),
+		optionNoSubject: fmt.Sprintf(
+			"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
+			optionNoSubject,
+		),
 	}
 
 	// sanitizers is map of option name => sanitizer function
 	sanitizers = map[string]sanitizerFunc{
-		"mailbox":   utils.Mailbox,
-		"nosender":  utils.SanitizeBoolString,
-		"nosubject": utils.SanitizeBoolString,
+		optionMailbox:   utils.Mailbox,
+		optionNoSender:  utils.SanitizeBoolString,
+		optionNoSubject: utils.SanitizeBoolString,
 	}
 )
 
@@ -106,7 +113,7 @@ func (b *Bot) runStop(ctx context.Context, evt *event.Event) {
 		return
 	}
 
-	mailbox := cfg.Get("mailbox")
+	mailbox := cfg.Get(optionMailbox)
 	if mailbox == "" {
 		b.Notice(span.Context(), evt.RoomID, "that room is not configured yet")
 		return
@@ -150,7 +157,7 @@ func (b *Bot) getOption(ctx context.Context, evt *event.Event, name string) {
 		return
 	}
 
-	if name == "mailbox" {
+	if name == optionMailbox {
 		msg = msg + "@" + b.domain
 	}
 
@@ -167,7 +174,7 @@ func (b *Bot) setOption(ctx context.Context, evt *event.Event, name, value strin
 		value = sanitizer(value)
 	}
 
-	if name == "mailbox" {
+	if name == optionMailbox {
 		existingID, ok := b.GetMapping(ctx, value)
 		if ok && existingID != "" && existingID != evt.RoomID {
 			b.Notice(span.Context(), evt.RoomID, "Mailbox %s@%s already taken", value, b.domain)
@@ -187,9 +194,9 @@ func (b *Bot) setOption(ctx context.Context, evt *event.Event, name, value strin
 	}
 
 	cfg.Set(name, value)
-	if name == "mailbox" {
+	if name == optionMailbox {
 		msg = msg + "@" + b.domain
-		cfg.Set("owner", evt.Sender.String())
+		cfg.Set(optionOwner, evt.Sender.String())
 		b.roomsmu.Lock()
 		b.rooms[value] = evt.RoomID
 		b.roomsmu.Unlock()
