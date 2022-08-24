@@ -7,6 +7,8 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 const settingskey = "cc.etke.postmoogle.settings"
@@ -39,7 +41,21 @@ func (s settings) Allowed(noowner bool, userID id.UserID) bool {
 
 // Get option
 func (s settings) Get(key string) string {
-	return s[strings.ToLower(strings.TrimSpace(key))]
+	value := s[strings.ToLower(strings.TrimSpace(key))]
+
+	sanitizer, exists := sanitizers[key]
+	if exists {
+		return sanitizer(value)
+	}
+	return value
+}
+
+func (s settings) NoSender() bool {
+	return utils.Bool(s.Get("nosender"))
+}
+
+func (s settings) NoSubject() bool {
+	return utils.Bool(s.Get("nosubject"))
 }
 
 // Set option

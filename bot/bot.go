@@ -102,12 +102,12 @@ func (b *Bot) Send(ctx context.Context, from, to, subject, plaintext, html strin
 	}
 
 	var text strings.Builder
-	if !utils.Bool(settings.Get("nosender")) {
+	if !settings.NoSender() {
 		text.WriteString("From: ")
 		text.WriteString(from)
 		text.WriteString("\n\n")
 	}
-	if !utils.Bool(settings.Get("nosubject")) {
+	if !settings.NoSubject() {
 		text.WriteString("# ")
 		text.WriteString(subject)
 		text.WriteString("\n\n")
