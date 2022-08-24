@@ -107,9 +107,11 @@ func (b *Bot) Send(ctx context.Context, from, to, subject, plaintext, html strin
 		text.WriteString(from)
 		text.WriteString("\n\n")
 	}
-	text.WriteString("# ")
-	text.WriteString(subject)
-	text.WriteString("\n\n")
+	if !utils.Bool(settings.Get("nosubject")) {
+		text.WriteString("# ")
+		text.WriteString(subject)
+		text.WriteString("\n\n")
+	}
 	if html != "" {
 		text.WriteString(format.HTMLToMarkdown(html))
 	} else {

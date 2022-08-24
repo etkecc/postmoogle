@@ -20,15 +20,17 @@ var (
 		"help": "Get help",
 
 		// options commands
-		"mailbox":  "Get or set mailbox of that room",
-		"owner":    "Get or set owner of that room",
-		"nosender": "Get or set `nosender` of that room (`true` - hide email sender; `false` - show email sender)",
+		"mailbox":   "Get or set mailbox of that room",
+		"owner":     "Get or set owner of that room",
+		"nosender":  "Get or set `nosender` of that room (`true` - hide email sender; `false` - show email sender)",
+		"nosubject": "Get or set `nosubject` of that room (`true` - hide email subject; `false` - show email subject)",
 	}
 
 	// sanitizers is map of option name => sanitizer function
 	sanitizers = map[string]sanitizerFunc{
-		"mailbox":  utils.Mailbox,
-		"nosender": utils.SanitizeBoolString,
+		"mailbox":   utils.Mailbox,
+		"nosender":  utils.SanitizeBoolString,
+		"nosubject": utils.SanitizeBoolString,
 	}
 )
 
