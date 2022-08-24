@@ -41,13 +41,13 @@ func (s settings) Allowed(noowner bool, userID id.UserID) bool {
 
 // Get option
 func (s settings) Get(key string) string {
-	rawValue := s[strings.ToLower(strings.TrimSpace(key))]
+	value := s[strings.ToLower(strings.TrimSpace(key))]
 
 	sanitizer, exists := sanitizers[key]
 	if exists {
-		return sanitizer(rawValue)
+		return sanitizer(value)
 	}
-	return rawValue
+	return value
 }
 
 func (s settings) NoSender() bool {
