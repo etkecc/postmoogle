@@ -90,8 +90,8 @@ func (b *Bot) Start() error {
 }
 
 // Send email to matrix room
-func (b *Bot) Send(ctx context.Context, from, to, subject, plaintext, html string, files []*utils.File) error {
-	roomID, ok := b.GetMapping(ctx, utils.Mailbox(to))
+func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
+	roomID, ok := b.GetMapping(ctx, utils.Mailbox(email.To))
 	if !ok {
 		return errors.New("room not found")
 	}
@@ -104,26 +104,56 @@ func (b *Bot) Send(ctx context.Context, from, to, subject, plaintext, html strin
 	var text strings.Builder
 	if !settings.NoSender() {
 		text.WriteString("From: ")
-		text.WriteString(from)
+		text.WriteString(email.From)
 		text.WriteString("\n\n")
 	}
 	if !settings.NoSubject() {
 		text.WriteString("# ")
-		text.WriteString(subject)
+		text.WriteString(email.Subject)
 		text.WriteString("\n\n")
 	}
-	if html != "" {
-		text.WriteString(format.HTMLToMarkdown(html))
+	if email.HTML != "" {
+		text.WriteString(format.HTMLToMarkdown(email.HTML))
 	} else {
-		text.WriteString(plaintext)
+		text.WriteString(email.Text)
 	}
 
-	content := format.RenderMarkdown(text.String(), true, true)
-	_, err = b.lp.Send(roomID, content)
-	if err != nil {
-		return err
+	contentParsed := format.RenderMarkdown(text.String(), true, true)
+
+	var threadID id.EventID
+	if email.InReplyTo != "" {
+		threadID = b.getThreadID(ctx, roomID, email.InReplyTo)
+		if threadID != "" {
+			contentParsed.SetRelatesTo(&event.RelatesTo{
+				Type:    event.RelThread,
+				EventID: threadID,
+			})
+			b.setThreadID(ctx, roomID, email.MessageID, threadID)
+		}
 	}
 
+	content := &event.Content{
+		Raw: map[string]interface{}{
+			eventMessageIDkey: email.MessageID,
+			eventInReplyToKey: email.InReplyTo,
+		},
+		Parsed: contentParsed,
+	}
+	eventID, serr := b.lp.Send(roomID, content)
+	if serr != nil {
+		return serr
+	}
+
+	if threadID == "" {
+		b.setThreadID(ctx, roomID, email.MessageID, eventID)
+		threadID = eventID
+	}
+
+	b.sendFiles(ctx, roomID, email.Files, threadID)
+	return nil
+}
+
+func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.File, threadID id.EventID) {
 	for _, file := range files {
 		req := file.Convert()
 		resp, err := b.lp.GetClient().UploadMedia(req)
@@ -135,13 +165,15 @@ func (b *Bot) Send(ctx context.Context, from, to, subject, plaintext, html strin
 			MsgType: event.MsgFile,
 			Body:    req.FileName,
 			URL:     resp.ContentURI.CUString(),
+			RelatesTo: &event.RelatesTo{
+				Type:    event.RelThread,
+				EventID: threadID,
+			},
 		})
 		if err != nil {
 			b.Error(ctx, roomID, "cannot send uploaded file %s: %v", req.FileName, err)
 		}
 	}
-
-	return nil
 }
 
 // GetMappings returns mapping of mailbox = room
