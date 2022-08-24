@@ -16,22 +16,16 @@ import (
 type sanitizerFunc func(string) string
 
 var (
-	commands = map[string]string{
+	commands = utils.List{
 		// special commands
-		"help": "Get help",
-		"stop": "Disable bridge for the room and clear all configuration",
+		{K: "help", V: "Show this help message"},
+		{K: "stop", V: "Disable bridge for the room and clear all configuration"},
 
 		// options commands
-		optionMailbox: "Get or set mailbox of the room",
-		optionOwner:   "Get or set owner of the room",
-		optionNoSender: fmt.Sprintf(
-			"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
-			optionNoSender,
-		),
-		optionNoSubject: fmt.Sprintf(
-			"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
-			optionNoSubject,
-		),
+		{K: optionMailbox, V: "Get or set mailbox of the room"},
+		{K: optionOwner, V: "Get or set owner of the room"},
+		{K: optionNoSender, V: fmt.Sprintf("Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)", optionNoSender)},
+		{K: optionNoSubject, V: fmt.Sprintf("Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)", optionNoSubject)},
 	}
 
 	// sanitizers is map of option name => sanitizer function
@@ -43,7 +37,7 @@ var (
 )
 
 func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []string) {
-	if _, ok := commands[command[0]]; !ok {
+	if _, ok := commands.Get(command[0]); !ok {
 		return
 	}
 
@@ -82,13 +76,13 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 
 	var msg strings.Builder
 	msg.WriteString("the following commands are supported:\n\n")
-	for name, desc := range commands {
+	commands.ForEach(func(command, description string) {
 		msg.WriteString("* **")
-		msg.WriteString(name)
+		msg.WriteString(command)
 		msg.WriteString("** - ")
-		msg.WriteString(desc)
+		msg.WriteString(description)
 		msg.WriteString("\n")
-	}
+	})
 
 	content := format.RenderMarkdown(msg.String(), true, true)
 	content.MsgType = event.MsgNotice
