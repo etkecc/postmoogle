@@ -1,8 +1,9 @@
 From: James Hillyerd <james@makita.skynet>
 Content-Type: multipart/alternative; boundary="Apple-Mail=_E091454E-BCFA-43B4-99C0-678AEC9868D6"
-Subject: MIME test 1
+Subject: MIME test 2 with reply
 Date: Sat, 13 Oct 2012 15:33:07 -0700
-Message-Id: <4E2E5A48-1A2C-4450-8663-D41B451DA93A@makita.skynet>
+Message-Id: <4E2E5A48-1A2C-4450-8663-D41B451DA93E@makita.skynet>
+In-Reply-To: <4E2E5A48-1A2C-4450-8663-D41B451DA93A@makita.skynet>
 To: test@localhost
 Mime-Version: 1.0 (Apple Message framework v1283)
 X-Mailer: Apple Mail (2.1283)

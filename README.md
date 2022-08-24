@@ -13,7 +13,7 @@ An Email to Matrix bridge
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms
 - [x] Receive attachments
-- [ ] Map email threads to matrix threads
+- [x] Map email threads to matrix threads
 
 ### Send
 
