@@ -18,6 +18,7 @@ var (
 	commands = map[string]string{
 		// special commands
 		"help": "Get help",
+		"stop": "Disable bridge for that room",
 
 		// options commands
 		"mailbox":  "Get or set mailbox of that room",
@@ -45,6 +46,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []str
 	switch command[0] {
 	case "help":
 		b.sendHelp(ctx, evt.RoomID)
+	case "stop":
+		b.runStop(ctx, evt)
 	default:
 		b.handleOption(ctx, evt, command)
 	}
@@ -84,6 +87,40 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 	if err != nil {
 		b.Error(span.Context(), roomID, "cannot send message: %v", err)
 	}
+}
+
+func (b *Bot) runStop(ctx context.Context, evt *event.Event) {
+	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("runStop"))
+	defer span.Finish()
+
+	cfg, err := b.getSettings(span.Context(), evt.RoomID)
+	if err != nil {
+		b.Error(span.Context(), evt.RoomID, "failed to retrieve settings: %v", err)
+		return
+	}
+
+	if !cfg.Allowed(b.noowner, evt.Sender) {
+		b.Notice(span.Context(), evt.RoomID, "you don't have permission to do that")
+		return
+	}
+
+	mailbox := cfg.Get("mailbox")
+	if mailbox == "" {
+		b.Notice(span.Context(), evt.RoomID, "that room is not configured yet")
+		return
+	}
+
+	b.roomsmu.Lock()
+	delete(b.rooms, mailbox)
+	b.roomsmu.Unlock()
+
+	err = b.setSettings(span.Context(), evt.RoomID, settings{})
+	if err != nil {
+		b.Error(span.Context(), evt.RoomID, "cannot update settings: %v", err)
+		return
+	}
+
+	b.Notice(span.Context(), evt.RoomID, "mailbox has been disabled")
 }
 
 func (b *Bot) handleOption(ctx context.Context, evt *event.Event, command []string) {
