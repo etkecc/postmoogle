@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/getsentry/sentry-go"
+	"gitlab.com/etke.cc/postmoogle/utils"
 	"maunium.net/go/mautrix/id"
 )
 
@@ -39,7 +40,21 @@ func (s settings) Allowed(noowner bool, userID id.UserID) bool {
 
 // Get option
 func (s settings) Get(key string) string {
-	return s[strings.ToLower(strings.TrimSpace(key))]
+	rawValue := s[strings.ToLower(strings.TrimSpace(key))]
+
+	sanitizer, exists := sanitizers[key]
+	if exists {
+		return sanitizer(rawValue)
+	}
+	return rawValue
+}
+
+func (s settings) NoSender() bool {
+	return utils.Bool(s.Get("nosender"))
+}
+
+func (s settings) NoSubject() bool {
+	return utils.Bool(s.Get("nosubject"))
 }
 
 // Set option
