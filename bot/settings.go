@@ -1,11 +1,9 @@
 package bot
 
 import (
-	"context"
 	"strconv"
 	"strings"
 
-	"github.com/getsentry/sentry-go"
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
@@ -68,7 +66,7 @@ func (s settings) Set(key, value string) {
 }
 
 // TODO: remove after migration
-func (b *Bot) migrateSettings(ctx context.Context, roomID id.RoomID) {
+func (b *Bot) migrateSettings(roomID id.RoomID) {
 	var config settingsOld
 	err := b.lp.GetClient().GetRoomAccountData(roomID, settingskey, &config)
 	if err != nil {
@@ -84,16 +82,13 @@ func (b *Bot) migrateSettings(ctx context.Context, roomID id.RoomID) {
 	cfg.Set(optionOwner, config.Owner.String())
 	cfg.Set(optionNoSender, strconv.FormatBool(config.NoSender))
 
-	err = b.setSettings(ctx, roomID, cfg)
+	err = b.setSettings(roomID, cfg)
 	if err != nil {
 		b.log.Error("cannot migrate settings: %v", err)
 	}
 }
 
-func (b *Bot) getSettings(ctx context.Context, roomID id.RoomID) (settings, error) {
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("getSettings"))
-	defer span.Finish()
-
+func (b *Bot) getSettings(roomID id.RoomID) (settings, error) {
 	config := settings{}
 	err := b.lp.GetClient().GetRoomAccountData(roomID, settingskey, &config)
 	if err != nil {
@@ -108,9 +103,6 @@ func (b *Bot) getSettings(ctx context.Context, roomID id.RoomID) (settings, erro
 	return config, err
 }
 
-func (b *Bot) setSettings(ctx context.Context, roomID id.RoomID, cfg settings) error {
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("setSettings"))
-	defer span.Finish()
-
+func (b *Bot) setSettings(roomID id.RoomID, cfg settings) error {
 	return b.lp.GetClient().SetRoomAccountData(roomID, settingskey, cfg)
 }

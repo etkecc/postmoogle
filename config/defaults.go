@@ -10,7 +10,4 @@ var defaultConfig = &Config{
 		DSN:     "local.db",
 		Dialect: "sqlite3",
 	},
-	Sentry: Sentry{
-		SampleRate: 20,
-	},
 }

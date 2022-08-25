@@ -47,11 +47,7 @@ func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string, noo
 func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args ...interface{}) {
 	b.log.Error(message, args...)
 
-	if sentry.HasHubOnContext(ctx) {
-		sentry.GetHubFromContext(ctx).CaptureException(fmt.Errorf(message, args...))
-	} else {
-		sentry.CaptureException(fmt.Errorf(message, args...))
-	}
+	sentry.GetHubFromContext(ctx).CaptureException(fmt.Errorf(message, args...))
 	if roomID != "" {
 		// nolint // if something goes wrong here nobody can help...
 		b.lp.Send(roomID, &event.MessageEventContent{
@@ -67,11 +63,7 @@ func (b *Bot) Notice(ctx context.Context, roomID id.RoomID, message string) {
 	content.MsgType = event.MsgNotice
 	_, err := b.lp.Send(roomID, &content)
 	if err != nil {
-		if sentry.HasHubOnContext(ctx) {
-			sentry.GetHubFromContext(ctx).CaptureException(err)
-		} else {
-			sentry.CaptureException(err)
-		}
+		sentry.GetHubFromContext(ctx).CaptureException(err)
 	}
 }
 
@@ -80,8 +72,7 @@ func (b *Bot) Start() error {
 	if err := b.migrate(); err != nil {
 		return err
 	}
-	ctx := sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone())
-	if err := b.syncRooms(ctx); err != nil {
+	if err := b.syncRooms(); err != nil {
 		return err
 	}
 
@@ -92,12 +83,12 @@ func (b *Bot) Start() error {
 
 // Send email to matrix room
 func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
-	roomID, ok := b.GetMapping(ctx, utils.Mailbox(email.To))
+	roomID, ok := b.GetMapping(utils.Mailbox(email.To))
 	if !ok {
 		return errors.New("room not found")
 	}
 
-	settings, err := b.getSettings(ctx, roomID)
+	settings, err := b.getSettings(roomID)
 	if err != nil {
 		b.Error(ctx, roomID, "cannot get settings: %v", err)
 	}
@@ -123,13 +114,13 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 
 	var threadID id.EventID
 	if email.InReplyTo != "" {
-		threadID = b.getThreadID(ctx, roomID, email.InReplyTo)
+		threadID = b.getThreadID(roomID, email.InReplyTo)
 		if threadID != "" {
 			contentParsed.SetRelatesTo(&event.RelatesTo{
 				Type:    event.RelThread,
 				EventID: threadID,
 			})
-			b.setThreadID(ctx, roomID, email.MessageID, threadID)
+			b.setThreadID(roomID, email.MessageID, threadID)
 		}
 	}
 
@@ -146,7 +137,7 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 	}
 
 	if threadID == "" {
-		b.setThreadID(ctx, roomID, email.MessageID, eventID)
+		b.setThreadID(roomID, email.MessageID, eventID)
 		threadID = eventID
 	}
 
@@ -178,9 +169,9 @@ func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.Fi
 }
 
 // GetMappings returns mapping of mailbox = room
-func (b *Bot) GetMapping(ctx context.Context, mailbox string) (id.RoomID, bool) {
+func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
 	if len(b.rooms) == 0 {
-		err := b.syncRooms(ctx)
+		err := b.syncRooms()
 		if err != nil {
 			return "", false
 		}

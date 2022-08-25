@@ -53,7 +53,6 @@ func initSentry(cfg *config.Config) {
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:              cfg.Sentry.DSN,
 		AttachStacktrace: true,
-		TracesSampleRate: float64(cfg.Sentry.SampleRate) / 100,
 	})
 	if err != nil {
 		log.Fatal("cannot initialize sentry: %v", err)

@@ -1,10 +1,8 @@
 package bot
 
 import (
-	"context"
 	"strings"
 
-	"github.com/getsentry/sentry-go"
 	"maunium.net/go/mautrix/id"
 )
 
@@ -59,11 +57,9 @@ func (b *Bot) migrate() error {
 	return nil
 }
 
-func (b *Bot) syncRooms(ctx context.Context) error {
+func (b *Bot) syncRooms() error {
 	b.roomsmu.Lock()
 	defer b.roomsmu.Unlock()
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("syncRooms"))
-	defer span.Finish()
 
 	resp, err := b.lp.GetClient().JoinedRooms()
 	if err != nil {
@@ -71,8 +67,8 @@ func (b *Bot) syncRooms(ctx context.Context) error {
 	}
 	b.rooms = make(map[string]id.RoomID, len(resp.JoinedRooms))
 	for _, roomID := range resp.JoinedRooms {
-		b.migrateSettings(span.Context(), roomID)
-		cfg, serr := b.getSettings(span.Context(), roomID)
+		b.migrateSettings(roomID)
+		cfg, serr := b.getSettings(roomID)
 		if serr != nil {
 			b.log.Warn("cannot get %s settings: %v", roomID, err)
 			continue
@@ -86,10 +82,7 @@ func (b *Bot) syncRooms(ctx context.Context) error {
 	return nil
 }
 
-func (b *Bot) getThreadID(ctx context.Context, roomID id.RoomID, messageID string) id.EventID {
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("getThreadID"))
-	defer span.Finish()
-
+func (b *Bot) getThreadID(roomID id.RoomID, messageID string) id.EventID {
 	key := messagekey + "." + messageID
 	data := map[string]id.EventID{}
 	err := b.lp.GetClient().GetRoomAccountData(roomID, key, &data)
@@ -103,10 +96,7 @@ func (b *Bot) getThreadID(ctx context.Context, roomID id.RoomID, messageID strin
 	return data["eventID"]
 }
 
-func (b *Bot) setThreadID(ctx context.Context, roomID id.RoomID, messageID string, eventID id.EventID) {
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("setThreadID"))
-	defer span.Finish()
-
+func (b *Bot) setThreadID(roomID id.RoomID, messageID string, eventID id.EventID) {
 	key := messagekey + "." + messageID
 	data := map[string]id.EventID{
 		"eventID": eventID,

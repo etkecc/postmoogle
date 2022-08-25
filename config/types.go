@@ -42,6 +42,5 @@ type DB struct {
 
 // Sentry config
 type Sentry struct {
-	DSN        string
-	SampleRate int
+	DSN string
 }

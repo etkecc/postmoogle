@@ -37,7 +37,7 @@ func (s *session) Rcpt(to string) error {
 		return smtp.ErrAuthRequired
 	}
 
-	_, ok := s.client.GetMapping(s.ctx, utils.Mailbox(to))
+	_, ok := s.client.GetMapping(utils.Mailbox(to))
 	if !ok {
 		s.log.Debug("mapping for %s not found", to)
 		return smtp.ErrAuthRequired

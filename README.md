@@ -39,7 +39,6 @@ env vars
 * **POSTMOOGLE_FEDERATION** - allow usage of Postmoogle by users from others homeservers
 * **POSTMOOGLE_NOENCRYPTION** - disable encryption support
 * **POSTMOOGLE_SENTRY_DSN** - sentry DSN
-* **POSTMOOGLE_SENTRY_RATE** - sentry sample rate, from 0 to 100 (default: 20)
 * **POSTMOOGLE_LOGLEVEL** - log level
 * **POSTMOOGLE_DB_DSN** - database connection string
 * **POSTMOOGLE_DB_DIALECT** - database dialect (postgres, sqlite3)

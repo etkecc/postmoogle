@@ -3,11 +3,10 @@ package bot
 import (
 	"context"
 	"strings"
-
-	"maunium.net/go/mautrix/event"
 )
 
-func (b *Bot) handle(ctx context.Context, evt *event.Event) {
+func (b *Bot) handle(ctx context.Context) {
+	evt := eventFromContext(ctx)
 	content := evt.Content.AsMessage()
 	if content == nil {
 		b.Error(ctx, evt.RoomID, "cannot read message")

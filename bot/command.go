@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/getsentry/sentry-go"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
 
@@ -89,9 +88,9 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []str
 	case "help":
 		b.sendHelp(ctx, evt.RoomID)
 	case "stop":
-		b.runStop(ctx, evt)
+		b.runStop(ctx)
 	default:
-		b.handleOption(ctx, evt, command)
+		b.handleOption(ctx, command)
 	}
 }
 
@@ -110,9 +109,6 @@ func (b *Bot) parseCommand(message string) []string {
 }
 
 func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("sendIntroduction"))
-	defer span.Finish()
-
 	var msg strings.Builder
 	msg.WriteString("Hello!\n\n")
 	msg.WriteString("This is Postmoogle - a bot that bridges Email to Matrix.\n\n")
@@ -130,9 +126,6 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 }
 
 func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("sendHelp"))
-	defer span.Finish()
-
 	var msg strings.Builder
 	msg.WriteString("The following commands are supported:\n\n")
 	for _, command := range commands {
@@ -142,24 +135,22 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 	b.Notice(ctx, roomID, msg.String())
 }
 
-func (b *Bot) runStop(ctx context.Context, evt *event.Event) {
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("runStop"))
-	defer span.Finish()
-
-	cfg, err := b.getSettings(span.Context(), evt.RoomID)
+func (b *Bot) runStop(ctx context.Context) {
+	evt := eventFromContext(ctx)
+	cfg, err := b.getSettings(evt.RoomID)
 	if err != nil {
-		b.Error(span.Context(), evt.RoomID, "failed to retrieve settings: %v", err)
+		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
 	}
 
 	if !cfg.Allowed(b.noowner, evt.Sender) {
-		b.Notice(span.Context(), evt.RoomID, "you don't have permission to do that")
+		b.Notice(ctx, evt.RoomID, "you don't have permission to do that")
 		return
 	}
 
 	mailbox := cfg.Get(optionMailbox)
 	if mailbox == "" {
-		b.Notice(span.Context(), evt.RoomID, "that room is not configured yet")
+		b.Notice(ctx, evt.RoomID, "that room is not configured yet")
 		return
 	}
 
@@ -167,37 +158,36 @@ func (b *Bot) runStop(ctx context.Context, evt *event.Event) {
 	delete(b.rooms, mailbox)
 	b.roomsmu.Unlock()
 
-	err = b.setSettings(span.Context(), evt.RoomID, settings{})
+	err = b.setSettings(evt.RoomID, settings{})
 	if err != nil {
-		b.Error(span.Context(), evt.RoomID, "cannot update settings: %v", err)
+		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
 		return
 	}
 
-	b.Notice(span.Context(), evt.RoomID, "mailbox has been disabled")
+	b.Notice(ctx, evt.RoomID, "mailbox has been disabled")
 }
 
-func (b *Bot) handleOption(ctx context.Context, evt *event.Event, command []string) {
+func (b *Bot) handleOption(ctx context.Context, command []string) {
 	if len(command) == 1 {
-		b.getOption(ctx, evt, command[0])
+		b.getOption(ctx, command[0])
 		return
 	}
-	b.setOption(ctx, evt, command[0], command[1])
+	b.setOption(ctx, command[0], command[1])
 }
 
-func (b *Bot) getOption(ctx context.Context, evt *event.Event, name string) {
+func (b *Bot) getOption(ctx context.Context, name string) {
 	msg := "`%s` of this room is %s"
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("getOption"))
-	defer span.Finish()
 
-	cfg, err := b.getSettings(span.Context(), evt.RoomID)
+	evt := eventFromContext(ctx)
+	cfg, err := b.getSettings(evt.RoomID)
 	if err != nil {
-		b.Error(span.Context(), evt.RoomID, "failed to retrieve settings: %v", err)
+		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
 	}
 
 	value := cfg.Get(name)
 	if value == "" {
-		b.Notice(span.Context(), evt.RoomID, fmt.Sprintf("`%s` is not set", name))
+		b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` is not set", name))
 		return
 	}
 
@@ -205,12 +195,10 @@ func (b *Bot) getOption(ctx context.Context, evt *event.Event, name string) {
 		msg = msg + "@" + b.domain
 	}
 
-	b.Notice(span.Context(), evt.RoomID, fmt.Sprintf(msg, name, value))
+	b.Notice(ctx, evt.RoomID, fmt.Sprintf(msg, name, value))
 }
 
-func (b *Bot) setOption(ctx context.Context, evt *event.Event, name, value string) {
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("setOption"))
-	defer span.Finish()
+func (b *Bot) setOption(ctx context.Context, name, value string) {
 	msg := "`%s` of this room set to %s"
 
 	sanitizer, ok := sanitizers[name]
@@ -218,22 +206,23 @@ func (b *Bot) setOption(ctx context.Context, evt *event.Event, name, value strin
 		value = sanitizer(value)
 	}
 
+	evt := eventFromContext(ctx)
 	if name == optionMailbox {
-		existingID, ok := b.GetMapping(ctx, value)
+		existingID, ok := b.GetMapping(value)
 		if ok && existingID != "" && existingID != evt.RoomID {
-			b.Notice(span.Context(), evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken", value, b.domain))
+			b.Notice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken", value, b.domain))
 			return
 		}
 	}
 
-	cfg, err := b.getSettings(span.Context(), evt.RoomID)
+	cfg, err := b.getSettings(evt.RoomID)
 	if err != nil {
-		b.Error(span.Context(), evt.RoomID, "failed to retrieve settings: %v", err)
+		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
 	}
 
 	if !cfg.Allowed(b.noowner, evt.Sender) {
-		b.Notice(span.Context(), evt.RoomID, "you don't have permission to do that")
+		b.Notice(ctx, evt.RoomID, "you don't have permission to do that")
 		return
 	}
 
@@ -246,11 +235,11 @@ func (b *Bot) setOption(ctx context.Context, evt *event.Event, name, value strin
 		b.roomsmu.Unlock()
 	}
 
-	err = b.setSettings(span.Context(), evt.RoomID, cfg)
+	err = b.setSettings(evt.RoomID, cfg)
 	if err != nil {
-		b.Error(span.Context(), evt.RoomID, "cannot update settings: %v", err)
+		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
 		return
 	}
 
-	b.Notice(span.Context(), evt.RoomID, fmt.Sprintf(msg, name, value))
+	b.Notice(ctx, evt.RoomID, fmt.Sprintf(msg, name, value))
 }
