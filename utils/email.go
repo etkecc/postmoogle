@@ -11,3 +11,27 @@ type Email struct {
 	HTML      string
 	Files     []*File
 }
+
+// NewEmail constructs Email object
+func NewEmail(messageID, inReplyTo, subject, from, to, text, html string, files []*File) *Email {
+	email := &Email{
+		MessageID: messageID,
+		InReplyTo: inReplyTo,
+		From:      from,
+		To:        to,
+		Subject:   subject,
+		Text:      text,
+		HTML:      html,
+		Files:     files,
+	}
+
+	if html != "" {
+		var err error
+		html, err = StripHTMLTag(html, "style")
+		if err == nil {
+			email.HTML = html
+		}
+	}
+
+	return email
+}
