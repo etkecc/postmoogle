@@ -116,11 +116,7 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 	var msg strings.Builder
 	msg.WriteString("The following commands are supported:\n\n")
 	for _, command := range commands {
-		msg.WriteString("* **")
-		msg.WriteString(fmt.Sprintf("`%s %s`", b.prefix, command.key))
-		msg.WriteString("** - ")
-		msg.WriteString(command.description)
-		msg.WriteString("\n")
+		msg.WriteString(fmt.Sprintf("* **`%s %s`** - %s\n", b.prefix, command.key, command.description))
 	}
 
 	b.Notice(ctx, roomID, msg.String())
