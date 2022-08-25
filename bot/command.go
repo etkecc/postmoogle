@@ -7,7 +7,6 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"maunium.net/go/mautrix/event"
-	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
@@ -115,21 +114,16 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 	defer span.Finish()
 
 	var msg strings.Builder
-	msg.WriteString("the following commands are supported:\n\n")
+	msg.WriteString("The following commands are supported:\n\n")
 	for _, command := range commands {
 		msg.WriteString("* **")
-		msg.WriteString(command.key)
+		msg.WriteString(fmt.Sprintf("`%s %s`", b.prefix, command.key))
 		msg.WriteString("** - ")
 		msg.WriteString(command.description)
 		msg.WriteString("\n")
 	}
 
-	content := format.RenderMarkdown(msg.String(), true, true)
-	content.MsgType = event.MsgNotice
-	_, err := b.lp.Send(roomID, content)
-	if err != nil {
-		b.Error(span.Context(), roomID, "cannot send message: %v", err)
-	}
+	b.Notice(ctx, roomID, msg.String())
 }
 
 func (b *Bot) runStop(ctx context.Context, evt *event.Event) {
