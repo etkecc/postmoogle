@@ -12,10 +12,6 @@ func (b *Bot) initSync() {
 	b.lp.OnEventType(
 		event.StateMember,
 		func(_ mautrix.EventSource, evt *event.Event) {
-			// Trying to debug the membership=join event being handled twice here.
-			eventJSON, _ := evt.MarshalJSON()
-			b.log.Debug(string(eventJSON))
-
 			go b.onMembership(evt)
 		},
 	)
@@ -108,6 +104,14 @@ func (b *Bot) onEncryptedMessage(evt *event.Event) {
 
 // onBotJoin handles the "bot joined the room" event
 func (b *Bot) onBotJoin(evt *event.Event, hub *sentry.Hub) {
+	// Workaround for membership=join events which are delivered to us twice,
+	// as described in this bug report: https://github.com/matrix-org/synapse/issues/9768
+	_, exists := b.handledEvents.LoadOrStore(evt.ID, true)
+	if exists {
+		b.log.Info("Suppressing already handled event %s", evt.ID)
+		return
+	}
+
 	ctx := sentry.SetHubOnContext(context.Background(), hub)
 	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("onBotJoin"))
 	defer span.Finish()
