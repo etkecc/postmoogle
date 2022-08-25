@@ -61,8 +61,8 @@ func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args 
 }
 
 // Notice sends a notice message to the matrix room
-func (b *Bot) Notice(ctx context.Context, roomID id.RoomID, message string, args ...interface{}) {
-	content := format.RenderMarkdown(fmt.Sprintf(message, args...), true, true)
+func (b *Bot) Notice(ctx context.Context, roomID id.RoomID, message string) {
+	content := format.RenderMarkdown(message, true, true)
 	content.MsgType = event.MsgNotice
 	_, err := b.lp.Send(roomID, &content)
 	if err != nil {
