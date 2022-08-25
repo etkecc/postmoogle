@@ -99,8 +99,6 @@ func (b *Bot) onBotJoin(evt *event.Event, hub *sentry.Hub) {
 	}
 
 	ctx := sentry.SetHubOnContext(context.Background(), hub)
-	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("onBotJoin"))
-	defer span.Finish()
 
 	b.sendIntroduction(ctx, evt.RoomID)
 	b.sendHelp(ctx, evt.RoomID)
