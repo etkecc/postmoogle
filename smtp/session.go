@@ -74,16 +74,15 @@ func (s *session) Data(r io.Reader) error {
 	files = append(files, attachments...)
 	files = append(files, inlines...)
 
-	email := &utils.Email{
-		MessageID: eml.GetHeader("Message-Id"),
-		InReplyTo: eml.GetHeader("In-Reply-To"),
-		Subject:   eml.GetHeader("Subject"),
-		From:      s.from,
-		To:        s.to,
-		Text:      eml.Text,
-		HTML:      eml.HTML,
-		Files:     files,
-	}
+	email := utils.NewEmail(
+		eml.GetHeader("Message-Id"),
+		eml.GetHeader("In-Reply-To"),
+		eml.GetHeader("Subject"),
+		s.from,
+		s.to,
+		eml.Text,
+		eml.HTML,
+		files)
 
 	return s.client.Send(s.ctx, email)
 }
