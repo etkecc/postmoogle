@@ -177,7 +177,7 @@ func (b *Bot) getOption(ctx context.Context, evt *event.Event, name string) {
 
 	value := cfg.Get(name)
 	if value == "" {
-		b.Notice(span.Context(), evt.RoomID, "`%s` is not set", name)
+		b.Notice(span.Context(), evt.RoomID, fmt.Sprintf("`%s` is not set", name))
 		return
 	}
 
@@ -185,7 +185,7 @@ func (b *Bot) getOption(ctx context.Context, evt *event.Event, name string) {
 		msg = msg + "@" + b.domain
 	}
 
-	b.Notice(span.Context(), evt.RoomID, msg, name, value)
+	b.Notice(span.Context(), evt.RoomID, fmt.Sprintf(msg, name, value))
 }
 
 func (b *Bot) setOption(ctx context.Context, evt *event.Event, name, value string) {
@@ -201,7 +201,7 @@ func (b *Bot) setOption(ctx context.Context, evt *event.Event, name, value strin
 	if name == optionMailbox {
 		existingID, ok := b.GetMapping(ctx, value)
 		if ok && existingID != "" && existingID != evt.RoomID {
-			b.Notice(span.Context(), evt.RoomID, "Mailbox %s@%s already taken", value, b.domain)
+			b.Notice(span.Context(), evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken", value, b.domain))
 			return
 		}
 	}
@@ -232,5 +232,5 @@ func (b *Bot) setOption(ctx context.Context, evt *event.Event, name, value strin
 		return
 	}
 
-	b.Notice(span.Context(), evt.RoomID, msg, name, value)
+	b.Notice(span.Context(), evt.RoomID, fmt.Sprintf(msg, name, value))
 }
