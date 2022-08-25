@@ -92,8 +92,8 @@ func (b *Bot) onEncryptedMessage(evt *event.Event) {
 func (b *Bot) onBotJoin(evt *event.Event, hub *sentry.Hub) {
 	// Workaround for membership=join events which are delivered to us twice,
 	// as described in this bug report: https://github.com/matrix-org/synapse/issues/9768
-	_, exists := b.handledJoinEvents.LoadOrStore(evt.ID, true)
-	if exists {
+	_, ok := b.handledJoinEvents.LoadOrStore(evt.ID, true)
+	if ok {
 		b.log.Info("Suppressing already handled event %s", evt.ID)
 		return
 	}
