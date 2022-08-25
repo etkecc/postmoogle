@@ -154,9 +154,7 @@ func (b *Bot) runStop(ctx context.Context) {
 		return
 	}
 
-	b.roomsmu.Lock()
-	delete(b.rooms, mailbox)
-	b.roomsmu.Unlock()
+	b.rooms.Delete(mailbox)
 
 	err = b.setSettings(evt.RoomID, settings{})
 	if err != nil {
@@ -230,9 +228,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	if name == optionMailbox {
 		msg = msg + "@" + b.domain
 		cfg.Set(optionOwner, evt.Sender.String())
-		b.roomsmu.Lock()
-		b.rooms[value] = evt.RoomID
-		b.roomsmu.Unlock()
+		b.rooms.Store(value, evt.RoomID)
 	}
 
 	err = b.setSettings(evt.RoomID, cfg)

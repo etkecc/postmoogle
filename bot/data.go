@@ -58,14 +58,10 @@ func (b *Bot) migrate() error {
 }
 
 func (b *Bot) syncRooms() error {
-	b.roomsmu.Lock()
-	defer b.roomsmu.Unlock()
-
 	resp, err := b.lp.GetClient().JoinedRooms()
 	if err != nil {
 		return err
 	}
-	b.rooms = make(map[string]id.RoomID, len(resp.JoinedRooms))
 	for _, roomID := range resp.JoinedRooms {
 		b.migrateSettings(roomID)
 		cfg, serr := b.getSettings(roomID)
@@ -75,7 +71,7 @@ func (b *Bot) syncRooms() error {
 		}
 		mailbox := cfg.Mailbox()
 		if mailbox != "" {
-			b.rooms[mailbox] = roomID
+			b.rooms.Store(mailbox, roomID)
 		}
 	}
 

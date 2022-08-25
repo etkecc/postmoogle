@@ -23,8 +23,7 @@ type Bot struct {
 	federation        bool
 	prefix            string
 	domain            string
-	rooms             map[string]id.RoomID
-	roomsmu           *sync.Mutex
+	rooms             sync.Map
 	log               *logger.Logger
 	lp                *linkpearl.Linkpearl
 	handledJoinEvents sync.Map
@@ -35,9 +34,9 @@ func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string, noo
 	return &Bot{
 		noowner:    noowner,
 		federation: federation,
-		roomsmu:    &sync.Mutex{},
 		prefix:     prefix,
 		domain:     domain,
+		rooms:      sync.Map{},
 		log:        log,
 		lp:         lp,
 	}
@@ -170,14 +169,15 @@ func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.Fi
 
 // GetMappings returns mapping of mailbox = room
 func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
-	if len(b.rooms) == 0 {
-		err := b.syncRooms()
-		if err != nil {
-			return "", false
-		}
+	v, ok := b.rooms.Load(mailbox)
+	if !ok {
+		return "", ok
+	}
+	roomID, ok := v.(id.RoomID)
+	if !ok {
+		return "", ok
 	}
 
-	roomID, ok := b.rooms[mailbox]
 	return roomID, ok
 }
 
