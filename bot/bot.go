@@ -19,14 +19,15 @@ import (
 
 // Bot represents matrix bot
 type Bot struct {
-	noowner    bool
-	federation bool
-	prefix     string
-	domain     string
-	rooms      map[string]id.RoomID
-	roomsmu    *sync.Mutex
-	log        *logger.Logger
-	lp         *linkpearl.Linkpearl
+	noowner           bool
+	federation        bool
+	prefix            string
+	domain            string
+	rooms             map[string]id.RoomID
+	roomsmu           *sync.Mutex
+	log               *logger.Logger
+	lp                *linkpearl.Linkpearl
+	handledJoinEvents sync.Map
 }
 
 // New creates a new matrix bot

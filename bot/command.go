@@ -109,6 +109,26 @@ func (b *Bot) parseCommand(message string) []string {
 	return strings.Split(message, " ")
 }
 
+func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
+	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("sendIntroduction"))
+	defer span.Finish()
+
+	var msg strings.Builder
+	msg.WriteString("Hello!\n\n")
+	msg.WriteString("This is Postmoogle - a bot that bridges Email to Matrix.\n\n")
+	msg.WriteString(fmt.Sprintf(
+		"To get started, assign an email address to this room by sending a `%s %s SOME_INBOX` command.\n",
+		b.prefix,
+		optionMailbox,
+	))
+	msg.WriteString(fmt.Sprintf(
+		"You will then be able to send emails to `SOME_INBOX@%s` and have them appear in this room.",
+		b.domain,
+	))
+
+	b.Notice(ctx, roomID, msg.String())
+}
+
 func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 	span := sentry.StartSpan(ctx, "http.server", sentry.TransactionName("sendHelp"))
 	defer span.Finish()

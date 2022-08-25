@@ -39,8 +39,8 @@ func (s settings) Allowed(noowner bool, userID id.UserID) bool {
 func (s settings) Get(key string) string {
 	value := s[strings.ToLower(strings.TrimSpace(key))]
 
-	sanitizer, exists := sanitizers[key]
-	if exists {
+	sanitizer, ok := sanitizers[key]
+	if ok {
 		return sanitizer(value)
 	}
 	return value
