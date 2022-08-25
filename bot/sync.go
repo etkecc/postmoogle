@@ -29,27 +29,13 @@ func (b *Bot) initSync() {
 
 func (b *Bot) onMembership(evt *event.Event) {
 	hub := sentry.CurrentHub().Clone()
-	hub.ConfigureScope(func(scope *sentry.Scope) {
-		scope.SetUser(sentry.User{ID: evt.Sender.String()})
-		scope.SetContext("event", map[string]string{
-			"id":     evt.ID.String(),
-			"room":   evt.RoomID.String(),
-			"sender": evt.Sender.String(),
-		})
-	})
 
-	if evt.Sender == b.lp.GetClient().UserID {
-		// Handle membership events related to our own (bot) user first
-
-		switch evt.Content.AsMember().Membership {
-		case event.MembershipJoin:
-			b.onBotJoin(evt, hub)
-		}
-
+	if evt.Content.AsMember().Membership == event.MembershipJoin && evt.Sender == b.lp.GetClient().UserID {
+		b.onBotJoin(evt, hub)
 		return
 	}
 
-	// Handle membership events related to other users
+	// Potentially handle other membership events in the future
 }
 
 func (b *Bot) onMessage(evt *event.Event) {
@@ -106,7 +92,7 @@ func (b *Bot) onEncryptedMessage(evt *event.Event) {
 func (b *Bot) onBotJoin(evt *event.Event, hub *sentry.Hub) {
 	// Workaround for membership=join events which are delivered to us twice,
 	// as described in this bug report: https://github.com/matrix-org/synapse/issues/9768
-	_, exists := b.handledEvents.LoadOrStore(evt.ID, true)
+	_, exists := b.handledJoinEvents.LoadOrStore(evt.ID, true)
 	if exists {
 		b.log.Info("Suppressing already handled event %s", evt.ID)
 		return
