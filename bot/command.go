@@ -197,7 +197,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
-	msg := "`%s` of this room set to %s"
+	msg := "`%s` of this room set to `%s`"
 
 	sanitizer, ok := sanitizers[name]
 	if ok {
