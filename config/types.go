@@ -1,5 +1,7 @@
 package config
 
+import "regexp"
+
 // Config of Postmoogle
 type Config struct {
 	// Homeserver url
@@ -26,6 +28,11 @@ type Config struct {
 	MaxSize int
 	// StatusMsg of the bot
 	StatusMsg string
+	// Users holds regular expression patterns of users that are allowed to use the bridge.
+	// The regular expression patterns are compiled from wildcard patterns like:
+	// `@someone:example.com`, `@*:example.com`, `@bot.*:example.com`, `@someone:*`, `@someone:*.example.com`
+	// An empty list means that "everyone is allowed".
+	Users []*regexp.Regexp
 
 	// DB config
 	DB DB
