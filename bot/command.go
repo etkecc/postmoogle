@@ -78,6 +78,13 @@ var (
 				optionNoThreads,
 			),
 		},
+		{
+			key: optionNoFiles,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - ignore email attachments; `false` - upload email attachments)",
+				optionNoFiles,
+			),
+		},
 	}
 
 	// sanitizers is map of option name => sanitizer function
@@ -87,6 +94,7 @@ var (
 		optionNoSubject: utils.SanitizeBoolString,
 		optionNoHTML:    utils.SanitizeBoolString,
 		optionNoThreads: utils.SanitizeBoolString,
+		optionNoFiles:   utils.SanitizeBoolString,
 	}
 )
 

@@ -80,6 +80,28 @@ func (b *Bot) Start() error {
 	return b.lp.Start()
 }
 
+func (b *Bot) email2content(email *utils.Email, cfg settings) *event.MessageEventContent {
+	var text strings.Builder
+	if !cfg.NoSender() {
+		text.WriteString("From: ")
+		text.WriteString(email.From)
+		text.WriteString("\n\n")
+	}
+	if !cfg.NoSubject() {
+		text.WriteString("# ")
+		text.WriteString(email.Subject)
+		text.WriteString("\n\n")
+	}
+	if email.HTML != "" && !cfg.NoHTML() {
+		text.WriteString(format.HTMLToMarkdown(email.HTML))
+	} else {
+		text.WriteString(email.Text)
+	}
+
+	content := format.RenderMarkdown(text.String(), true, true)
+	return &content
+}
+
 // Send email to matrix room
 func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 	roomID, ok := b.GetMapping(utils.Mailbox(email.To))
@@ -87,32 +109,22 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 		return errors.New("room not found")
 	}
 
-	settings, err := b.getSettings(roomID)
+	cfg, err := b.getSettings(roomID)
 	if err != nil {
 		b.Error(ctx, roomID, "cannot get settings: %v", err)
 	}
 
-	var text strings.Builder
-	if !settings.NoSender() {
-		text.WriteString("From: ")
-		text.WriteString(email.From)
-		text.WriteString("\n\n")
+	contentParsed := b.email2content(email, cfg)
+	content := &event.Content{
+		Raw: map[string]interface{}{
+			eventMessageIDkey: email.MessageID,
+			eventInReplyToKey: email.InReplyTo,
+		},
+		Parsed: contentParsed,
 	}
-	if !settings.NoSubject() {
-		text.WriteString("# ")
-		text.WriteString(email.Subject)
-		text.WriteString("\n\n")
-	}
-	if email.HTML != "" && !settings.NoHTML() {
-		text.WriteString(format.HTMLToMarkdown(email.HTML))
-	} else {
-		text.WriteString(email.Text)
-	}
-
-	contentParsed := format.RenderMarkdown(text.String(), true, true)
 
 	var threadID id.EventID
-	if email.InReplyTo != "" && !settings.NoThreads() {
+	if email.InReplyTo != "" && !cfg.NoThreads() {
 		threadID = b.getThreadID(roomID, email.InReplyTo)
 		if threadID != "" {
 			contentParsed.SetRelatesTo(&event.RelatesTo{
@@ -121,14 +133,6 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 			})
 			b.setThreadID(roomID, email.MessageID, threadID)
 		}
-	}
-
-	content := &event.Content{
-		Raw: map[string]interface{}{
-			eventMessageIDkey: email.MessageID,
-			eventInReplyToKey: email.InReplyTo,
-		},
-		Parsed: contentParsed,
 	}
 	eventID, serr := b.lp.Send(roomID, content)
 	if serr != nil {
@@ -140,7 +144,9 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 		threadID = eventID
 	}
 
-	b.sendFiles(ctx, roomID, email.Files, threadID)
+	if !cfg.NoFiles() {
+		b.sendFiles(ctx, roomID, email.Files, threadID)
+	}
 	return nil
 }
 

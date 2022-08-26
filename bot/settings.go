@@ -68,6 +68,10 @@ func (s settings) NoThreads() bool {
 	return utils.Bool(s.Get(optionNoThreads))
 }
 
+func (s settings) NoFiles() bool {
+	return utils.Bool(s.Get(optionNoFiles))
+}
+
 // Set option
 func (s settings) Set(key, value string) {
 	s[strings.ToLower(strings.TrimSpace(key))] = value

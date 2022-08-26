@@ -26,6 +26,7 @@ const (
 	optionNoSubject = "nosubject"
 	optionNoHTML    = "nohtml"
 	optionNoThreads = "nothreads"
+	optionNoFiles   = "nofiles"
 )
 
 var migrations = []string{}
