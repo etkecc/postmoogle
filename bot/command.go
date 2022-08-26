@@ -112,7 +112,7 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []str
 	case "help":
 		b.sendHelp(ctx, evt.RoomID)
 	case "stop":
-		b.runStop(ctx)
+		b.runStop(ctx, true)
 	default:
 		b.handleOption(ctx, command)
 	}
@@ -159,7 +159,7 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 	b.Notice(ctx, roomID, msg.String())
 }
 
-func (b *Bot) runStop(ctx context.Context) {
+func (b *Bot) runStop(ctx context.Context, checkAllowed bool) {
 	evt := eventFromContext(ctx)
 	cfg, err := b.getSettings(evt.RoomID)
 	if err != nil {
@@ -167,7 +167,7 @@ func (b *Bot) runStop(ctx context.Context) {
 		return
 	}
 
-	if !cfg.Allowed(b.noowner, evt.Sender) {
+	if checkAllowed && !cfg.Allowed(b.noowner, evt.Sender) {
 		b.Notice(ctx, evt.RoomID, "you don't have permission to do that")
 		return
 	}
