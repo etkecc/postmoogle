@@ -23,19 +23,19 @@ func WildcardUserPatternsToRegexPatterns(wildCardPatterns []string) (*[]*regexp.
 
 // MatchUserWithAllowedRegexes tells if the given user id is allowed to use the bot, according to the given whitelist
 // An empty whitelist means "everyone is allowed"
-func MatchUserWithAllowedRegexes(userID string, allowed []*regexp.Regexp) (bool, error) {
+func MatchUserWithAllowedRegexes(userID string, allowed []*regexp.Regexp) bool {
 	// No whitelisted users means everyone is whitelisted
 	if len(allowed) == 0 {
-		return true, nil
+		return true
 	}
 
 	for _, regex := range allowed {
 		if regex.MatchString(userID) {
-			return true, nil
+			return true
 		}
 	}
 
-	return false, nil
+	return false
 }
 
 // parseAllowedUserRule parses a user whitelisting rule and returns a regular expression which corresponds to it

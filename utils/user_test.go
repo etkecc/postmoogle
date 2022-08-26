@@ -202,10 +202,7 @@ func TestMatch(t *testing.T) {
 					t.Error(err)
 				}
 
-				actualResult, err := MatchUserWithAllowedRegexes(testData.checkedValue, *allowedUserRegexes)
-				if err != nil {
-					t.Error(err)
-				}
+				actualResult := MatchUserWithAllowedRegexes(testData.checkedValue, *allowedUserRegexes)
 
 				if actualResult == testData.expectedResult {
 					return
