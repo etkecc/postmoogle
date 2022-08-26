@@ -134,17 +134,19 @@ func (b *Bot) parseCommand(message string) []string {
 
 func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	var msg strings.Builder
-	msg.WriteString("Hello!\n\n")
+	msg.WriteString("Hello, kupo!\n\n")
+
 	msg.WriteString("This is Postmoogle - a bot that bridges Email to Matrix.\n\n")
-	msg.WriteString(fmt.Sprintf(
-		"To get started, assign an email address to this room by sending a `%s %s SOME_INBOX` command.\n",
-		b.prefix,
-		optionMailbox,
-	))
-	msg.WriteString(fmt.Sprintf(
-		"You will then be able to send emails to `SOME_INBOX@%s` and have them appear in this room.",
-		b.domain,
-	))
+
+	msg.WriteString("To get started, assign an email address to this room by sending a `")
+	msg.WriteString(b.prefix)
+	msg.WriteString(" ")
+	msg.WriteString(optionMailbox)
+	msg.WriteString("` command.\n")
+
+	msg.WriteString("You will then be able to send emails to `SOME_INBOX@")
+	msg.WriteString(b.domain)
+	msg.WriteString("` and have them appear in this room.")
 
 	b.Notice(ctx, roomID, msg.String())
 }
@@ -153,7 +155,13 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 	var msg strings.Builder
 	msg.WriteString("The following commands are supported:\n\n")
 	for _, command := range commands {
-		msg.WriteString(fmt.Sprintf("* **`%s %s`** - %s\n", b.prefix, command.key, command.description))
+		msg.WriteString("* **`")
+		msg.WriteString(b.prefix)
+		msg.WriteString(" ")
+		msg.WriteString(command.key)
+		msg.WriteString("`** - ")
+		msg.WriteString(command.description)
+		msg.WriteString("\n")
 	}
 
 	b.Notice(ctx, roomID, msg.String())
@@ -209,7 +217,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 
 	value := cfg.Get(name)
 	if value == "" {
-		b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` is not set", name))
+		b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` is not set, kupo.", name))
 		return
 	}
 
@@ -232,7 +240,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	if name == optionMailbox {
 		existingID, ok := b.GetMapping(value)
 		if ok && existingID != "" && existingID != evt.RoomID {
-			b.Notice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken", value, b.domain))
+			b.Notice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken, kupo", value, b.domain))
 			return
 		}
 	}
@@ -244,7 +252,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	}
 
 	if !cfg.Allowed(b.noowner, evt.Sender) {
-		b.Notice(ctx, evt.RoomID, "you don't have permission to do that")
+		b.Notice(ctx, evt.RoomID, "you don't have permission to do that, kupo")
 		return
 	}
 
