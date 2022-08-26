@@ -103,7 +103,7 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 		text.WriteString(email.Subject)
 		text.WriteString("\n\n")
 	}
-	if email.HTML != "" {
+	if email.HTML != "" && !settings.NoHTML() {
 		text.WriteString(format.HTMLToMarkdown(email.HTML))
 	} else {
 		text.WriteString(email.Text)

@@ -24,6 +24,7 @@ const (
 	optionMailbox   = "mailbox"
 	optionNoSender  = "nosender"
 	optionNoSubject = "nosubject"
+	optionNoHTML    = "nohtml"
 )
 
 var migrations = []string{}

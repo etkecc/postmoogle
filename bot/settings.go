@@ -60,6 +60,10 @@ func (s settings) NoSubject() bool {
 	return utils.Bool(s.Get(optionNoSubject))
 }
 
+func (s settings) NoHTML() bool {
+	return utils.Bool(s.Get(optionNoHTML))
+}
+
 // Set option
 func (s settings) Set(key, value string) {
 	s[strings.ToLower(strings.TrimSpace(key))] = value

@@ -64,6 +64,13 @@ var (
 				optionNoSubject,
 			),
 		},
+		{
+			key: optionNoHTML,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
+				optionNoHTML,
+			),
+		},
 	}
 
 	// sanitizers is map of option name => sanitizer function
@@ -71,6 +78,7 @@ var (
 		optionMailbox:   utils.Mailbox,
 		optionNoSender:  utils.SanitizeBoolString,
 		optionNoSubject: utils.SanitizeBoolString,
+		optionNoHTML:    utils.SanitizeBoolString,
 	}
 )
 
