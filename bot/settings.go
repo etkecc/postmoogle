@@ -64,6 +64,10 @@ func (s settings) NoHTML() bool {
 	return utils.Bool(s.Get(optionNoHTML))
 }
 
+func (s settings) NoThreads() bool {
+	return utils.Bool(s.Get(optionNoThreads))
+}
+
 // Set option
 func (s settings) Set(key, value string) {
 	s[strings.ToLower(strings.TrimSpace(key))] = value

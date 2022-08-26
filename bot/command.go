@@ -71,6 +71,13 @@ var (
 				optionNoHTML,
 			),
 		},
+		{
+			key: optionNoThreads,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
+				optionNoThreads,
+			),
+		},
 	}
 
 	// sanitizers is map of option name => sanitizer function
@@ -79,6 +86,7 @@ var (
 		optionNoSender:  utils.SanitizeBoolString,
 		optionNoSubject: utils.SanitizeBoolString,
 		optionNoHTML:    utils.SanitizeBoolString,
+		optionNoThreads: utils.SanitizeBoolString,
 	}
 )
 

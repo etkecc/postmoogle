@@ -112,7 +112,7 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 	contentParsed := format.RenderMarkdown(text.String(), true, true)
 
 	var threadID id.EventID
-	if email.InReplyTo != "" {
+	if email.InReplyTo != "" && !settings.NoThreads() {
 		threadID = b.getThreadID(roomID, email.InReplyTo)
 		if threadID != "" {
 			contentParsed.SetRelatesTo(&event.RelatesTo{

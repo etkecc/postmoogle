@@ -25,6 +25,7 @@ const (
 	optionNoSender  = "nosender"
 	optionNoSubject = "nosubject"
 	optionNoHTML    = "nohtml"
+	optionNoThreads = "nothreads"
 )
 
 var migrations = []string{}
