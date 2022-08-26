@@ -38,6 +38,7 @@ env vars
 * **POSTMOOGLE_NOOWNER** - allow change room settings by any room partisipant
 * **POSTMOOGLE_FEDERATION** - allow usage of Postmoogle by users from others homeservers
 * **POSTMOOGLE_NOENCRYPTION** - disable encryption support
+* **POSTMOOGLE_STATUSMSG** - presence status message
 * **POSTMOOGLE_SENTRY_DSN** - sentry DSN
 * **POSTMOOGLE_LOGLEVEL** - log level
 * **POSTMOOGLE_DB_DSN** - database connection string

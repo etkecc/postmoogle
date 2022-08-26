@@ -10,7 +10,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.14
 	gitlab.com/etke.cc/go/env v1.0.0
 	gitlab.com/etke.cc/go/logger v1.1.0
-	gitlab.com/etke.cc/linkpearl v0.0.0-20220823124436-ff8541c79eee
+	gitlab.com/etke.cc/linkpearl v0.0.0-20220826133247-10dcaedb8085
 	golang.org/x/net v0.0.0-20220822230855-b0a4917ee28c
 	maunium.net/go/mautrix v0.12.0
 )
@@ -36,8 +36,8 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yuin/goldmark v1.4.12 // indirect
-	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8 // indirect
-	golang.org/x/sys v0.0.0-20220823224334-20c2bfdbfe24 // indirect
+	golang.org/x/crypto v0.0.0-20220824171710-5757bc0c5503 // indirect
+	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	maunium.net/go/maulogger/v2 v2.3.2 // indirect

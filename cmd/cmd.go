@@ -40,7 +40,7 @@ func main() {
 	initShutdown(quit)
 	defer recovery()
 
-	go startBot()
+	go startBot(cfg.StatusMsg)
 	if err := smtp.Start(cfg.Domain, cfg.Port, cfg.LogLevel, cfg.MaxSize, mxb); err != nil {
 		//nolint:gocritic
 		log.Fatal("SMTP server crashed: %v", err)
@@ -97,9 +97,9 @@ func initShutdown(quit chan struct{}) {
 	}()
 }
 
-func startBot() {
-	log.Debug("starting matrix bot...")
-	err := mxb.Start()
+func startBot(statusMsg string) {
+	log.Debug("starting matrix bot: %s...", statusMsg)
+	err := mxb.Start(statusMsg)
 	if err != nil {
 		//nolint:gocritic
 		log.Fatal("cannot start the bot: %v", err)

@@ -24,6 +24,8 @@ type Config struct {
 	Prefix string
 	// MaxSize of an email (including attachments)
 	MaxSize int
+	// StatusMsg of the bot
+	StatusMsg string
 
 	// DB config
 	DB DB

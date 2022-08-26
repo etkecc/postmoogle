@@ -20,6 +20,7 @@ func New() *Config {
 		NoOwner:      env.Bool("noowner"),
 		Federation:   env.Bool("federation"),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
+		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
 		Sentry: Sentry{
 			DSN: env.String("sentry.dsn", defaultConfig.Sentry.DSN),
 		},

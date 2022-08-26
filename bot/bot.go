@@ -67,7 +67,7 @@ func (b *Bot) Notice(ctx context.Context, roomID id.RoomID, message string) {
 }
 
 // Start performs matrix /sync
-func (b *Bot) Start() error {
+func (b *Bot) Start(statusMsg string) error {
 	if err := b.migrate(); err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (b *Bot) Start() error {
 
 	b.initSync()
 	b.log.Info("Postmoogle has been started")
-	return b.lp.Start()
+	return b.lp.Start(statusMsg)
 }
 
 func (b *Bot) email2content(email *utils.Email, cfg settings) *event.MessageEventContent {
