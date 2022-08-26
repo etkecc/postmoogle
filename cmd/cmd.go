@@ -30,7 +30,7 @@ func main() {
 	cfg, err := config.New()
 	if err != nil {
 		log = logger.New("postmoogle.", "info")
-		log.Fatal("%s", err)
+		log.Fatal("cannot read config: %v", err)
 	}
 
 	log = logger.New("postmoogle.", cfg.LogLevel)
