@@ -151,15 +151,45 @@ func TestMatch(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			name:           "mxid localpart wildcard match is allowed",
+			name:           "mxid localpart only wildcard match is allowed",
 			checkedValue:   "@someone:example.com",
 			allowedUsers:   []string{"@*:example.com"},
 			expectedResult: true,
 		},
 		{
+			name:           "mxid localpart with wildcard match is allowed",
+			checkedValue:   "@bot.abc:example.com",
+			allowedUsers:   []string{"@bot.*:example.com"},
+			expectedResult: true,
+		},
+		{
+			name:           "mxid localpart with wildcard match is not allowed when it does not match",
+			checkedValue:   "@bot.abc:example.com",
+			allowedUsers:   []string{"@employee.*:example.com"},
+			expectedResult: false,
+		},
+		{
 			name:           "mxid localpart wildcard for another domain is not allowed",
 			checkedValue:   "@someone:example.com",
 			allowedUsers:   []string{"@*:another.com"},
+			expectedResult: false,
+		},
+		{
+			name:           "mxid domainpart with only wildcard match is allowed",
+			checkedValue:   "@someone:example.com",
+			allowedUsers:   []string{"@someone:*"},
+			expectedResult: true,
+		},
+		{
+			name:           "mxid domainpart with wildcard match is allowed",
+			checkedValue:   "@someone:example.organization.com",
+			allowedUsers:   []string{"@someone:*.organization.com"},
+			expectedResult: true,
+		},
+		{
+			name:           "mxid domainpart with wildcard match is not allowed when it does not match",
+			checkedValue:   "@someone:example.another.com",
+			allowedUsers:   []string{"@someone:*.organization.com"},
 			expectedResult: false,
 		},
 	}
