@@ -190,7 +190,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	}
 
 	if name == optionMailbox {
-		msg = msg + "@" + b.domain
+		value = fmt.Sprintf("%s@%s", value, b.domain)
 	}
 
 	b.Notice(ctx, evt.RoomID, fmt.Sprintf(msg, name, value))
@@ -226,7 +226,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 
 	cfg.Set(name, value)
 	if name == optionMailbox {
-		msg = msg + "@" + b.domain
+		value = fmt.Sprintf("%s@%s", value, b.domain)
 		cfg.Set(optionOwner, evt.Sender.String())
 		b.rooms.Store(value, evt.RoomID)
 	}
