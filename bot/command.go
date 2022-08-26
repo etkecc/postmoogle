@@ -174,7 +174,7 @@ func (b *Bot) handleOption(ctx context.Context, command []string) {
 }
 
 func (b *Bot) getOption(ctx context.Context, name string) {
-	msg := "`%s` of this room is %s"
+	msg := "`%s` of this room is `%s`"
 
 	evt := eventFromContext(ctx)
 	cfg, err := b.getSettings(evt.RoomID)
