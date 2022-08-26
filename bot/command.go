@@ -174,7 +174,7 @@ func (b *Bot) handleOption(ctx context.Context, command []string) {
 }
 
 func (b *Bot) getOption(ctx context.Context, name string) {
-	msg := "`%s` of this room is %s"
+	msg := "`%s` of this room is `%s`"
 
 	evt := eventFromContext(ctx)
 	cfg, err := b.getSettings(evt.RoomID)
@@ -190,14 +190,14 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	}
 
 	if name == optionMailbox {
-		msg = msg + "@" + b.domain
+		value = fmt.Sprintf("%s@%s", value, b.domain)
 	}
 
 	b.Notice(ctx, evt.RoomID, fmt.Sprintf(msg, name, value))
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
-	msg := "`%s` of this room set to %s"
+	msg := "`%s` of this room set to `%s`"
 
 	sanitizer, ok := sanitizers[name]
 	if ok {
@@ -226,7 +226,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 
 	cfg.Set(name, value)
 	if name == optionMailbox {
-		msg = msg + "@" + b.domain
+		value = fmt.Sprintf("%s@%s", value, b.domain)
 		cfg.Set(optionOwner, evt.Sender.String())
 		b.rooms.Store(value, evt.RoomID)
 	}
