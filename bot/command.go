@@ -182,10 +182,7 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 			if value == "" {
 				msg.WriteString(" (currently not set)")
 			} else {
-				if command.key == optionMailbox {
-					value = fmt.Sprintf("%s@%s", value, b.domain)
-				}
-				msg.WriteString(fmt.Sprintf(" (currently `%v`)", value))
+				msg.WriteString(fmt.Sprintf(" (currently `%v`)", b.formatOptionValue(command.key, value)))
 			}
 		}
 
@@ -237,8 +234,6 @@ func (b *Bot) handleOption(ctx context.Context, command []string) {
 }
 
 func (b *Bot) getOption(ctx context.Context, name string) {
-	msg := "`%s` of this room is `%s`"
-
 	evt := eventFromContext(ctx)
 	cfg, err := b.getSettings(evt.RoomID)
 	if err != nil {
@@ -252,16 +247,14 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		return
 	}
 
-	if name == optionMailbox {
-		value = fmt.Sprintf("%s@%s", value, b.domain)
-	}
-
-	b.Notice(ctx, evt.RoomID, fmt.Sprintf(msg, name, value))
+	b.Notice(ctx, evt.RoomID, fmt.Sprintf(
+		"`%s` of this room is `%s`",
+		name,
+		b.formatOptionValue(name, value),
+	))
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
-	msg := "`%s` of this room set to `%s`"
-
 	sanitizer, ok := sanitizers[name]
 	if ok {
 		value = sanitizer(value)
@@ -271,7 +264,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	if name == optionMailbox {
 		existingID, ok := b.GetMapping(value)
 		if ok && existingID != "" && existingID != evt.RoomID {
-			b.Notice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken, kupo", value, b.domain))
+			b.Notice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` already taken, kupo", b.formatOptionValue(name, value)))
 			return
 		}
 	}
@@ -289,9 +282,8 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 
 	cfg.Set(name, value)
 	if name == optionMailbox {
-		value = fmt.Sprintf("%s@%s", value, b.domain)
 		cfg.Set(optionOwner, evt.Sender.String())
-		b.rooms.Store(value, evt.RoomID)
+		b.rooms.Store(b.formatOptionValue(name, value), evt.RoomID)
 	}
 
 	err = b.setSettings(evt.RoomID, cfg)
@@ -300,5 +292,9 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		return
 	}
 
-	b.Notice(ctx, evt.RoomID, fmt.Sprintf(msg, name, value))
+	b.Notice(ctx, evt.RoomID, fmt.Sprintf(
+		"`%s` of this room set to `%s`",
+		name,
+		b.formatOptionValue(name, value),
+	))
 }

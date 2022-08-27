@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -117,4 +118,16 @@ func (b *Bot) getSettings(roomID id.RoomID) (settings, error) {
 
 func (b *Bot) setSettings(roomID id.RoomID, cfg settings) error {
 	return b.lp.GetClient().SetRoomAccountData(roomID, settingskey, cfg)
+}
+
+func (b *Bot) formatOptionValue(name string, value string) string {
+	if value == "" {
+		return value
+	}
+
+	if name == optionMailbox {
+		value = fmt.Sprintf("%s@%s", value, b.domain)
+	}
+
+	return value
 }
