@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -114,24 +113,6 @@ func (b *Bot) getSettings(roomID id.RoomID) (settings, error) {
 	}
 
 	return config, err
-}
-
-func (b *Bot) getSettingsOption(roomID id.RoomID, name string) (any, error) {
-	cfg, err := b.getSettings(roomID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve settings: %v", err)
-	}
-
-	value := cfg.Get(name)
-	if value == "" {
-		return nil, nil
-	}
-
-	if name == optionMailbox {
-		value = fmt.Sprintf("%s@%s", value, b.domain)
-	}
-
-	return value, nil
 }
 
 func (b *Bot) setSettings(roomID id.RoomID, cfg settings) error {

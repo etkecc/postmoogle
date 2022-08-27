@@ -162,6 +162,11 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 	evt := eventFromContext(ctx)
 
+	settings, settingsErr := b.getSettings(evt.RoomID)
+	if settingsErr != nil {
+		b.Error(ctx, evt.RoomID, settingsErr.Error())
+	}
+
 	var msg strings.Builder
 	msg.WriteString("The following commands are supported:\n\n")
 	for _, command := range commands {
@@ -171,16 +176,16 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 		msg.WriteString(command.key)
 		msg.WriteString("`**")
 
-		if command.isOption {
-			value, err := b.getSettingsOption(evt.RoomID, command.key)
-			if err != nil {
-				b.Error(ctx, evt.RoomID, err.Error())
+		if command.isOption && settingsErr == nil {
+			value := settings.Get(command.key)
+
+			if value == "" {
+				msg.WriteString(" (currently not set)")
 			} else {
-				if value == nil {
-					msg.WriteString(" (currently not set)")
-				} else {
-					msg.WriteString(fmt.Sprintf(" (currently `%v`)", value))
+				if command.key == optionMailbox {
+					value = fmt.Sprintf("%s@%s", value, b.domain)
 				}
+				msg.WriteString(fmt.Sprintf(" (currently `%v`)", value))
 			}
 		}
 
@@ -232,19 +237,26 @@ func (b *Bot) handleOption(ctx context.Context, command []string) {
 }
 
 func (b *Bot) getOption(ctx context.Context, name string) {
-	evt := eventFromContext(ctx)
+	msg := "`%s` of this room is `%s`"
 
-	value, err := b.getSettingsOption(evt.RoomID, name)
+	evt := eventFromContext(ctx)
+	cfg, err := b.getSettings(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, err.Error())
+		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
 	}
-	if value == nil {
+
+	value := cfg.Get(name)
+	if value == "" {
 		b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` is not set, kupo.", name))
 		return
 	}
 
-	b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room is `%s`", name, value))
+	if name == optionMailbox {
+		value = fmt.Sprintf("%s@%s", value, b.domain)
+	}
+
+	b.Notice(ctx, evt.RoomID, fmt.Sprintf(msg, name, value))
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
