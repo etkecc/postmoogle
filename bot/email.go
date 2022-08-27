@@ -68,7 +68,7 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 	content := email2content(email, cfg, threadID)
 	eventID, serr := b.lp.Send(roomID, content)
 	if serr != nil {
-		return serr
+		return utils.UnwrapError(serr)
 	}
 
 	if threadID == "" && !cfg.NoThreads() {

@@ -112,9 +112,9 @@ func (b *Bot) getSettings(roomID id.RoomID) (settings, error) {
 		}
 	}
 
-	return config, err
+	return config, utils.UnwrapError(err)
 }
 
 func (b *Bot) setSettings(roomID id.RoomID, cfg settings) error {
-	return b.lp.GetClient().SetRoomAccountData(roomID, settingskey, cfg)
+	return utils.UnwrapError(b.lp.GetClient().SetRoomAccountData(roomID, settingskey, cfg))
 }
