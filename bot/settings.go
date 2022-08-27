@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -20,7 +21,11 @@ type settingsOld struct {
 }
 
 // Allowed checks if change is allowed
-func (s settings) Allowed(noowner bool, userID id.UserID) bool {
+func (s settings) Allowed(noowner bool, userID id.UserID, allowedUsers []*regexp.Regexp) bool {
+	if !utils.Match(userID.String(), allowedUsers) {
+		return false
+	}
+
 	if noowner {
 		return true
 	}
