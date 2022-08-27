@@ -22,6 +22,7 @@ type Bot struct {
 	rooms                   sync.Map
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
+	mu                      map[id.RoomID]*sync.Mutex
 	handledMembershipEvents sync.Map
 }
 
@@ -35,6 +36,7 @@ func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string, noo
 		rooms:      sync.Map{},
 		log:        log,
 		lp:         lp,
+		mu:         map[id.RoomID]*sync.Mutex{},
 	}
 }
 

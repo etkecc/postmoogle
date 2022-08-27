@@ -49,6 +49,8 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 	if !ok {
 		return errors.New("room not found")
 	}
+	b.lock(roomID)
+	defer b.unlock(roomID)
 
 	cfg, err := b.getSettings(roomID)
 	if err != nil {
