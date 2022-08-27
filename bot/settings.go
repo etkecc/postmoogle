@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -36,13 +35,7 @@ func (s settings) Allowed(noowner bool, userID id.UserID) bool {
 
 // Get option
 func (s settings) Get(key string) string {
-	value := s[strings.ToLower(strings.TrimSpace(key))]
-
-	sanitizer, ok := sanitizers[key]
-	if ok {
-		return sanitizer(value)
-	}
-	return value
+	return s[strings.ToLower(strings.TrimSpace(key))]
 }
 
 func (s settings) Mailbox() string {
@@ -118,16 +111,4 @@ func (b *Bot) getSettings(roomID id.RoomID) (settings, error) {
 
 func (b *Bot) setSettings(roomID id.RoomID, cfg settings) error {
 	return b.lp.GetClient().SetRoomAccountData(roomID, settingskey, cfg)
-}
-
-func (b *Bot) formatOptionValue(name string, value string) string {
-	if value == "" {
-		return value
-	}
-
-	if name == optionMailbox {
-		value = fmt.Sprintf("%s@%s", value, b.domain)
-	}
-
-	return value
 }
