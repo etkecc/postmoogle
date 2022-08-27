@@ -88,7 +88,7 @@ func TestRuleToRegex(t *testing.T) {
 	for _, testData := range tests {
 		func(testData testDataDefinition) {
 			t.Run(testData.name, func(t *testing.T) {
-				actualResult, err := parseAllowedUserRule(testData.checkedValue)
+				actualResult, err := parseMXIDWildcard(testData.checkedValue)
 
 				if testData.expectedError {
 					if err != nil {
@@ -197,12 +197,12 @@ func TestMatch(t *testing.T) {
 	for _, testData := range tests {
 		func(testData testDataDefinition) {
 			t.Run(testData.name, func(t *testing.T) {
-				allowedUserRegexes, err := WildcardUserPatternsToRegexPatterns(testData.allowedUsers)
+				allowedUserRegexes, err := WildcardMXIDsToRegexes(testData.allowedUsers)
 				if err != nil {
 					t.Error(err)
 				}
 
-				actualResult := MatchUserWithAllowedRegexes(testData.checkedValue, *allowedUserRegexes)
+				actualResult := Match(testData.checkedValue, *allowedUserRegexes)
 
 				if actualResult == testData.expectedResult {
 					return

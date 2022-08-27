@@ -14,12 +14,12 @@ const prefix = "postmoogle"
 func New() (*Config, error) {
 	env.SetPrefix(prefix)
 
-	wildCardUserPatterns := env.Slice("users")
-	regexUserPatterns, err := utils.WildcardUserPatternsToRegexPatterns(wildCardUserPatterns)
+	mxidPatterns := env.Slice("users")
+	regexPatterns, err := utils.WildcardMXIDsToRegexes(mxidPatterns)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to convert wildcard user patterns (`%s`) to regular expression: %s",
-			wildCardUserPatterns,
+			mxidPatterns,
 			err,
 		)
 	}
@@ -36,7 +36,7 @@ func New() (*Config, error) {
 		Federation:   env.Bool("federation"),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
-		Users:        *regexUserPatterns,
+		Users:        *regexPatterns,
 		Sentry: Sentry{
 			DSN: env.String("sentry.dsn", defaultConfig.Sentry.DSN),
 		},
