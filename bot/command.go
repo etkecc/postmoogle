@@ -16,6 +16,7 @@ type sanitizerFunc func(string) string
 type commandDefinition struct {
 	key         string
 	description string
+	isOption    bool
 }
 
 type commandList []commandDefinition
@@ -45,10 +46,12 @@ var (
 		{
 			key:         optionMailbox,
 			description: "Get or set mailbox of the room",
+			isOption:    true,
 		},
 		{
 			key:         optionOwner,
 			description: "Get or set owner of the room",
+			isOption:    true,
 		},
 		{
 			key: optionNoSender,
@@ -56,6 +59,7 @@ var (
 				"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
 				optionNoSender,
 			),
+			isOption: true,
 		},
 		{
 			key: optionNoSubject,
@@ -63,6 +67,7 @@ var (
 				"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
 				optionNoSubject,
 			),
+			isOption: true,
 		},
 		{
 			key: optionNoHTML,
@@ -70,6 +75,7 @@ var (
 				"Get or set `%s` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
 				optionNoHTML,
 			),
+			isOption: true,
 		},
 		{
 			key: optionNoThreads,
@@ -77,6 +83,7 @@ var (
 				"Get or set `%s` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
 				optionNoThreads,
 			),
+			isOption: true,
 		},
 		{
 			key: optionNoFiles,
@@ -84,6 +91,7 @@ var (
 				"Get or set `%s` of the room (`true` - ignore email attachments; `false` - upload email attachments)",
 				optionNoFiles,
 			),
+			isOption: true,
 		},
 	}
 
@@ -152,6 +160,8 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 }
 
 func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
+	evt := eventFromContext(ctx)
+
 	var msg strings.Builder
 	msg.WriteString("The following commands are supported:\n\n")
 	for _, command := range commands {
@@ -159,7 +169,23 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 		msg.WriteString(b.prefix)
 		msg.WriteString(" ")
 		msg.WriteString(command.key)
-		msg.WriteString("`** - ")
+		msg.WriteString("`**")
+
+		if command.isOption {
+			value, err := b.getSettingsOption(evt.RoomID, command.key)
+			if err != nil {
+				b.Error(ctx, evt.RoomID, err.Error())
+			} else {
+				if value == nil {
+					msg.WriteString(" (currently not set)")
+				} else {
+					msg.WriteString(fmt.Sprintf(" (currently `%v`)", value))
+				}
+			}
+		}
+
+		msg.WriteString(" - ")
+
 		msg.WriteString(command.description)
 		msg.WriteString("\n")
 	}
@@ -206,26 +232,19 @@ func (b *Bot) handleOption(ctx context.Context, command []string) {
 }
 
 func (b *Bot) getOption(ctx context.Context, name string) {
-	msg := "`%s` of this room is `%s`"
-
 	evt := eventFromContext(ctx)
-	cfg, err := b.getSettings(evt.RoomID)
+
+	value, err := b.getSettingsOption(evt.RoomID, name)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
+		b.Error(ctx, evt.RoomID, err.Error())
 		return
 	}
-
-	value := cfg.Get(name)
-	if value == "" {
+	if value == nil {
 		b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` is not set, kupo.", name))
 		return
 	}
 
-	if name == optionMailbox {
-		value = fmt.Sprintf("%s@%s", value, b.domain)
-	}
-
-	b.Notice(ctx, evt.RoomID, fmt.Sprintf(msg, name, value))
+	b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room is `%s`", name, value))
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
