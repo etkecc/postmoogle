@@ -33,7 +33,8 @@ env vars
 * **POSTMOOGLE_DOMAIN** - SMTP domain to listen for new emails
 * **POSTMOOGLE_PORT** - SMTP port to listen for new emails
 
-### optional
+<details>
+<summary>other optional config parameters</summary>
 
 * **POSTMOOGLE_NOOWNER** - allow change room settings by any room partisipant
 * **POSTMOOGLE_FEDERATION** - allow usage of Postmoogle by users from others homeservers
@@ -46,6 +47,8 @@ env vars
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
 
 You can find default values in [config/defaults.go](config/defaults.go)
+
+</details>
 
 ## Usage
 
