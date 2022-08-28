@@ -61,8 +61,6 @@ If you want to change them - check available options in the help message (`!pm h
 <details>
 <summary>Full list of available commands</summary>
 
-The following commands are supported
-
 * **!pm help** - Show help message
 * **!pm stop** - Disable bridge for the room and clear all configuration
 
