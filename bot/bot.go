@@ -24,20 +24,22 @@ type Bot struct {
 	rooms                   sync.Map
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
+	mu                      map[id.RoomID]*sync.Mutex
 	handledMembershipEvents sync.Map
 }
 
 // New creates a new matrix bot
 func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string, noowner, federation bool, allowedUsers []*regexp.Regexp) *Bot {
 	return &Bot{
-		noowner:      noowner,
-		federation:   federation,
-		prefix:       prefix,
-		domain:       domain,
+		noowner:    noowner,
+		federation: federation,
+		prefix:     prefix,
+		domain:     domain,
 		allowedUsers: allowedUsers,
-		rooms:        sync.Map{},
-		log:          log,
-		lp:           lp,
+		rooms:      sync.Map{},
+		log:        log,
+		lp:         lp,
+		mu:         map[id.RoomID]*sync.Mutex{},
 	}
 }
 
@@ -77,20 +79,6 @@ func (b *Bot) Start(statusMsg string) error {
 	b.initSync()
 	b.log.Info("Postmoogle has been started")
 	return b.lp.Start(statusMsg)
-}
-
-// GetMappings returns mapping of mailbox = room
-func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
-	v, ok := b.rooms.Load(mailbox)
-	if !ok {
-		return "", ok
-	}
-	roomID, ok := v.(id.RoomID)
-	if !ok {
-		return "", ok
-	}
-
-	return roomID, ok
 }
 
 // Stop the bot

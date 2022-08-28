@@ -256,11 +256,16 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		return
 	}
 
+	old := cfg.Get(name)
 	cfg.Set(name, value)
+
 	if name == optionMailbox {
-		value = fmt.Sprintf("%s@%s", value, b.domain)
 		cfg.Set(optionOwner, evt.Sender.String())
+		if old != "" {
+			b.rooms.Delete(old)
+		}
 		b.rooms.Store(value, evt.RoomID)
+		value = fmt.Sprintf("%s@%s", value, b.domain)
 	}
 
 	err = b.setSettings(evt.RoomID, cfg)

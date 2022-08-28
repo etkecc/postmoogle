@@ -43,12 +43,28 @@ func email2content(email *utils.Email, cfg settings, threadID id.EventID) *event
 	return &content
 }
 
+// GetMapping returns mapping of mailbox = room
+func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
+	v, ok := b.rooms.Load(mailbox)
+	if !ok {
+		return "", ok
+	}
+	roomID, ok := v.(id.RoomID)
+	if !ok {
+		return "", ok
+	}
+
+	return roomID, ok
+}
+
 // Send email to matrix room
 func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 	roomID, ok := b.GetMapping(utils.Mailbox(email.To))
 	if !ok {
 		return errors.New("room not found")
 	}
+	b.lock(roomID)
+	defer b.unlock(roomID)
 
 	cfg, err := b.getSettings(roomID)
 	if err != nil {
@@ -66,7 +82,7 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 	content := email2content(email, cfg, threadID)
 	eventID, serr := b.lp.Send(roomID, content)
 	if serr != nil {
-		return serr
+		return utils.UnwrapError(serr)
 	}
 
 	if threadID == "" && !cfg.NoThreads() {
