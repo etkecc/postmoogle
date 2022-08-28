@@ -45,11 +45,6 @@ func email2content(email *utils.Email, cfg settings, threadID id.EventID) *event
 
 // GetMapping returns mapping of mailbox = room
 func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
-	b.rooms.Range(func(key, value any) bool {
-		b.log.Debug("MAPPING %v=%v", key, value)
-
-		return true
-	})
 	v, ok := b.rooms.Load(mailbox)
 	if !ok {
 		return "", ok
