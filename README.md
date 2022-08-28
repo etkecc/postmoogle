@@ -43,6 +43,7 @@ env vars
 * **POSTMOOGLE_DB_DSN** - database connection string
 * **POSTMOOGLE_DB_DIALECT** - database dialect (postgres, sqlite3)
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
+* **POSTMOOGLE_USERS** - a space-separated list of whitelisted users allowed to use the bridge. If not defined, everyone is allowed. Example rule: `@someone:example.com @another:example.com @bot.*:example.com @*:another.com`
 
 You can find default values in [config/defaults.go](config/defaults.go)
 

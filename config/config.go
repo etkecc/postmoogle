@@ -1,14 +1,29 @@
 package config
 
 import (
+	"fmt"
+
 	"gitlab.com/etke.cc/go/env"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 const prefix = "postmoogle"
 
 // New config
-func New() *Config {
+func New() (*Config, error) {
 	env.SetPrefix(prefix)
+
+	mxidPatterns := env.Slice("users")
+	regexPatterns, err := utils.WildcardMXIDsToRegexes(mxidPatterns)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to convert wildcard user patterns (`%s`) to regular expression: %s",
+			mxidPatterns,
+			err,
+		)
+	}
+
 	cfg := &Config{
 		Homeserver:   env.String("homeserver", defaultConfig.Homeserver),
 		Login:        env.String("login", defaultConfig.Login),
@@ -21,6 +36,7 @@ func New() *Config {
 		Federation:   env.Bool("federation"),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
+		Users:        *regexPatterns,
 		Sentry: Sentry{
 			DSN: env.String("sentry.dsn", defaultConfig.Sentry.DSN),
 		},
@@ -31,5 +47,5 @@ func New() *Config {
 		},
 	}
 
-	return cfg
+	return cfg, nil
 }

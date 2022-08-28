@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sync"
 
 	"github.com/getsentry/sentry-go"
@@ -19,6 +20,7 @@ type Bot struct {
 	federation              bool
 	prefix                  string
 	domain                  string
+	allowedUsers            []*regexp.Regexp
 	rooms                   sync.Map
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
@@ -27,16 +29,17 @@ type Bot struct {
 }
 
 // New creates a new matrix bot
-func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string, noowner, federation bool) *Bot {
+func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string, noowner, federation bool, allowedUsers []*regexp.Regexp) *Bot {
 	return &Bot{
-		noowner:    noowner,
-		federation: federation,
-		prefix:     prefix,
-		domain:     domain,
-		rooms:      sync.Map{},
-		log:        log,
-		lp:         lp,
-		mu:         map[id.RoomID]*sync.Mutex{},
+		noowner:      noowner,
+		federation:   federation,
+		prefix:       prefix,
+		domain:       domain,
+		allowedUsers: allowedUsers,
+		rooms:        sync.Map{},
+		log:          log,
+		lp:           lp,
+		mu:           map[id.RoomID]*sync.Mutex{},
 	}
 }
 

@@ -1,5 +1,7 @@
 package config
 
+import "regexp"
+
 // Config of Postmoogle
 type Config struct {
 	// Homeserver url
@@ -26,6 +28,8 @@ type Config struct {
 	MaxSize int
 	// StatusMsg of the bot
 	StatusMsg string
+	// Users holds list of allowed users (wildcards supported), e.g.: @*:example.com, @bot.*:example.com, @admin:*. Empty = *
+	Users []*regexp.Regexp
 
 	// DB config
 	DB DB
