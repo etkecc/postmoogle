@@ -175,7 +175,7 @@ func (b *Bot) runStop(ctx context.Context, checkAllowed bool) {
 		return
 	}
 
-	if checkAllowed && !cfg.Allowed(b.noowner, evt.Sender, b.allowedUsers) {
+	if checkAllowed && !b.Allowed(evt.Sender, cfg) {
 		b.Notice(ctx, evt.RoomID, "you don't have permission to do that")
 		return
 	}
@@ -251,7 +251,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		return
 	}
 
-	if !cfg.Allowed(b.noowner, evt.Sender, b.allowedUsers) {
+	if !b.Allowed(evt.Sender, cfg) {
 		b.Notice(ctx, evt.RoomID, "you don't have permission to do that, kupo")
 		return
 	}
