@@ -25,8 +25,6 @@ An Email to Matrix bridge
 
 env vars
 
-### mandatory
-
 * **POSTMOOGLE_HOMESERVER** - homeserver url, eg: `https://matrix.example.com`
 * **POSTMOOGLE_LOGIN** - user login/localpart, eg: `moogle`
 * **POSTMOOGLE_PASSWORD** - user password
@@ -60,7 +58,8 @@ You can find default values in [config/defaults.go](config/defaults.go)
 4. Done. Mailbox owner and other options will be set automatically when you configure mailbox.
 If you want to change them - check available options in the help message (`!pm help`)
 
-### Commands
+<details>
+<summary>Full list of available commands</summary>
 
 The following commands are supported
 
@@ -79,6 +78,9 @@ The following commands are supported
 * **!pm nohtml** - Get or set `nohtml` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)
 * **!pm nothreads** - Get or set `nothreads` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)
 * **!pm nofiles** - Get or set `nofiles` of the room (`true` - ignore email attachments; `false` - upload email attachments)
+
+</details>
+
 
 ## Where to get
 
