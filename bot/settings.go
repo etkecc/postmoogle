@@ -21,13 +21,7 @@ type settingsOld struct {
 
 // Get option
 func (s settings) Get(key string) string {
-	value := s[strings.ToLower(strings.TrimSpace(key))]
-
-	sanitizer, ok := sanitizers[key]
-	if ok {
-		return sanitizer(value)
-	}
-	return value
+	return s[strings.ToLower(strings.TrimSpace(key))]
 }
 
 func (s settings) Mailbox() string {

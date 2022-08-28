@@ -11,95 +11,91 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
-type sanitizerFunc func(string) string
-
-type commandDefinition struct {
-	key         string
-	description string
-}
-
-type commandList []commandDefinition
-
-func (c commandList) get(key string) (*commandDefinition, bool) {
-	for _, command := range c {
-		if command.key == key {
-			return &command, true
-		}
+type (
+	command struct {
+		key         string
+		description string
+		sanitizer   func(string) string
 	}
-	return nil, false
-}
-
-var (
-	commands = commandList{
-		// special commands
-		{
-			key:         "help",
-			description: "Show this help message",
-		},
-		{
-			key:         "stop",
-			description: "Disable bridge for the room and clear all configuration",
-		},
-
-		// options commands
-		{
-			key:         optionMailbox,
-			description: "Get or set mailbox of the room",
-		},
-		{
-			key:         optionOwner,
-			description: "Get or set owner of the room",
-		},
-		{
-			key: optionNoSender,
-			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
-				optionNoSender,
-			),
-		},
-		{
-			key: optionNoSubject,
-			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
-				optionNoSubject,
-			),
-		},
-		{
-			key: optionNoHTML,
-			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
-				optionNoHTML,
-			),
-		},
-		{
-			key: optionNoThreads,
-			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
-				optionNoThreads,
-			),
-		},
-		{
-			key: optionNoFiles,
-			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - ignore email attachments; `false` - upload email attachments)",
-				optionNoFiles,
-			),
-		},
-	}
-
-	// sanitizers is map of option name => sanitizer function
-	sanitizers = map[string]sanitizerFunc{
-		optionMailbox:   utils.Mailbox,
-		optionNoSender:  utils.SanitizeBoolString,
-		optionNoSubject: utils.SanitizeBoolString,
-		optionNoHTML:    utils.SanitizeBoolString,
-		optionNoThreads: utils.SanitizeBoolString,
-		optionNoFiles:   utils.SanitizeBoolString,
-	}
+	commandList []command
 )
 
-func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []string) {
-	if _, ok := commands.get(command[0]); !ok {
+func (c commandList) get(key string) *command {
+	for _, cmd := range c {
+		if cmd.key == key {
+			return &cmd
+		}
+	}
+	return nil
+}
+
+var commands = commandList{
+	// special commands
+	{
+		key:         "help",
+		description: "Show this help message",
+	},
+	{
+		key:         "stop",
+		description: "Disable bridge for the room and clear all configuration",
+	},
+	{}, // delimiter
+	// options commands
+	{
+		key:         optionMailbox,
+		description: "Get or set mailbox of the room",
+		sanitizer:   utils.Mailbox,
+	},
+	{
+		key:         optionOwner,
+		description: "Get or set owner of the room",
+		sanitizer:   func(s string) string { return s },
+	},
+	{}, // delimiter
+	{
+		key: optionNoSender,
+		description: fmt.Sprintf(
+			"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
+			optionNoSender,
+		),
+		sanitizer: utils.SanitizeBoolString,
+	},
+	{
+		key: optionNoSubject,
+		description: fmt.Sprintf(
+			"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
+			optionNoSubject,
+		),
+		sanitizer: utils.SanitizeBoolString,
+	},
+	{
+		key: optionNoHTML,
+		description: fmt.Sprintf(
+			"Get or set `%s` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
+			optionNoHTML,
+		),
+		sanitizer: utils.SanitizeBoolString,
+	},
+	{
+		key: optionNoThreads,
+		description: fmt.Sprintf(
+			"Get or set `%s` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
+			optionNoThreads,
+		),
+		sanitizer: utils.SanitizeBoolString,
+	},
+	{
+		key: optionNoFiles,
+		description: fmt.Sprintf(
+			"Get or set `%s` of the room (`true` - ignore email attachments; `false` - upload email attachments)",
+			optionNoFiles,
+		),
+		sanitizer: utils.SanitizeBoolString,
+	},
+}
+
+func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice []string) {
+	if cmd := commands.get(commandSlice[0]); cmd == nil {
 		return
 	}
 
@@ -108,13 +104,13 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, command []str
 		return
 	}
 
-	switch command[0] {
+	switch commandSlice[0] {
 	case "help":
 		b.sendHelp(ctx, evt.RoomID)
 	case "stop":
 		b.runStop(ctx, true)
 	default:
-		b.handleOption(ctx, command)
+		b.handleOption(ctx, commandSlice)
 	}
 }
 
@@ -152,15 +148,44 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 }
 
 func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
+	evt := eventFromContext(ctx)
+
+	cfg, serr := b.getSettings(evt.RoomID)
+	if serr != nil {
+		b.log.Error("cannot retrieve settings: %v", serr)
+	}
+
 	var msg strings.Builder
 	msg.WriteString("The following commands are supported:\n\n")
-	for _, command := range commands {
+	for _, cmd := range commands {
+		if cmd.key == "" {
+			msg.WriteString("\n---\n")
+			continue
+		}
 		msg.WriteString("* **`")
 		msg.WriteString(b.prefix)
 		msg.WriteString(" ")
-		msg.WriteString(command.key)
-		msg.WriteString("`** - ")
-		msg.WriteString(command.description)
+		msg.WriteString(cmd.key)
+		msg.WriteString("`**")
+		value := cfg.Get(cmd.key)
+		if cmd.sanitizer != nil {
+			switch value != "" {
+			case false:
+				msg.WriteString("(currently not set)")
+			case true:
+				msg.WriteString("(currently `")
+				msg.WriteString(value)
+				if cmd.key == optionMailbox {
+					msg.WriteString("@")
+					msg.WriteString(b.domain)
+				}
+				msg.WriteString("`)")
+			}
+		}
+
+		msg.WriteString(" - ")
+
+		msg.WriteString(cmd.description)
 		msg.WriteString("\n")
 	}
 
@@ -197,17 +222,15 @@ func (b *Bot) runStop(ctx context.Context, checkAllowed bool) {
 	b.Notice(ctx, evt.RoomID, "mailbox has been disabled")
 }
 
-func (b *Bot) handleOption(ctx context.Context, command []string) {
-	if len(command) == 1 {
-		b.getOption(ctx, command[0])
+func (b *Bot) handleOption(ctx context.Context, cmd []string) {
+	if len(cmd) == 1 {
+		b.getOption(ctx, cmd[0])
 		return
 	}
-	b.setOption(ctx, command[0], command[1])
+	b.setOption(ctx, cmd[0], cmd[1])
 }
 
 func (b *Bot) getOption(ctx context.Context, name string) {
-	msg := "`%s` of this room is `%s`"
-
 	evt := eventFromContext(ctx)
 	cfg, err := b.getSettings(evt.RoomID)
 	if err != nil {
@@ -222,18 +245,16 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	}
 
 	if name == optionMailbox {
-		value = fmt.Sprintf("%s@%s", value, b.domain)
+		value = value + "@" + b.domain
 	}
 
-	b.Notice(ctx, evt.RoomID, fmt.Sprintf(msg, name, value))
+	b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room is `%s`", name, value))
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
-	msg := "`%s` of this room set to `%s`"
-
-	sanitizer, ok := sanitizers[name]
-	if ok {
-		value = sanitizer(value)
+	cmd := commands.get(name)
+	if cmd != nil {
+		value = cmd.sanitizer(value)
 	}
 
 	evt := eventFromContext(ctx)
@@ -274,5 +295,9 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		return
 	}
 
-	b.Notice(ctx, evt.RoomID, fmt.Sprintf(msg, name, value))
+	if name == optionMailbox {
+		value = value + "@" + b.domain
+	}
+
+	b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room set to `%s`", name, value))
 }
