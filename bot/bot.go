@@ -31,15 +31,15 @@ type Bot struct {
 // New creates a new matrix bot
 func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string, noowner, federation bool, allowedUsers []*regexp.Regexp) *Bot {
 	return &Bot{
-		noowner:    noowner,
-		federation: federation,
-		prefix:     prefix,
-		domain:     domain,
+		noowner:      noowner,
+		federation:   federation,
+		prefix:       prefix,
+		domain:       domain,
 		allowedUsers: allowedUsers,
-		rooms:      sync.Map{},
-		log:        log,
-		lp:         lp,
-		mu:         map[id.RoomID]*sync.Mutex{},
+		rooms:        sync.Map{},
+		log:          log,
+		lp:           lp,
+		mu:           map[id.RoomID]*sync.Mutex{},
 	}
 }
 
