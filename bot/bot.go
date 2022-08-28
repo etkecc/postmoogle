@@ -78,20 +78,6 @@ func (b *Bot) Start(statusMsg string) error {
 	return b.lp.Start(statusMsg)
 }
 
-// GetMappings returns mapping of mailbox = room
-func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
-	v, ok := b.rooms.Load(mailbox)
-	if !ok {
-		return "", ok
-	}
-	roomID, ok := v.(id.RoomID)
-	if !ok {
-		return "", ok
-	}
-
-	return roomID, ok
-}
-
 // Stop the bot
 func (b *Bot) Stop() {
 	err := b.lp.GetClient().SetPresence(event.PresenceOffline)
