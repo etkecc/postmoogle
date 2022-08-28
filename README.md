@@ -47,6 +47,36 @@ env vars
 
 You can find default values in [config/defaults.go](config/defaults.go)
 
+## Usage
+
+### How to start
+
+1. Invite the bot into a room you want to use as mailbox
+2. Read the bot's introduction
+3. Set mailbox using `!pm mailbox NAME` where `NAME` is part of email (e.g. `NAME@example.com`)
+4. Done. Mailbox owner and other options will be set automatically when you configure mailbox.
+If you want to change them - check available options in the help message (`!pm help`)
+
+### Commands
+
+The following commands are supported
+
+* **!pm help** - Show help message
+* **!pm stop** - Disable bridge for the room and clear all configuration
+
+---
+
+* **!pm mailbox** - Get or set mailbox of the room
+* **!pm owner** - Get or set owner of the room
+
+---
+
+* **!pm nosender** - Get or set `nosender` of the room (`true` - hide email sender; `false` - show email sender)
+* **!pm nosubject** - Get or set `nosubject` of the room (`true` - hide email subject; `false` - show email subject)
+* **!pm nohtml** - Get or set `nohtml` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)
+* **!pm nothreads** - Get or set `nothreads` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)
+* **!pm nofiles** - Get or set `nofiles` of the room (`true` - ignore email attachments; `false` - upload email attachments)
+
 ## Where to get
 
 [docker registry](https://gitlab.com/etke.cc/postmoogle/container_registry), [etke.cc](https://etke.cc)
