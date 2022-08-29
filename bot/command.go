@@ -49,7 +49,7 @@ func (b *Bot) buildCommandList() commandList {
 			description: "Disable bridge for the room and clear all configuration",
 			allowed:     b.allowOwner,
 		},
-		{}, // delimiter
+		{allowed: b.allowOwner}, // delimiter
 		// options commands
 		{
 			key:         optionMailbox,
@@ -63,7 +63,7 @@ func (b *Bot) buildCommandList() commandList {
 			sanitizer:   func(s string) string { return s },
 			allowed:     b.allowOwner,
 		},
-		{}, // delimiter
+		{allowed: b.allowOwner}, // delimiter
 		{
 			key: optionNoSender,
 			description: fmt.Sprintf(
@@ -109,7 +109,7 @@ func (b *Bot) buildCommandList() commandList {
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
-		{}, // delimiter
+		{allowed: b.allowAdmin}, // delimiter
 		{
 			key:         commandMailboxes,
 			description: "Show the list of all mailboxes",
@@ -136,7 +136,7 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 
 	switch commandSlice[0] {
 	case commandHelp:
-		b.sendHelp(ctx, evt.RoomID)
+		b.sendHelp(ctx)
 	case commandStop:
 		b.runStop(ctx)
 	case commandMailboxes:
@@ -179,7 +179,7 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	b.SendNotice(ctx, roomID, msg.String())
 }
 
-func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
+func (b *Bot) sendHelp(ctx context.Context) {
 	evt := eventFromContext(ctx)
 
 	cfg, serr := b.getSettings(evt.RoomID)
@@ -190,6 +190,9 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 	var msg strings.Builder
 	msg.WriteString("The following commands are supported:\n\n")
 	for _, cmd := range b.commands {
+		if !cmd.allowed(evt.Sender, evt.RoomID) {
+			continue
+		}
 		if cmd.key == "" {
 			msg.WriteString("\n---\n")
 			continue
@@ -221,5 +224,5 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 		msg.WriteString("\n")
 	}
 
-	b.SendNotice(ctx, roomID, msg.String())
+	b.SendNotice(ctx, evt.RoomID, msg.String())
 }

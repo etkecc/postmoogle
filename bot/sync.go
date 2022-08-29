@@ -80,7 +80,7 @@ func (b *Bot) onBotJoin(ctx context.Context) {
 	}
 
 	b.sendIntroduction(ctx, evt.RoomID)
-	b.sendHelp(ctx, evt.RoomID)
+	b.sendHelp(ctx)
 }
 
 func (b *Bot) onLeave(ctx context.Context) {
