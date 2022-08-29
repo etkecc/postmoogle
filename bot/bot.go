@@ -22,6 +22,7 @@ type Bot struct {
 	domain                  string
 	allowedUsers            []*regexp.Regexp
 	allowedAdmins           []*regexp.Regexp
+	commands                commandList
 	rooms                   sync.Map
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
@@ -38,7 +39,7 @@ func New(
 	allowedUsers []*regexp.Regexp,
 	allowedAdmins []*regexp.Regexp,
 ) *Bot {
-	return &Bot{
+	b := &Bot{
 		noowner:       noowner,
 		federation:    federation,
 		prefix:        prefix,
@@ -50,6 +51,10 @@ func New(
 		lp:            lp,
 		mu:            map[id.RoomID]*sync.Mutex{},
 	}
+
+	b.commands = b.buildCommandList()
+
+	return b
 }
 
 // Error message to the log and matrix room

@@ -11,11 +11,18 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
+const (
+	commandHelp      = "help"
+	commandStop      = "stop"
+	commandMailboxes = "mailboxes"
+)
+
 type (
 	command struct {
-		key         string
-		description string
-		sanitizer   func(string) string
+		key           string
+		description   string
+		sanitizer     func(string) string
+		accessChecker accessCheckerFunc
 	}
 	commandList []command
 )
@@ -29,73 +36,85 @@ func (c commandList) get(key string) *command {
 	return nil
 }
 
-var commands = commandList{
-	// special commands
-	{
-		key:         "help",
-		description: "Show this help message",
-	},
-	{
-		key:         "stop",
-		description: "Disable bridge for the room and clear all configuration",
-	},
-	{}, // delimiter
-	// options commands
-	{
-		key:         optionMailbox,
-		description: "Get or set mailbox of the room",
-		sanitizer:   utils.Mailbox,
-	},
-	{
-		key:         optionOwner,
-		description: "Get or set owner of the room",
-		sanitizer:   func(s string) string { return s },
-	},
-	{}, // delimiter
-	{
-		key: optionNoSender,
-		description: fmt.Sprintf(
-			"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
-			optionNoSender,
-		),
-		sanitizer: utils.SanitizeBoolString,
-	},
-	{
-		key: optionNoSubject,
-		description: fmt.Sprintf(
-			"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
-			optionNoSubject,
-		),
-		sanitizer: utils.SanitizeBoolString,
-	},
-	{
-		key: optionNoHTML,
-		description: fmt.Sprintf(
-			"Get or set `%s` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
-			optionNoHTML,
-		),
-		sanitizer: utils.SanitizeBoolString,
-	},
-	{
-		key: optionNoThreads,
-		description: fmt.Sprintf(
-			"Get or set `%s` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
-			optionNoThreads,
-		),
-		sanitizer: utils.SanitizeBoolString,
-	},
-	{
-		key: optionNoFiles,
-		description: fmt.Sprintf(
-			"Get or set `%s` of the room (`true` - ignore email attachments; `false` - upload email attachments)",
-			optionNoFiles,
-		),
-		sanitizer: utils.SanitizeBoolString,
-	},
+func (b *Bot) buildCommandList() commandList {
+	return commandList{
+		// special commands
+		{
+			key:           commandHelp,
+			description:   "Show this help message",
+			accessChecker: b.allowAnyone,
+		},
+		{
+			key:           commandStop,
+			description:   "Disable bridge for the room and clear all configuration",
+			accessChecker: b.allowOwner,
+		},
+		{}, // delimiter
+		// options commands
+		{
+			key:           optionMailbox,
+			description:   "Get or set mailbox of the room",
+			sanitizer:     utils.Mailbox,
+			accessChecker: b.allowOwner,
+		},
+		{
+			key:           optionOwner,
+			description:   "Get or set owner of the room",
+			sanitizer:     func(s string) string { return s },
+			accessChecker: b.allowOwner,
+		},
+		{}, // delimiter
+		{
+			key: optionNoSender,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
+				optionNoSender,
+			),
+			sanitizer:     utils.SanitizeBoolString,
+			accessChecker: b.allowOwner,
+		},
+		{
+			key: optionNoSubject,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
+				optionNoSubject,
+			),
+			sanitizer:     utils.SanitizeBoolString,
+			accessChecker: b.allowOwner,
+		},
+		{
+			key: optionNoHTML,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
+				optionNoHTML,
+			),
+			sanitizer:     utils.SanitizeBoolString,
+			accessChecker: b.allowOwner,
+		},
+		{
+			key: optionNoThreads,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
+				optionNoThreads,
+			),
+			sanitizer:     utils.SanitizeBoolString,
+			accessChecker: b.allowOwner,
+		},
+		{
+			key: optionNoFiles,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - ignore email attachments; `false` - upload email attachments)",
+				optionNoFiles,
+			),
+			sanitizer:     utils.SanitizeBoolString,
+			accessChecker: b.allowOwner,
+		},
+	}
 }
 
 func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice []string) {
-	if cmd := commands.get(commandSlice[0]); cmd == nil {
+	cmd := b.commands.get(commandSlice[0])
+	if cmd == nil {
 		return
 	}
 
@@ -104,11 +123,21 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		return
 	}
 
+	allowed, err := cmd.accessChecker(evt.Sender, evt.RoomID)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, err.Error())
+		return
+	}
+	if !allowed {
+		b.Notice(ctx, evt.RoomID, "not allowed to do that, kupo")
+		return
+	}
+
 	switch commandSlice[0] {
-	case "help":
+	case commandHelp:
 		b.sendHelp(ctx, evt.RoomID)
-	case "stop":
-		b.runStop(ctx, true)
+	case commandStop:
+		b.runStop(ctx)
 	default:
 		b.handleOption(ctx, commandSlice)
 	}
@@ -157,7 +186,7 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 
 	var msg strings.Builder
 	msg.WriteString("The following commands are supported:\n\n")
-	for _, cmd := range commands {
+	for _, cmd := range b.commands {
 		if cmd.key == "" {
 			msg.WriteString("\n---\n")
 			continue
@@ -192,16 +221,11 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 	b.Notice(ctx, roomID, msg.String())
 }
 
-func (b *Bot) runStop(ctx context.Context, checkAllowed bool) {
+func (b *Bot) runStop(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	cfg, err := b.getSettings(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
-		return
-	}
-
-	if checkAllowed && !b.Allowed(evt.Sender, cfg) {
-		b.Notice(ctx, evt.RoomID, "you don't have permission to do that")
 		return
 	}
 
@@ -252,7 +276,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
-	cmd := commands.get(name)
+	cmd := b.commands.get(name)
 	if cmd != nil {
 		value = cmd.sanitizer(value)
 	}
@@ -269,11 +293,6 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	cfg, err := b.getSettings(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
-		return
-	}
-
-	if !b.Allowed(evt.Sender, cfg) {
-		b.Notice(ctx, evt.RoomID, "you don't have permission to do that, kupo")
 		return
 	}
 

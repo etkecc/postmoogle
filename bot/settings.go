@@ -98,21 +98,3 @@ func (b *Bot) getSettings(roomID id.RoomID) (settings, error) {
 func (b *Bot) setSettings(roomID id.RoomID, cfg settings) error {
 	return utils.UnwrapError(b.lp.GetClient().SetRoomAccountData(roomID, settingskey, cfg))
 }
-
-// Allowed checks if change is allowed
-func (b *Bot) Allowed(userID id.UserID, cfg settings) bool {
-	if !utils.Match(userID.String(), b.allowedUsers) {
-		return false
-	}
-
-	if b.noowner {
-		return true
-	}
-
-	owner := cfg.Owner()
-	if owner == "" {
-		return true
-	}
-
-	return owner == userID.String()
-}
