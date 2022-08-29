@@ -18,8 +18,6 @@ type Config struct {
 	LogLevel string
 	// NoEncryption disabled encryption support
 	NoEncryption bool
-	// NoOwner allows room settings change by any participant
-	NoOwner bool
 	// Prefix for commands
 	Prefix string
 	// MaxSize of an email (including attachments)

@@ -17,7 +17,6 @@ import (
 
 // Bot represents matrix bot
 type Bot struct {
-	noowner                 bool
 	prefix                  string
 	domain                  string
 	allowedUsers            []*regexp.Regexp
@@ -37,12 +36,10 @@ func New(
 	log *logger.Logger,
 	prefix string,
 	domain string,
-	noowner bool,
 	allowedUsers []*regexp.Regexp,
 	allowedAdmins []*regexp.Regexp,
 ) *Bot {
 	b := &Bot{
-		noowner:       noowner,
 		prefix:        prefix,
 		domain:        domain,
 		allowedUsers:  allowedUsers,

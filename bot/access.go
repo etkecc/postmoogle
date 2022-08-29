@@ -19,10 +19,6 @@ func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
 		}
 	}
 
-	if b.noowner {
-		return true
-	}
-
 	cfg, err := b.getSettings(targetRoomID)
 	if err != nil {
 		b.Error(context.Background(), targetRoomID, "failed to retrieve settings: %v", err)

@@ -33,7 +33,6 @@ func New() (*Config, error) {
 		Domain:       env.String("domain", defaultConfig.Domain),
 		Port:         env.String("port", defaultConfig.Port),
 		NoEncryption: env.Bool("noencryption"),
-		NoOwner:      env.Bool("noowner"),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
 		Users:        userPatterns,

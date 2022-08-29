@@ -34,7 +34,6 @@ env vars
 <details>
 <summary>other optional config parameters</summary>
 
-* **POSTMOOGLE_NOOWNER** - allow change room settings by any room partisipant
 * **POSTMOOGLE_NOENCRYPTION** - disable encryption support
 * **POSTMOOGLE_STATUSMSG** - presence status message
 * **POSTMOOGLE_SENTRY_DSN** - sentry DSN
@@ -81,6 +80,7 @@ If you want to change them - check available options in the help message (`!pm h
 ---
 
 * **!pm mailboxes** - Show the list of all mailboxes
+* **!pm delete** &lt;mailbox&gt; - Delete specific mailbox
 
 </details>
 
