@@ -1,29 +1,14 @@
 package config
 
 import (
-	"fmt"
-	"regexp"
-
 	"gitlab.com/etke.cc/go/env"
-
-	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 const prefix = "postmoogle"
 
 // New config
-func New() (*Config, error) {
+func New() *Config {
 	env.SetPrefix(prefix)
-
-	userPatterns, err := getUserRegexPatterns("users")
-	if err != nil {
-		return nil, err
-	}
-
-	adminPatterns, err := getUserRegexPatterns("admins")
-	if err != nil {
-		return nil, err
-	}
 
 	cfg := &Config{
 		Homeserver:   env.String("homeserver", defaultConfig.Homeserver),
@@ -35,8 +20,8 @@ func New() (*Config, error) {
 		NoEncryption: env.Bool("noencryption"),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
-		Users:        userPatterns,
-		Admins:       adminPatterns,
+		Users:        env.Slice("users"),
+		Admins:       env.Slice("admins"),
 		Sentry: Sentry{
 			DSN: env.String("sentry.dsn", defaultConfig.Sentry.DSN),
 		},
@@ -47,19 +32,5 @@ func New() (*Config, error) {
 		},
 	}
 
-	return cfg, nil
-}
-
-func getUserRegexPatterns(key string) ([]*regexp.Regexp, error) {
-	mxidPatterns := env.Slice(key)
-	regexPatterns, err := utils.WildcardMXIDsToRegexes(mxidPatterns)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to convert wildcard %s patterns (`%s`) to regular expression: %s",
-			key,
-			mxidPatterns,
-			err,
-		)
-	}
-	return regexPatterns, nil
+	return cfg
 }

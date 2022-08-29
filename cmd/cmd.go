@@ -27,12 +27,7 @@ var (
 func main() {
 	quit := make(chan struct{})
 
-	cfg, err := config.New()
-	if err != nil {
-		log = logger.New("postmoogle.", "info")
-		log.Fatal("cannot read config: %v", err)
-	}
-
+	cfg := config.New()
 	log = logger.New("postmoogle.", cfg.LogLevel)
 
 	log.Info("#############################")
@@ -87,7 +82,12 @@ func initBot(cfg *config.Config) {
 		// nolint // Fatal = panic, not os.Exit()
 		log.Fatal("cannot initialize matrix bot: %v", err)
 	}
-	mxb = bot.New(lp, mxlog, cfg.Prefix, cfg.Domain, cfg.Users, cfg.Admins)
+
+	mxb, err = bot.New(lp, mxlog, cfg.Prefix, cfg.Domain, cfg.Users, cfg.Admins)
+	if err != nil {
+		// nolint // Fatal = panic, not os.Exit()
+		log.Fatal("cannot start matrix bot: %v", err)
+	}
 	log.Debug("bot has been created")
 }
 

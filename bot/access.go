@@ -2,11 +2,20 @@ package bot
 
 import (
 	"context"
+	"regexp"
 
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
+
+func parseMXIDpatterns(patterns []string, defaultPattern string) ([]*regexp.Regexp, error) {
+	if len(patterns) == 0 && defaultPattern != "" {
+		patterns = []string{defaultPattern}
+	}
+
+	return utils.WildcardMXIDsToRegexes(patterns)
+}
 
 func (b *Bot) allowAnyone(actorID id.UserID, targetRoomID id.RoomID) bool {
 	return true

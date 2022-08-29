@@ -36,9 +36,23 @@ func New(
 	log *logger.Logger,
 	prefix string,
 	domain string,
-	allowedUsers []*regexp.Regexp,
-	allowedAdmins []*regexp.Regexp,
-) *Bot {
+	users []string,
+	admins []string,
+) (*Bot, error) {
+	_, homeserver, err := lp.GetClient().UserID.Parse()
+	if err != nil {
+		return nil, err
+	}
+	var allowedUsers []*regexp.Regexp
+	allowedUsers, uerr := parseMXIDpatterns(users, "@*:"+homeserver)
+	if uerr != nil {
+		return nil, uerr
+	}
+	allowedAdmins, aerr := parseMXIDpatterns(admins, "")
+	if aerr != nil {
+		return nil, aerr
+	}
+
 	b := &Bot{
 		prefix:        prefix,
 		domain:        domain,
@@ -50,10 +64,9 @@ func New(
 		lp:            lp,
 		mu:            map[id.RoomID]*sync.Mutex{},
 	}
-
 	b.commands = b.buildCommandList()
 
-	return b
+	return b, nil
 }
 
 // Error message to the log and matrix room
