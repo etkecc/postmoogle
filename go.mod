@@ -3,6 +3,7 @@ module gitlab.com/etke.cc/postmoogle
 go 1.18
 
 require (
+	git.sr.ht/~xn/cache/v2 v2.0.0
 	github.com/emersion/go-smtp v0.15.0
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/jhillyerd/enmime v0.10.0

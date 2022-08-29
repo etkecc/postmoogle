@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sync"
 
+	"git.sr.ht/~xn/cache/v2"
 	"github.com/getsentry/sentry-go"
 	"gitlab.com/etke.cc/go/logger"
 	"gitlab.com/etke.cc/linkpearl"
@@ -24,6 +25,7 @@ type Bot struct {
 	allowedAdmins           []*regexp.Regexp
 	commands                commandList
 	rooms                   sync.Map
+	cfg                     cache.Cache[settings]
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
 	mu                      map[id.RoomID]*sync.Mutex
@@ -47,6 +49,7 @@ func New(
 		allowedUsers:  allowedUsers,
 		allowedAdmins: allowedAdmins,
 		rooms:         sync.Map{},
+		cfg:           cache.NewLRU[settings](1000),
 		log:           log,
 		lp:            lp,
 		mu:            map[id.RoomID]*sync.Mutex{},

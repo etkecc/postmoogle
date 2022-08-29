@@ -1,3 +1,5 @@
+git.sr.ht/~xn/cache/v2 v2.0.0 h1:aYzwGDyVIzjCl2yqcxZjprnu++Q3BmUQeK2agqvcQt8=
+git.sr.ht/~xn/cache/v2 v2.0.0/go.mod h1:HIPSMiDudQ483tRDup586e0YZdwMySIZFWXMPwYMuV8=
 github.com/DATA-DOG/go-sqlmock v1.5.0 h1:Shsta01QNfFxHCfpW6YH2STWB0MudeXXEWMr20OEh60=
 github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a h1:MISbI8sU/PSK/ztvmWKFcI7UGb5/HQT7B+i3a2myKgI=
 github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a/go.mod h1:2GxOXOlEPAMFPfp014mK1SWq8G8BN8o7/dfYqJrVGn8=
