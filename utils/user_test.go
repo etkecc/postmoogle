@@ -202,7 +202,7 @@ func TestMatch(t *testing.T) {
 					t.Error(err)
 				}
 
-				actualResult := Match(testData.checkedValue, *allowedUserRegexes)
+				actualResult := Match(testData.checkedValue, allowedUserRegexes)
 
 				if actualResult == testData.expectedResult {
 					return

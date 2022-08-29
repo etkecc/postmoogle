@@ -37,8 +37,8 @@ func New() (*Config, error) {
 		Federation:   env.Bool("federation"),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
-		Users:        *userPatterns,
-		Admins:       *adminPatterns,
+		Users:        userPatterns,
+		Admins:       adminPatterns,
 		Sentry: Sentry{
 			DSN: env.String("sentry.dsn", defaultConfig.Sentry.DSN),
 		},
@@ -52,7 +52,7 @@ func New() (*Config, error) {
 	return cfg, nil
 }
 
-func getUserRegexPatterns(key string) (*[]*regexp.Regexp, error) {
+func getUserRegexPatterns(key string) ([]*regexp.Regexp, error) {
 	mxidPatterns := env.Slice(key)
 	regexPatterns, err := utils.WildcardMXIDsToRegexes(mxidPatterns)
 	if err != nil {

@@ -60,19 +60,21 @@ func New(
 // Error message to the log and matrix room
 func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args ...interface{}) {
 	b.log.Error(message, args...)
+	err := fmt.Errorf(message, args...)
 
-	sentry.GetHubFromContext(ctx).CaptureException(fmt.Errorf(message, args...))
+	sentry.GetHubFromContext(ctx).CaptureException(err)
 	if roomID != "" {
-		// nolint // if something goes wrong here nobody can help...
-		b.lp.Send(roomID, &event.MessageEventContent{
-			MsgType: event.MsgNotice,
-			Body:    "ERROR: " + fmt.Sprintf(message, args...),
-		})
+		b.SendError(ctx, roomID, message)
 	}
 }
 
-// Notice sends a notice message to the matrix room
-func (b *Bot) Notice(ctx context.Context, roomID id.RoomID, message string) {
+// SendError sends an error message to the matrix room
+func (b *Bot) SendError(ctx context.Context, roomID id.RoomID, message string) {
+	b.SendNotice(ctx, roomID, "ERROR: "+message)
+}
+
+// SendNotice sends a notice message to the matrix room
+func (b *Bot) SendNotice(ctx context.Context, roomID id.RoomID, message string) {
 	content := format.RenderMarkdown(message, true, true)
 	content.MsgType = event.MsgNotice
 	_, err := b.lp.Send(roomID, &content)

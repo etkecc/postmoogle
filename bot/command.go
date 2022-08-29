@@ -19,10 +19,10 @@ const (
 
 type (
 	command struct {
-		key           string
-		description   string
-		sanitizer     func(string) string
-		accessChecker accessCheckerFunc
+		key         string
+		description string
+		sanitizer   func(string) string
+		allowed     func(id.UserID, id.RoomID) bool
 	}
 	commandList []command
 )
@@ -40,28 +40,28 @@ func (b *Bot) buildCommandList() commandList {
 	return commandList{
 		// special commands
 		{
-			key:           commandHelp,
-			description:   "Show this help message",
-			accessChecker: b.allowAnyone,
+			key:         commandHelp,
+			description: "Show this help message",
+			allowed:     b.allowAnyone,
 		},
 		{
-			key:           commandStop,
-			description:   "Disable bridge for the room and clear all configuration",
-			accessChecker: b.allowOwner,
+			key:         commandStop,
+			description: "Disable bridge for the room and clear all configuration",
+			allowed:     b.allowOwner,
 		},
 		{}, // delimiter
 		// options commands
 		{
-			key:           optionMailbox,
-			description:   "Get or set mailbox of the room",
-			sanitizer:     utils.Mailbox,
-			accessChecker: b.allowOwner,
+			key:         optionMailbox,
+			description: "Get or set mailbox of the room",
+			sanitizer:   utils.Mailbox,
+			allowed:     b.allowOwner,
 		},
 		{
-			key:           optionOwner,
-			description:   "Get or set owner of the room",
-			sanitizer:     func(s string) string { return s },
-			accessChecker: b.allowOwner,
+			key:         optionOwner,
+			description: "Get or set owner of the room",
+			sanitizer:   func(s string) string { return s },
+			allowed:     b.allowOwner,
 		},
 		{}, // delimiter
 		{
@@ -70,8 +70,8 @@ func (b *Bot) buildCommandList() commandList {
 				"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
 				optionNoSender,
 			),
-			sanitizer:     utils.SanitizeBoolString,
-			accessChecker: b.allowOwner,
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
 		},
 		{
 			key: optionNoSubject,
@@ -79,8 +79,8 @@ func (b *Bot) buildCommandList() commandList {
 				"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
 				optionNoSubject,
 			),
-			sanitizer:     utils.SanitizeBoolString,
-			accessChecker: b.allowOwner,
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
 		},
 		{
 			key: optionNoHTML,
@@ -88,8 +88,8 @@ func (b *Bot) buildCommandList() commandList {
 				"Get or set `%s` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
 				optionNoHTML,
 			),
-			sanitizer:     utils.SanitizeBoolString,
-			accessChecker: b.allowOwner,
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
 		},
 		{
 			key: optionNoThreads,
@@ -97,8 +97,8 @@ func (b *Bot) buildCommandList() commandList {
 				"Get or set `%s` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
 				optionNoThreads,
 			),
-			sanitizer:     utils.SanitizeBoolString,
-			accessChecker: b.allowOwner,
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
 		},
 		{
 			key: optionNoFiles,
@@ -106,14 +106,14 @@ func (b *Bot) buildCommandList() commandList {
 				"Get or set `%s` of the room (`true` - ignore email attachments; `false` - upload email attachments)",
 				optionNoFiles,
 			),
-			sanitizer:     utils.SanitizeBoolString,
-			accessChecker: b.allowOwner,
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
 		},
 		{}, // delimiter
 		{
-			key:           commandMailboxes,
-			description:   "Show the list of all mailboxes",
-			accessChecker: b.allowAdmin,
+			key:         commandMailboxes,
+			description: "Show the list of all mailboxes",
+			allowed:     b.allowAdmin,
 		},
 	}
 }
@@ -129,13 +129,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		return
 	}
 
-	allowed, err := cmd.accessChecker(evt.Sender, evt.RoomID)
-	if err != nil {
-		b.Error(ctx, evt.RoomID, err.Error())
-		return
-	}
-	if !allowed {
-		b.Notice(ctx, evt.RoomID, "not allowed to do that, kupo")
+	if !cmd.allowed(evt.Sender, evt.RoomID) {
+		b.SendNotice(ctx, evt.RoomID, "not allowed to do that, kupo")
 		return
 	}
 
@@ -181,7 +176,7 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	msg.WriteString(b.domain)
 	msg.WriteString("` and have them appear in this room.")
 
-	b.Notice(ctx, roomID, msg.String())
+	b.SendNotice(ctx, roomID, msg.String())
 }
 
 func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
@@ -226,7 +221,52 @@ func (b *Bot) sendHelp(ctx context.Context, roomID id.RoomID) {
 		msg.WriteString("\n")
 	}
 
-	b.Notice(ctx, roomID, msg.String())
+	b.SendNotice(ctx, roomID, msg.String())
+}
+
+func (b *Bot) sendMailboxes(ctx context.Context) {
+	evt := eventFromContext(ctx)
+	mailboxes := map[string]id.RoomID{}
+	b.rooms.Range(func(key any, value any) bool {
+		if key == nil {
+			return true
+		}
+		if value == nil {
+			return true
+		}
+
+		mailbox, ok := key.(string)
+		if !ok {
+			return true
+		}
+		roomID, ok := value.(id.RoomID)
+		if !ok {
+			return true
+		}
+
+		mailboxes[mailbox] = roomID
+		return true
+	})
+
+	if len(mailboxes) == 0 {
+		b.SendNotice(ctx, evt.RoomID, "No mailboxes are managed by the bot so far, kupo!")
+		return
+	}
+
+	var msg strings.Builder
+	msg.WriteString("The following mailboxes are managed by the bot:\n")
+	for mailbox, roomID := range mailboxes {
+		msg.WriteString("* `")
+		msg.WriteString(mailbox)
+		msg.WriteString("@")
+		msg.WriteString(b.domain)
+		msg.WriteString("` - `")
+		msg.WriteString(roomID.String())
+		msg.WriteString("`")
+		msg.WriteString("\n")
+	}
+
+	b.SendNotice(ctx, evt.RoomID, msg.String())
 }
 
 func (b *Bot) runStop(ctx context.Context) {
@@ -239,7 +279,7 @@ func (b *Bot) runStop(ctx context.Context) {
 
 	mailbox := cfg.Get(optionMailbox)
 	if mailbox == "" {
-		b.Notice(ctx, evt.RoomID, "that room is not configured yet")
+		b.SendNotice(ctx, evt.RoomID, "that room is not configured yet")
 		return
 	}
 
@@ -251,7 +291,7 @@ func (b *Bot) runStop(ctx context.Context) {
 		return
 	}
 
-	b.Notice(ctx, evt.RoomID, "mailbox has been disabled")
+	b.SendNotice(ctx, evt.RoomID, "mailbox has been disabled")
 }
 
 func (b *Bot) handleOption(ctx context.Context, cmd []string) {
@@ -272,7 +312,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 
 	value := cfg.Get(name)
 	if value == "" {
-		b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` is not set, kupo.", name))
+		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("`%s` is not set, kupo.", name))
 		return
 	}
 
@@ -280,7 +320,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		value = value + "@" + b.domain
 	}
 
-	b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room is `%s`", name, value))
+	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room is `%s`", name, value))
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
@@ -293,7 +333,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	if name == optionMailbox {
 		existingID, ok := b.GetMapping(value)
 		if ok && existingID != "" && existingID != evt.RoomID {
-			b.Notice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken, kupo", value, b.domain))
+			b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken, kupo", value, b.domain))
 			return
 		}
 	}
@@ -326,5 +366,5 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		value = value + "@" + b.domain
 	}
 
-	b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room set to `%s`", name, value))
+	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room set to `%s`", name, value))
 }

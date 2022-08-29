@@ -1,41 +1,40 @@
 package bot
 
 import (
-	"fmt"
+	"context"
 
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
-type accessCheckerFunc func(id.UserID, id.RoomID) (bool, error)
-
-func (b *Bot) allowAnyone(actorID id.UserID, targetRoomID id.RoomID) (bool, error) {
-	return true, nil
+func (b *Bot) allowAnyone(actorID id.UserID, targetRoomID id.RoomID) bool {
+	return true
 }
 
-func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) (bool, error) {
+func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
 	if !utils.Match(actorID.String(), b.allowedUsers) {
-		return false, nil
+		return false
 	}
 
 	if b.noowner {
-		return true, nil
+		return true
 	}
 
 	cfg, err := b.getSettings(targetRoomID)
 	if err != nil {
-		return false, fmt.Errorf("failed to retrieve settings: %v", err)
+		b.Error(context.Background(), targetRoomID, "failed to retrieve settings: %v", err)
+		return false
 	}
 
 	owner := cfg.Owner()
 	if owner == "" {
-		return true, nil
+		return true
 	}
 
-	return owner == actorID.String(), nil
+	return owner == actorID.String()
 }
 
-func (b *Bot) allowAdmin(actorID id.UserID, targetRoomID id.RoomID) (bool, error) {
-	return utils.Match(actorID.String(), b.allowedAdmins), nil
+func (b *Bot) allowAdmin(actorID id.UserID, targetRoomID id.RoomID) bool {
+	return utils.Match(actorID.String(), b.allowedAdmins)
 }
