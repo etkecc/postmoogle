@@ -35,3 +35,7 @@ func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) (bool, error
 
 	return owner == actorID.String(), nil
 }
+
+func (b *Bot) allowAdmin(actorID id.UserID, targetRoomID id.RoomID) (bool, error) {
+	return utils.Match(actorID.String(), b.allowedAdmins), nil
+}

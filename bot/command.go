@@ -109,6 +109,12 @@ func (b *Bot) buildCommandList() commandList {
 			sanitizer:     utils.SanitizeBoolString,
 			accessChecker: b.allowOwner,
 		},
+		{}, // delimiter
+		{
+			key:           commandMailboxes,
+			description:   "Show the list of all mailboxes",
+			accessChecker: b.allowAdmin,
+		},
 	}
 }
 
@@ -138,6 +144,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.sendHelp(ctx, evt.RoomID)
 	case commandStop:
 		b.runStop(ctx)
+	case commandMailboxes:
+		b.sendMailboxes(ctx)
 	default:
 		b.handleOption(ctx, commandSlice)
 	}
