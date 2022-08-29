@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"regexp"
 
 	"gitlab.com/etke.cc/go/env"
 
@@ -14,14 +15,14 @@ const prefix = "postmoogle"
 func New() (*Config, error) {
 	env.SetPrefix(prefix)
 
-	mxidPatterns := env.Slice("users")
-	regexPatterns, err := utils.WildcardMXIDsToRegexes(mxidPatterns)
+	userPatterns, err := getUserRegexPatterns("users")
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to convert wildcard user patterns (`%s`) to regular expression: %s",
-			mxidPatterns,
-			err,
-		)
+		return nil, err
+	}
+
+	adminPatterns, err := getUserRegexPatterns("admins")
+	if err != nil {
+		return nil, err
 	}
 
 	cfg := &Config{
@@ -36,7 +37,8 @@ func New() (*Config, error) {
 		Federation:   env.Bool("federation"),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
-		Users:        *regexPatterns,
+		Users:        *userPatterns,
+		Admins:       *adminPatterns,
 		Sentry: Sentry{
 			DSN: env.String("sentry.dsn", defaultConfig.Sentry.DSN),
 		},
@@ -48,4 +50,18 @@ func New() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func getUserRegexPatterns(key string) (*[]*regexp.Regexp, error) {
+	mxidPatterns := env.Slice(key)
+	regexPatterns, err := utils.WildcardMXIDsToRegexes(mxidPatterns)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to convert wildcard %s patterns (`%s`) to regular expression: %s",
+			key,
+			mxidPatterns,
+			err,
+		)
+	}
+	return regexPatterns, nil
 }

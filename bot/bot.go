@@ -21,6 +21,7 @@ type Bot struct {
 	prefix                  string
 	domain                  string
 	allowedUsers            []*regexp.Regexp
+	allowedAdmins           []*regexp.Regexp
 	rooms                   sync.Map
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
@@ -29,17 +30,25 @@ type Bot struct {
 }
 
 // New creates a new matrix bot
-func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string, noowner, federation bool, allowedUsers []*regexp.Regexp) *Bot {
+func New(
+	lp *linkpearl.Linkpearl,
+	log *logger.Logger,
+	prefix, domain string,
+	noowner, federation bool,
+	allowedUsers []*regexp.Regexp,
+	allowedAdmins []*regexp.Regexp,
+) *Bot {
 	return &Bot{
-		noowner:      noowner,
-		federation:   federation,
-		prefix:       prefix,
-		domain:       domain,
-		allowedUsers: allowedUsers,
-		rooms:        sync.Map{},
-		log:          log,
-		lp:           lp,
-		mu:           map[id.RoomID]*sync.Mutex{},
+		noowner:       noowner,
+		federation:    federation,
+		prefix:        prefix,
+		domain:        domain,
+		allowedUsers:  allowedUsers,
+		allowedAdmins: allowedAdmins,
+		rooms:         sync.Map{},
+		log:           log,
+		lp:            lp,
+		mu:            map[id.RoomID]*sync.Mutex{},
 	}
 }
 

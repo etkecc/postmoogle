@@ -30,6 +30,8 @@ type Config struct {
 	StatusMsg string
 	// Users holds list of allowed users (wildcards supported), e.g.: @*:example.com, @bot.*:example.com, @admin:*. Empty = *
 	Users []*regexp.Regexp
+	// Admins holds list of admin users (wildcards supported), e.g.: @*:example.com, @bot.*:example.com, @admin:*. Empty = *
+	Admins []*regexp.Regexp
 
 	// DB config
 	DB DB
