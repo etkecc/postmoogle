@@ -14,6 +14,7 @@ import (
 const (
 	commandHelp      = "help"
 	commandStop      = "stop"
+	commandUsers     = botOptionUsers
 	commandDelete    = "delete"
 	commandMailboxes = "mailboxes"
 )
@@ -112,6 +113,11 @@ func (b *Bot) buildCommandList() commandList {
 		},
 		{allowed: b.allowAdmin}, // delimiter
 		{
+			key:         botOptionUsers,
+			description: "Get or set allowed users",
+			allowed:     b.allowAdmin,
+		},
+		{
 			key:         commandMailboxes,
 			description: "Show the list of all mailboxes",
 			allowed:     b.allowAdmin,
@@ -140,6 +146,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.sendHelp(ctx)
 	case commandStop:
 		b.runStop(ctx)
+	case commandUsers:
+		b.runUsers(ctx, commandSlice)
 	case commandDelete:
 		b.runDelete(ctx, commandSlice)
 	case commandMailboxes:

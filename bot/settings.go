@@ -52,6 +52,11 @@ func (s settings) NoFiles() bool {
 	return utils.Bool(s.Get(optionNoFiles))
 }
 
+// Users is bot/admin option
+func (s settings) Users() []string {
+	return strings.Split(s.Get(botOptionUsers), " ")
+}
+
 // Set option
 func (s settings) Set(key, value string) {
 	s[strings.ToLower(strings.TrimSpace(key))] = value

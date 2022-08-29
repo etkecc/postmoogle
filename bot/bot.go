@@ -39,12 +39,25 @@ func New(
 	users []string,
 	admins []string,
 ) (*Bot, error) {
+	b := &Bot{
+		prefix: prefix,
+		domain: domain,
+		rooms:  sync.Map{},
+		cfg:    cache.NewLRU[settings](1000),
+		log:    log,
+		lp:     lp,
+		mu:     map[id.RoomID]*sync.Mutex{},
+	}
+	err := b.migrateBotSettings(users)
+	if err != nil {
+		return nil, err
+	}
+
 	_, homeserver, err := lp.GetClient().UserID.Parse()
 	if err != nil {
 		return nil, err
 	}
-	var allowedUsers []*regexp.Regexp
-	allowedUsers, uerr := parseMXIDpatterns(users, "@*:"+homeserver)
+	allowedUsers, uerr := parseMXIDpatterns(b.getBotSettings().Users(), "@*:"+homeserver)
 	if uerr != nil {
 		return nil, uerr
 	}
@@ -52,18 +65,8 @@ func New(
 	if aerr != nil {
 		return nil, aerr
 	}
-
-	b := &Bot{
-		prefix:        prefix,
-		domain:        domain,
-		allowedUsers:  allowedUsers,
-		allowedAdmins: allowedAdmins,
-		rooms:         sync.Map{},
-		cfg:           cache.NewLRU[settings](1000),
-		log:           log,
-		lp:            lp,
-		mu:            map[id.RoomID]*sync.Mutex{},
-	}
+	b.allowedUsers = allowedUsers
+	b.allowedAdmins = allowedAdmins
 	b.commands = b.buildCommandList()
 
 	return b, nil

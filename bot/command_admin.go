@@ -87,3 +87,41 @@ func (b *Bot) runDelete(ctx context.Context, commandSlice []string) {
 
 	b.SendNotice(ctx, evt.RoomID, "mailbox has been deleted")
 }
+
+func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	cfg := b.getBotSettings()
+	if len(commandSlice) < 2 {
+		var msg strings.Builder
+		users := cfg.Users()
+		if len(users) > 0 {
+			msg.WriteString("Currently: `")
+			msg.WriteString(strings.Join(users, " "))
+			msg.WriteString("`\n\n")
+		}
+		msg.WriteString("Usage: `")
+		msg.WriteString(b.prefix)
+		msg.WriteString(" users PATTERN1 PATTERN2 PATTERN3...`")
+		msg.WriteString("where patterns like `@someone:example.com ")
+		msg.WriteString(" @bot.*:example.com @*:another.com @*:*`\n")
+
+		b.SendNotice(ctx, evt.RoomID, msg.String())
+		return
+	}
+
+	patterns := commandSlice[1:]
+	allowedUsers, err := parseMXIDpatterns(patterns, "")
+	if err != nil {
+		b.SendError(ctx, evt.RoomID, fmt.Sprintf("invalid patterns: %v", err))
+		return
+	}
+
+	cfg.Set(botOptionUsers, strings.Join(patterns, " "))
+
+	err = b.setBotSettings(cfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+	}
+	b.allowedUsers = allowedUsers
+	b.SendNotice(ctx, evt.RoomID, "allowed users updated")
+}

@@ -44,8 +44,8 @@ env vars
 * **POSTMOOGLE_DB_DSN** - database connection string
 * **POSTMOOGLE_DB_DIALECT** - database dialect (postgres, sqlite3)
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
-* **POSTMOOGLE_USERS** - a space-separated list of whitelisted users allowed to use the bridge. If not defined, everyone on the homeserver are allowed. Example rule: `@someone:example.com @another:example.com @bot.*:example.com @*:another.com`
 * **POSTMOOGLE_ADMINS** - a space-separated list of admin users. See `POSTMOOGLE_USERS` for syntax examples
+* <s>**POSTMOOGLE_USERS**</s> - deprecated and ignored, use `!pm users` instead
 
 You can find default values in [config/defaults.go](config/defaults.go)
 
@@ -83,6 +83,7 @@ If you want to change them - check available options in the help message (`!pm h
 ---
 
 * **!pm mailboxes** - Show the list of all mailboxes
+* **!pm users** - Get or set allowed users patterns
 * **!pm delete** &lt;mailbox&gt; - Delete specific mailbox
 
 </details>
