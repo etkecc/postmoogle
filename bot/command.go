@@ -14,6 +14,7 @@ import (
 const (
 	commandHelp      = "help"
 	commandStop      = "stop"
+	commandDelete    = "delete"
 	commandMailboxes = "mailboxes"
 )
 
@@ -115,6 +116,11 @@ func (b *Bot) buildCommandList() commandList {
 			description: "Show the list of all mailboxes",
 			allowed:     b.allowAdmin,
 		},
+		{
+			key:         commandDelete,
+			description: "Delete specific mailbox",
+			allowed:     b.allowAdmin,
+		},
 	}
 }
 
@@ -134,6 +140,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.sendHelp(ctx)
 	case commandStop:
 		b.runStop(ctx)
+	case commandDelete:
+		b.runDelete(ctx, commandSlice)
 	case commandMailboxes:
 		b.sendMailboxes(ctx)
 	default:
