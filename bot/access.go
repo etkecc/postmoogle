@@ -13,8 +13,10 @@ func (b *Bot) allowAnyone(actorID id.UserID, targetRoomID id.RoomID) bool {
 }
 
 func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
-	if !utils.Match(actorID.String(), b.allowedUsers) {
-		return false
+	if len(b.allowedUsers) != 0 {
+		if !utils.Match(actorID.String(), b.allowedUsers) {
+			return false
+		}
 	}
 
 	if b.noowner {

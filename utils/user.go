@@ -23,11 +23,6 @@ func WildcardMXIDsToRegexes(wildCardPatterns []string) ([]*regexp.Regexp, error)
 
 // Match tells if the given user id is allowed to use the bot, according to the given whitelist
 func Match(userID string, allowed []*regexp.Regexp) bool {
-	// No whitelisted users means everyone is whitelisted
-	if len(allowed) == 0 {
-		return true
-	}
-
 	for _, regex := range allowed {
 		if regex.MatchString(userID) {
 			return true

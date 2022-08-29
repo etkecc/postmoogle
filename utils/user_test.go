@@ -127,10 +127,10 @@ func TestMatch(t *testing.T) {
 
 	tests := []testDataDefinition{
 		{
-			name:           "Empty allowed users allows anyone",
+			name:           "Empty allowed users allows no one",
 			checkedValue:   "@someone:example.com",
 			allowedUsers:   []string{},
-			expectedResult: true,
+			expectedResult: false,
 		},
 		{
 			name:           "Direct full mxid match is allowed",
