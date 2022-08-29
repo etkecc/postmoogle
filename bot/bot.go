@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sync"
 
+	"git.sr.ht/~xn/cache/v2"
 	"github.com/getsentry/sentry-go"
 	"gitlab.com/etke.cc/go/logger"
 	"gitlab.com/etke.cc/linkpearl"
@@ -21,7 +22,10 @@ type Bot struct {
 	prefix                  string
 	domain                  string
 	allowedUsers            []*regexp.Regexp
+	allowedAdmins           []*regexp.Regexp
+	commands                commandList
 	rooms                   sync.Map
+	cfg                     cache.Cache[settings]
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
 	mu                      map[id.RoomID]*sync.Mutex
@@ -29,36 +33,51 @@ type Bot struct {
 }
 
 // New creates a new matrix bot
-func New(lp *linkpearl.Linkpearl, log *logger.Logger, prefix, domain string, noowner, federation bool, allowedUsers []*regexp.Regexp) *Bot {
-	return &Bot{
-		noowner:      noowner,
-		federation:   federation,
-		prefix:       prefix,
-		domain:       domain,
-		allowedUsers: allowedUsers,
-		rooms:        sync.Map{},
-		log:          log,
-		lp:           lp,
-		mu:           map[id.RoomID]*sync.Mutex{},
+func New(
+	lp *linkpearl.Linkpearl,
+	log *logger.Logger,
+	prefix, domain string,
+	noowner, federation bool,
+	allowedUsers []*regexp.Regexp,
+	allowedAdmins []*regexp.Regexp,
+) *Bot {
+	b := &Bot{
+		noowner:       noowner,
+		federation:    federation,
+		prefix:        prefix,
+		domain:        domain,
+		allowedUsers:  allowedUsers,
+		allowedAdmins: allowedAdmins,
+		rooms:         sync.Map{},
+		cfg:           cache.NewLRU[settings](1000),
+		log:           log,
+		lp:            lp,
+		mu:            map[id.RoomID]*sync.Mutex{},
 	}
+
+	b.commands = b.buildCommandList()
+
+	return b
 }
 
 // Error message to the log and matrix room
 func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args ...interface{}) {
 	b.log.Error(message, args...)
+	err := fmt.Errorf(message, args...)
 
-	sentry.GetHubFromContext(ctx).CaptureException(fmt.Errorf(message, args...))
+	sentry.GetHubFromContext(ctx).CaptureException(err)
 	if roomID != "" {
-		// nolint // if something goes wrong here nobody can help...
-		b.lp.Send(roomID, &event.MessageEventContent{
-			MsgType: event.MsgNotice,
-			Body:    "ERROR: " + fmt.Sprintf(message, args...),
-		})
+		b.SendError(ctx, roomID, message)
 	}
 }
 
-// Notice sends a notice message to the matrix room
-func (b *Bot) Notice(ctx context.Context, roomID id.RoomID, message string) {
+// SendError sends an error message to the matrix room
+func (b *Bot) SendError(ctx context.Context, roomID id.RoomID, message string) {
+	b.SendNotice(ctx, roomID, "ERROR: "+message)
+}
+
+// SendNotice sends a notice message to the matrix room
+func (b *Bot) SendNotice(ctx context.Context, roomID id.RoomID, message string) {
 	content := format.RenderMarkdown(message, true, true)
 	content.MsgType = event.MsgNotice
 	_, err := b.lp.Send(roomID, &content)

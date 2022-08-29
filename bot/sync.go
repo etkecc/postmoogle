@@ -80,7 +80,7 @@ func (b *Bot) onBotJoin(ctx context.Context) {
 	}
 
 	b.sendIntroduction(ctx, evt.RoomID)
-	b.sendHelp(ctx, evt.RoomID)
+	b.sendHelp(ctx)
 }
 
 func (b *Bot) onLeave(ctx context.Context) {
@@ -94,7 +94,7 @@ func (b *Bot) onLeave(ctx context.Context) {
 	count := len(members)
 	if count == 1 && members[0] == b.lp.GetClient().UserID {
 		b.log.Info("no more users left in the %s room", evt.RoomID)
-		b.runStop(ctx, false)
+		b.runStop(ctx)
 		_, err := b.lp.GetClient().LeaveRoom(evt.RoomID)
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "cannot leave empty room: %v", err)
