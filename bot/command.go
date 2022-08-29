@@ -295,9 +295,5 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		return
 	}
 
-	if name == optionMailbox {
-		value = value + "@" + b.domain
-	}
-
 	b.Notice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room set to `%s`", name, value))
 }
