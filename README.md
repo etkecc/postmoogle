@@ -79,6 +79,10 @@ If you want to change them - check available options in the help message (`!pm h
 * **!pm nothreads** - Get or set `nothreads` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)
 * **!pm nofiles** - Get or set `nofiles` of the room (`true` - ignore email attachments; `false` - upload email attachments)
 
+---
+
+* **!pm mailboxes** - Show the list of all mailboxes
+
 </details>
 
 
