@@ -34,7 +34,6 @@ func New() (*Config, error) {
 		Port:         env.String("port", defaultConfig.Port),
 		NoEncryption: env.Bool("noencryption"),
 		NoOwner:      env.Bool("noowner"),
-		Federation:   env.Bool("federation"),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
 		Users:        userPatterns,

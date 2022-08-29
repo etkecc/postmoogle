@@ -124,11 +124,6 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		return
 	}
 
-	// ignore requests over federation if disabled
-	if !b.federation && evt.Sender.Homeserver() != b.lp.GetClient().UserID.Homeserver() {
-		return
-	}
-
 	if !cmd.allowed(evt.Sender, evt.RoomID) {
 		b.SendNotice(ctx, evt.RoomID, "not allowed to do that, kupo")
 		return

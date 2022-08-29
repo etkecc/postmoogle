@@ -18,7 +18,6 @@ import (
 // Bot represents matrix bot
 type Bot struct {
 	noowner                 bool
-	federation              bool
 	prefix                  string
 	domain                  string
 	allowedUsers            []*regexp.Regexp
@@ -36,14 +35,14 @@ type Bot struct {
 func New(
 	lp *linkpearl.Linkpearl,
 	log *logger.Logger,
-	prefix, domain string,
-	noowner, federation bool,
+	prefix string,
+	domain string,
+	noowner bool,
 	allowedUsers []*regexp.Regexp,
 	allowedAdmins []*regexp.Regexp,
 ) *Bot {
 	b := &Bot{
 		noowner:       noowner,
-		federation:    federation,
 		prefix:        prefix,
 		domain:        domain,
 		allowedUsers:  allowedUsers,
