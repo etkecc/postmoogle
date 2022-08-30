@@ -58,9 +58,12 @@ func (b *Bot) getBotSettings() botSettings {
 	if err != nil {
 		if strings.Contains(err.Error(), "M_NOT_FOUND") {
 			err = nil
+		} else {
+			b.log.Error("cannot get bot settings: %v", utils.UnwrapError(err))
 		}
-		b.log.Error("cannot get bot settings: %v", utils.UnwrapError(err))
-	} else {
+	}
+
+	if err == nil {
 		b.botcfg.Set(acBotSettingsKey, config)
 	}
 
