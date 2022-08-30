@@ -32,7 +32,7 @@ func (s botSettings) Users() []string {
 	if strings.Contains(value, " ") {
 		return strings.Split(value, " ")
 	}
-	return []string{}
+	return []string{value}
 }
 
 func (b *Bot) initBotUsers(users []string) error {
