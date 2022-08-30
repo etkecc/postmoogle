@@ -102,8 +102,8 @@ func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 		msg.WriteString("Usage: `")
 		msg.WriteString(b.prefix)
 		msg.WriteString(" users PATTERN1 PATTERN2 PATTERN3...`")
-		msg.WriteString("where patterns like `@someone:example.com ")
-		msg.WriteString(" @bot.*:example.com @*:another.com @*:*`\n")
+		msg.WriteString("where each pattern is like `@someone:example.com`, ")
+		msg.WriteString("`@bot.*:example.com`, `@*:another.com`, or `@*:*`\n")
 
 		b.SendNotice(ctx, evt.RoomID, msg.String())
 		return

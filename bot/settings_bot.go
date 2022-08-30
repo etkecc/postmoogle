@@ -28,7 +28,11 @@ func (s botSettings) Set(key, value string) {
 
 // Users option
 func (s botSettings) Users() []string {
-	return strings.Split(s.Get(botOptionUsers), " ")
+	value := s.Get(botOptionUsers)
+	if strings.Contains(value, " ") {
+		return strings.Split(value, " ")
+	}
+	return []string{}
 }
 
 // TODO: remove after migration
