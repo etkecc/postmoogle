@@ -37,7 +37,7 @@ func New(
 	log *logger.Logger,
 	prefix string,
 	domain string,
-	users []string,
+	envUsers []string,
 	admins []string,
 ) (*Bot, error) {
 	b := &Bot{
@@ -50,15 +50,22 @@ func New(
 		lp:     lp,
 		mu:     map[id.RoomID]*sync.Mutex{},
 	}
-	err := b.initBotUsers(users)
+	users, err := b.initBotUsers(envUsers)
 	if err != nil {
 		return nil, err
 	}
+	allowedUsers, uerr := parseMXIDpatterns(users, "")
+	if uerr != nil {
+		return nil, uerr
+	}
+	b.allowedUsers = allowedUsers
+
 	allowedAdmins, aerr := parseMXIDpatterns(admins, "")
 	if aerr != nil {
 		return nil, aerr
 	}
 	b.allowedAdmins = allowedAdmins
+
 	b.commands = b.buildCommandList()
 
 	return b, nil

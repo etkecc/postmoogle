@@ -35,33 +35,26 @@ func (s botSettings) Users() []string {
 	return []string{value}
 }
 
-func (b *Bot) initBotUsers(users []string) error {
-	_, homeserver, err := b.lp.GetClient().UserID.Parse()
-	if err != nil {
-		return err
-	}
+func (b *Bot) initBotUsers(envUsers []string) ([]string, error) {
 	config := b.getBotSettings()
-	oldUsers := config.Get(botOptionUsers)
-	// TODO: remove after migration
-	if len(users) > 0 && oldUsers == "" {
-		_, err := parseMXIDpatterns(users, "@*:"+homeserver)
+	cfgUsers := config.Users()
+	if len(cfgUsers) > 0 {
+		// already migrated
+		return cfgUsers, nil
+	}
+	if len(envUsers) == 0 {
+		_, homeserver, err := b.lp.GetClient().UserID.Parse()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		config.Set(botOptionUsers, strings.Join(users, " "))
+		config.Set(botOptionUsers, "@*:"+homeserver)
+	} else {
+		// Initialize from environment variable
+		// TODO: remove this migration later and always initialize to `"@*:"+homeserver`
+		config.Set(botOptionUsers, strings.Join(envUsers, " "))
 	}
 
-	allowedUsers, uerr := parseMXIDpatterns(config.Users(), "@*:"+homeserver)
-	if uerr != nil {
-		return uerr
-	}
-	b.allowedUsers = allowedUsers
-
-	if oldUsers != config.Get(botOptionUsers) {
-		return b.setBotSettings(config)
-	}
-
-	return nil
+	return config.Users(), b.setBotSettings(config)
 }
 
 func (b *Bot) getBotSettings() botSettings {
