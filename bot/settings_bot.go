@@ -29,9 +29,14 @@ func (s botSettings) Set(key, value string) {
 // Users option
 func (s botSettings) Users() []string {
 	value := s.Get(botOptionUsers)
+	if value == "" {
+		return []string{}
+	}
+
 	if strings.Contains(value, " ") {
 		return strings.Split(value, " ")
 	}
+
 	return []string{value}
 }
 
