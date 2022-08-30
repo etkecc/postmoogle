@@ -14,20 +14,20 @@ const (
 	botOptionUsers = "users"
 )
 
-type botsettings map[string]string
+type botSettings map[string]string
 
 // Get option
-func (s botsettings) Get(key string) string {
+func (s botSettings) Get(key string) string {
 	return s[strings.ToLower(strings.TrimSpace(key))]
 }
 
 // Set option
-func (s botsettings) Set(key, value string) {
+func (s botSettings) Set(key, value string) {
 	s[strings.ToLower(strings.TrimSpace(key))] = value
 }
 
 // Users option
-func (s botsettings) Users() []string {
+func (s botSettings) Users() []string {
 	return strings.Split(s.Get(botOptionUsers), " ")
 }
 
@@ -47,13 +47,13 @@ func (b *Bot) migrateBotSettings(users []string) error {
 	return nil
 }
 
-func (b *Bot) getBotSettings() botsettings {
+func (b *Bot) getBotSettings() botSettings {
 	cfg := b.botcfg.Get(acBotSettingsKey)
 	if cfg != nil {
 		return cfg
 	}
 
-	config := botsettings{}
+	config := botSettings{}
 	err := b.lp.GetClient().GetAccountData(acBotSettingsKey, &config)
 	if err != nil {
 		if strings.Contains(err.Error(), "M_NOT_FOUND") {
@@ -67,7 +67,7 @@ func (b *Bot) getBotSettings() botsettings {
 	return config
 }
 
-func (b *Bot) setBotSettings(cfg botsettings) error {
+func (b *Bot) setBotSettings(cfg botSettings) error {
 	b.botcfg.Set(acBotSettingsKey, cfg)
 	return utils.UnwrapError(b.lp.GetClient().SetAccountData(acBotSettingsKey, cfg))
 }

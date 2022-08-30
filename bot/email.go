@@ -21,7 +21,7 @@ const (
 	eventInReplyToKey = "cc.etke.postmoogle.inReplyTo"
 )
 
-func email2content(email *utils.Email, cfg roomsettings, threadID id.EventID) *event.Content {
+func email2content(email *utils.Email, cfg roomSettings, threadID id.EventID) *event.Content {
 	var text strings.Builder
 	if !cfg.NoSender() {
 		text.WriteString("From: ")

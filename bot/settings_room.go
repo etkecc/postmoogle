@@ -14,16 +14,16 @@ const acRoomSettingsKey = "cc.etke.postmoogle.settings"
 
 // option keys
 const (
-	optionOwner     = "owner"
-	optionMailbox   = "mailbox"
-	optionNoSender  = "nosender"
-	optionNoSubject = "nosubject"
-	optionNoHTML    = "nohtml"
-	optionNoThreads = "nothreads"
-	optionNoFiles   = "nofiles"
+	roomOptionOwner     = "owner"
+	roomOptionMailbox   = "mailbox"
+	roomOptionNoSender  = "nosender"
+	roomOptionNoSubject = "nosubject"
+	roomOptionNoHTML    = "nohtml"
+	roomOptionNoThreads = "nothreads"
+	roomOptionNoFiles   = "nofiles"
 )
 
-type roomsettings map[string]string
+type roomSettings map[string]string
 
 // settingsOld of a room
 type settingsOld struct {
@@ -33,41 +33,41 @@ type settingsOld struct {
 }
 
 // Get option
-func (s roomsettings) Get(key string) string {
+func (s roomSettings) Get(key string) string {
 	return s[strings.ToLower(strings.TrimSpace(key))]
 }
 
 // Set option
-func (s roomsettings) Set(key, value string) {
+func (s roomSettings) Set(key, value string) {
 	s[strings.ToLower(strings.TrimSpace(key))] = value
 }
 
-func (s roomsettings) Mailbox() string {
-	return s.Get(optionMailbox)
+func (s roomSettings) Mailbox() string {
+	return s.Get(roomOptionMailbox)
 }
 
-func (s roomsettings) Owner() string {
-	return s.Get(optionOwner)
+func (s roomSettings) Owner() string {
+	return s.Get(roomOptionOwner)
 }
 
-func (s roomsettings) NoSender() bool {
-	return utils.Bool(s.Get(optionNoSender))
+func (s roomSettings) NoSender() bool {
+	return utils.Bool(s.Get(roomOptionNoSender))
 }
 
-func (s roomsettings) NoSubject() bool {
-	return utils.Bool(s.Get(optionNoSubject))
+func (s roomSettings) NoSubject() bool {
+	return utils.Bool(s.Get(roomOptionNoSubject))
 }
 
-func (s roomsettings) NoHTML() bool {
-	return utils.Bool(s.Get(optionNoHTML))
+func (s roomSettings) NoHTML() bool {
+	return utils.Bool(s.Get(roomOptionNoHTML))
 }
 
-func (s roomsettings) NoThreads() bool {
-	return utils.Bool(s.Get(optionNoThreads))
+func (s roomSettings) NoThreads() bool {
+	return utils.Bool(s.Get(roomOptionNoThreads))
 }
 
-func (s roomsettings) NoFiles() bool {
-	return utils.Bool(s.Get(optionNoFiles))
+func (s roomSettings) NoFiles() bool {
+	return utils.Bool(s.Get(roomOptionNoFiles))
 }
 
 // TODO: remove after migration
@@ -82,10 +82,10 @@ func (b *Bot) migrateSettings(roomID id.RoomID) {
 	if config.Mailbox == "" {
 		return
 	}
-	cfg := roomsettings{}
-	cfg.Set(optionMailbox, config.Mailbox)
-	cfg.Set(optionOwner, config.Owner.String())
-	cfg.Set(optionNoSender, strconv.FormatBool(config.NoSender))
+	cfg := roomSettings{}
+	cfg.Set(roomOptionMailbox, config.Mailbox)
+	cfg.Set(roomOptionOwner, config.Owner.String())
+	cfg.Set(roomOptionNoSender, strconv.FormatBool(config.NoSender))
 
 	err = b.setRoomSettings(roomID, cfg)
 	if err != nil {
@@ -93,13 +93,13 @@ func (b *Bot) migrateSettings(roomID id.RoomID) {
 	}
 }
 
-func (b *Bot) getRoomSettings(roomID id.RoomID) (roomsettings, error) {
+func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
 	cfg := b.cfg.Get(roomID.String())
 	if cfg != nil {
 		return cfg, nil
 	}
 
-	config := roomsettings{}
+	config := roomSettings{}
 	err := b.lp.GetClient().GetRoomAccountData(roomID, acRoomSettingsKey, &config)
 	if err != nil {
 		if strings.Contains(err.Error(), "M_NOT_FOUND") {
@@ -115,7 +115,7 @@ func (b *Bot) getRoomSettings(roomID id.RoomID) (roomsettings, error) {
 	return config, utils.UnwrapError(err)
 }
 
-func (b *Bot) setRoomSettings(roomID id.RoomID, cfg roomsettings) error {
+func (b *Bot) setRoomSettings(roomID id.RoomID, cfg roomSettings) error {
 	b.cfg.Set(roomID.String(), cfg)
 	return utils.UnwrapError(b.lp.GetClient().SetRoomAccountData(roomID, acRoomSettingsKey, cfg))
 }

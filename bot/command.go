@@ -54,59 +54,59 @@ func (b *Bot) buildCommandList() commandList {
 		{allowed: b.allowOwner}, // delimiter
 		// options commands
 		{
-			key:         optionMailbox,
+			key:         roomOptionMailbox,
 			description: "Get or set mailbox of the room",
 			sanitizer:   utils.Mailbox,
 			allowed:     b.allowOwner,
 		},
 		{
-			key:         optionOwner,
+			key:         roomOptionOwner,
 			description: "Get or set owner of the room",
 			sanitizer:   func(s string) string { return s },
 			allowed:     b.allowOwner,
 		},
 		{allowed: b.allowOwner}, // delimiter
 		{
-			key: optionNoSender,
+			key: roomOptionNoSender,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
-				optionNoSender,
+				roomOptionNoSender,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: optionNoSubject,
+			key: roomOptionNoSubject,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
-				optionNoSubject,
+				roomOptionNoSubject,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: optionNoHTML,
+			key: roomOptionNoHTML,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
-				optionNoHTML,
+				roomOptionNoHTML,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: optionNoThreads,
+			key: roomOptionNoThreads,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
-				optionNoThreads,
+				roomOptionNoThreads,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: optionNoFiles,
+			key: roomOptionNoFiles,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - ignore email attachments; `false` - upload email attachments)",
-				optionNoFiles,
+				roomOptionNoFiles,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
@@ -180,7 +180,7 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	msg.WriteString("To get started, assign an email address to this room by sending a `")
 	msg.WriteString(b.prefix)
 	msg.WriteString(" ")
-	msg.WriteString(optionMailbox)
+	msg.WriteString(roomOptionMailbox)
 	msg.WriteString("` command.\n")
 
 	msg.WriteString("You will then be able to send emails to `SOME_INBOX@")
@@ -221,7 +221,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 			case true:
 				msg.WriteString("(currently `")
 				msg.WriteString(value)
-				if cmd.key == optionMailbox {
+				if cmd.key == roomOptionMailbox {
 					msg.WriteString("@")
 					msg.WriteString(b.domain)
 				}
