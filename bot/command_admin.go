@@ -109,8 +109,13 @@ func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 		return
 	}
 
+	_, homeserver, err := b.lp.GetClient().UserID.Parse()
+	if err != nil {
+		b.SendError(ctx, evt.RoomID, fmt.Sprintf("invalid userID: %v", err))
+	}
+
 	patterns := commandSlice[1:]
-	allowedUsers, err := parseMXIDpatterns(patterns, "")
+	allowedUsers, err := parseMXIDpatterns(patterns, "@*:"+homeserver)
 	if err != nil {
 		b.SendError(ctx, evt.RoomID, fmt.Sprintf("invalid patterns: %v", err))
 		return

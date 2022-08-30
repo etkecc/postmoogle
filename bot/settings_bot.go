@@ -35,16 +35,29 @@ func (s botSettings) Users() []string {
 	return []string{}
 }
 
-// TODO: remove after migration
-func (b *Bot) migrateBotSettings(users []string) error {
+func (b *Bot) initBotUsers(users []string) error {
+	_, homeserver, err := b.lp.GetClient().UserID.Parse()
+	if err != nil {
+		return err
+	}
 	config := b.getBotSettings()
-	cfgUsers := config.Users()
-	if len(users) > 0 && len(cfgUsers) == 0 {
-		_, err := parseMXIDpatterns(users, "")
+	oldUsers := config.Get(botOptionUsers)
+	// TODO: remove after migration
+	if len(users) > 0 && oldUsers == "" {
+		_, err := parseMXIDpatterns(users, "@*:"+homeserver)
 		if err != nil {
 			return err
 		}
 		config.Set(botOptionUsers, strings.Join(users, " "))
+	}
+
+	allowedUsers, uerr := parseMXIDpatterns(config.Users(), "@*:"+homeserver)
+	if uerr != nil {
+		return uerr
+	}
+	b.allowedUsers = allowedUsers
+
+	if oldUsers != config.Get(botOptionUsers) {
 		return b.setBotSettings(config)
 	}
 

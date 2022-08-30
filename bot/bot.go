@@ -50,24 +50,14 @@ func New(
 		lp:     lp,
 		mu:     map[id.RoomID]*sync.Mutex{},
 	}
-	err := b.migrateBotSettings(users)
+	err := b.initBotUsers(users)
 	if err != nil {
 		return nil, err
-	}
-
-	_, homeserver, err := lp.GetClient().UserID.Parse()
-	if err != nil {
-		return nil, err
-	}
-	allowedUsers, uerr := parseMXIDpatterns(b.getBotSettings().Users(), "@*:"+homeserver)
-	if uerr != nil {
-		return nil, uerr
 	}
 	allowedAdmins, aerr := parseMXIDpatterns(admins, "")
 	if aerr != nil {
 		return nil, aerr
 	}
-	b.allowedUsers = allowedUsers
 	b.allowedAdmins = allowedAdmins
 	b.commands = b.buildCommandList()
 
