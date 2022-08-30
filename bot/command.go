@@ -199,7 +199,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 	}
 
 	var msg strings.Builder
-	msg.WriteString("The following commands are supported:\n\n")
+	msg.WriteString("The following commands are supported and accessible to you:\n\n")
 	for _, cmd := range b.commands {
 		if !cmd.allowed(evt.Sender, evt.RoomID) {
 			continue
