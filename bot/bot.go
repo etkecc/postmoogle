@@ -23,7 +23,8 @@ type Bot struct {
 	allowedAdmins           []*regexp.Regexp
 	commands                commandList
 	rooms                   sync.Map
-	cfg                     cache.Cache[settings]
+	botcfg                  cache.Cache[botsettings]
+	cfg                     cache.Cache[roomsettings]
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
 	mu                      map[id.RoomID]*sync.Mutex
@@ -43,7 +44,8 @@ func New(
 		prefix: prefix,
 		domain: domain,
 		rooms:  sync.Map{},
-		cfg:    cache.NewLRU[settings](1000),
+		botcfg: cache.NewLRU[botsettings](1),
+		cfg:    cache.NewLRU[roomsettings](1000),
 		log:    log,
 		lp:     lp,
 		mu:     map[id.RoomID]*sync.Mutex{},

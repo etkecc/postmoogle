@@ -193,7 +193,7 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 func (b *Bot) sendHelp(ctx context.Context) {
 	evt := eventFromContext(ctx)
 
-	cfg, serr := b.getSettings(evt.RoomID)
+	cfg, serr := b.getRoomSettings(evt.RoomID)
 	if serr != nil {
 		b.log.Error("cannot retrieve settings: %v", serr)
 	}

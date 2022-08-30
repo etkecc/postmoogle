@@ -1,0 +1,73 @@
+package bot
+
+import (
+	"strings"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
+)
+
+// account data key
+const botsettingskey = "cc.etke.postmoogle.config"
+
+// bot options keys
+const (
+	botOptionUsers = "users"
+)
+
+type botsettings map[string]string
+
+// Get option
+func (s botsettings) Get(key string) string {
+	return s[strings.ToLower(strings.TrimSpace(key))]
+}
+
+// Set option
+func (s botsettings) Set(key, value string) {
+	s[strings.ToLower(strings.TrimSpace(key))] = value
+}
+
+// Users option
+func (s botsettings) Users() []string {
+	return strings.Split(s.Get(botOptionUsers), " ")
+}
+
+// TODO: remove after migration
+func (b *Bot) migrateBotSettings(users []string) error {
+	config := b.getBotSettings()
+	cfgUsers := config.Users()
+	if len(users) > 0 && len(cfgUsers) == 0 {
+		_, err := parseMXIDpatterns(users, "")
+		if err != nil {
+			return err
+		}
+		config.Set(botOptionUsers, strings.Join(users, " "))
+		return b.setBotSettings(config)
+	}
+
+	return nil
+}
+
+func (b *Bot) getBotSettings() botsettings {
+	cfg := b.botcfg.Get(botsettingskey)
+	if cfg != nil {
+		return cfg
+	}
+
+	config := botsettings{}
+	err := b.lp.GetClient().GetAccountData(botsettingskey, &config)
+	if err != nil {
+		if strings.Contains(err.Error(), "M_NOT_FOUND") {
+			err = nil
+		}
+		b.log.Error("cannot get bot settings: %v", utils.UnwrapError(err))
+	} else {
+		b.botcfg.Set(botsettingskey, config)
+	}
+
+	return config
+}
+
+func (b *Bot) setBotSettings(cfg botsettings) error {
+	b.botcfg.Set(botsettingskey, cfg)
+	return utils.UnwrapError(b.lp.GetClient().SetAccountData(botsettingskey, cfg))
+}

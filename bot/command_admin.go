@@ -13,7 +13,7 @@ import (
 
 func (b *Bot) sendMailboxes(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	mailboxes := map[string]settings{}
+	mailboxes := map[string]roomsettings{}
 	slice := []string{}
 	b.rooms.Range(func(key any, value any) bool {
 		if key == nil {
@@ -31,7 +31,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		if !ok {
 			return true
 		}
-		config, err := b.getSettings(roomID)
+		config, err := b.getRoomSettings(roomID)
 		if err != nil {
 			b.log.Error("cannot retrieve settings: %v", err)
 		}
@@ -79,7 +79,7 @@ func (b *Bot) runDelete(ctx context.Context, commandSlice []string) {
 	roomID := v.(id.RoomID)
 
 	b.rooms.Delete(mailbox)
-	err := b.setSettings(roomID, settings{})
+	err := b.setRoomSettings(roomID, roomsettings{})
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
 		return

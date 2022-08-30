@@ -12,7 +12,7 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
-func email2content(email *utils.Email, cfg settings, threadID id.EventID) *event.Content {
+func email2content(email *utils.Email, cfg roomsettings, threadID id.EventID) *event.Content {
 	var text strings.Builder
 	if !cfg.NoSender() {
 		text.WriteString("From: ")
@@ -66,7 +66,7 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 	b.lock(roomID)
 	defer b.unlock(roomID)
 
-	cfg, err := b.getSettings(roomID)
+	cfg, err := b.getRoomSettings(roomID)
 	if err != nil {
 		b.Error(ctx, roomID, "cannot get settings: %v", err)
 	}

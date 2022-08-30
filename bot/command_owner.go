@@ -7,7 +7,7 @@ import (
 
 func (b *Bot) runStop(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	cfg, err := b.getSettings(evt.RoomID)
+	cfg, err := b.getRoomSettings(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
@@ -21,7 +21,7 @@ func (b *Bot) runStop(ctx context.Context) {
 
 	b.rooms.Delete(mailbox)
 
-	err = b.setSettings(evt.RoomID, settings{})
+	err = b.setRoomSettings(evt.RoomID, roomsettings{})
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
 		return
@@ -40,7 +40,7 @@ func (b *Bot) handleOption(ctx context.Context, cmd []string) {
 
 func (b *Bot) getOption(ctx context.Context, name string) {
 	evt := eventFromContext(ctx)
-	cfg, err := b.getSettings(evt.RoomID)
+	cfg, err := b.getRoomSettings(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
@@ -74,7 +74,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		}
 	}
 
-	cfg, err := b.getSettings(evt.RoomID)
+	cfg, err := b.getRoomSettings(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
@@ -92,7 +92,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		value = fmt.Sprintf("%s@%s", value, b.domain)
 	}
 
-	err = b.setSettings(evt.RoomID, cfg)
+	err = b.setRoomSettings(evt.RoomID, cfg)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
 		return
