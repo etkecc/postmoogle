@@ -1,0 +1,121 @@
+package bot
+
+import (
+	"strconv"
+	"strings"
+
+	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
+)
+
+// account data key
+const acRoomSettingsKey = "cc.etke.postmoogle.settings"
+
+// option keys
+const (
+	roomOptionOwner     = "owner"
+	roomOptionMailbox   = "mailbox"
+	roomOptionNoSender  = "nosender"
+	roomOptionNoSubject = "nosubject"
+	roomOptionNoHTML    = "nohtml"
+	roomOptionNoThreads = "nothreads"
+	roomOptionNoFiles   = "nofiles"
+)
+
+type roomSettings map[string]string
+
+// settingsOld of a room
+type settingsOld struct {
+	Mailbox  string
+	Owner    id.UserID
+	NoSender bool
+}
+
+// Get option
+func (s roomSettings) Get(key string) string {
+	return s[strings.ToLower(strings.TrimSpace(key))]
+}
+
+// Set option
+func (s roomSettings) Set(key, value string) {
+	s[strings.ToLower(strings.TrimSpace(key))] = value
+}
+
+func (s roomSettings) Mailbox() string {
+	return s.Get(roomOptionMailbox)
+}
+
+func (s roomSettings) Owner() string {
+	return s.Get(roomOptionOwner)
+}
+
+func (s roomSettings) NoSender() bool {
+	return utils.Bool(s.Get(roomOptionNoSender))
+}
+
+func (s roomSettings) NoSubject() bool {
+	return utils.Bool(s.Get(roomOptionNoSubject))
+}
+
+func (s roomSettings) NoHTML() bool {
+	return utils.Bool(s.Get(roomOptionNoHTML))
+}
+
+func (s roomSettings) NoThreads() bool {
+	return utils.Bool(s.Get(roomOptionNoThreads))
+}
+
+func (s roomSettings) NoFiles() bool {
+	return utils.Bool(s.Get(roomOptionNoFiles))
+}
+
+// TODO: remove after migration
+func (b *Bot) migrateSettings(roomID id.RoomID) {
+	var config settingsOld
+	err := b.lp.GetClient().GetRoomAccountData(roomID, acRoomSettingsKey, &config)
+	if err != nil {
+		// any error = no need to migrate
+		return
+	}
+
+	if config.Mailbox == "" {
+		return
+	}
+	cfg := roomSettings{}
+	cfg.Set(roomOptionMailbox, config.Mailbox)
+	cfg.Set(roomOptionOwner, config.Owner.String())
+	cfg.Set(roomOptionNoSender, strconv.FormatBool(config.NoSender))
+
+	err = b.setRoomSettings(roomID, cfg)
+	if err != nil {
+		b.log.Error("cannot migrate settings: %v", err)
+	}
+}
+
+func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
+	cfg := b.cfg.Get(roomID.String())
+	if cfg != nil {
+		return cfg, nil
+	}
+
+	config := roomSettings{}
+	err := b.lp.GetClient().GetRoomAccountData(roomID, acRoomSettingsKey, &config)
+	if err != nil {
+		if strings.Contains(err.Error(), "M_NOT_FOUND") {
+			// Suppress `M_NOT_FOUND (HTTP 404): Room account data not found` errors.
+			// Until some settings are explicitly set, we don't store any.
+			// In such cases, just return a default (empty) settings object.
+			err = nil
+		}
+	} else {
+		b.cfg.Set(roomID.String(), config)
+	}
+
+	return config, utils.UnwrapError(err)
+}
+
+func (b *Bot) setRoomSettings(roomID id.RoomID, cfg roomSettings) error {
+	b.cfg.Set(roomID.String(), cfg)
+	return utils.UnwrapError(b.lp.GetClient().SetRoomAccountData(roomID, acRoomSettingsKey, cfg))
+}

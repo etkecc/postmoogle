@@ -13,7 +13,7 @@ import (
 
 func (b *Bot) sendMailboxes(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	mailboxes := map[string]settings{}
+	mailboxes := map[string]roomSettings{}
 	slice := []string{}
 	b.rooms.Range(func(key any, value any) bool {
 		if key == nil {
@@ -31,7 +31,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		if !ok {
 			return true
 		}
-		config, err := b.getSettings(roomID)
+		config, err := b.getRoomSettings(roomID)
 		if err != nil {
 			b.log.Error("cannot retrieve settings: %v", err)
 		}
@@ -79,11 +79,54 @@ func (b *Bot) runDelete(ctx context.Context, commandSlice []string) {
 	roomID := v.(id.RoomID)
 
 	b.rooms.Delete(mailbox)
-	err := b.setSettings(roomID, settings{})
+	err := b.setRoomSettings(roomID, roomSettings{})
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
 		return
 	}
 
 	b.SendNotice(ctx, evt.RoomID, "mailbox has been deleted")
+}
+
+func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	cfg := b.getBotSettings()
+	if len(commandSlice) < 2 {
+		var msg strings.Builder
+		users := cfg.Users()
+		if len(users) > 0 {
+			msg.WriteString("Currently: `")
+			msg.WriteString(strings.Join(users, " "))
+			msg.WriteString("`\n\n")
+		}
+		msg.WriteString("Usage: `")
+		msg.WriteString(b.prefix)
+		msg.WriteString(" users PATTERN1 PATTERN2 PATTERN3...`")
+		msg.WriteString("where each pattern is like `@someone:example.com`, ")
+		msg.WriteString("`@bot.*:example.com`, `@*:another.com`, or `@*:*`\n")
+
+		b.SendNotice(ctx, evt.RoomID, msg.String())
+		return
+	}
+
+	_, homeserver, err := b.lp.GetClient().UserID.Parse()
+	if err != nil {
+		b.SendError(ctx, evt.RoomID, fmt.Sprintf("invalid userID: %v", err))
+	}
+
+	patterns := commandSlice[1:]
+	allowedUsers, err := parseMXIDpatterns(patterns, "@*:"+homeserver)
+	if err != nil {
+		b.SendError(ctx, evt.RoomID, fmt.Sprintf("invalid patterns: %v", err))
+		return
+	}
+
+	cfg.Set(botOptionUsers, strings.Join(patterns, " "))
+
+	err = b.setBotSettings(cfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+	}
+	b.allowedUsers = allowedUsers
+	b.SendNotice(ctx, evt.RoomID, "allowed users updated")
 }

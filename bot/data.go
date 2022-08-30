@@ -1,34 +1,5 @@
 package bot
 
-import (
-	"strings"
-
-	"maunium.net/go/mautrix/id"
-)
-
-// account data keys
-const (
-	messagekey  = "cc.etke.postmoogle.message"
-	settingskey = "cc.etke.postmoogle.settings"
-)
-
-// event keys
-const (
-	eventMessageIDkey = "cc.etke.postmoogle.messageID"
-	eventInReplyToKey = "cc.etke.postmoogle.inReplyTo"
-)
-
-// option keys
-const (
-	optionOwner     = "owner"
-	optionMailbox   = "mailbox"
-	optionNoSender  = "nosender"
-	optionNoSubject = "nosubject"
-	optionNoHTML    = "nohtml"
-	optionNoThreads = "nothreads"
-	optionNoFiles   = "nofiles"
-)
-
 var migrations = []string{}
 
 func (b *Bot) migrate() error {
@@ -67,7 +38,7 @@ func (b *Bot) syncRooms() error {
 	}
 	for _, roomID := range resp.JoinedRooms {
 		b.migrateSettings(roomID)
-		cfg, serr := b.getSettings(roomID)
+		cfg, serr := b.getRoomSettings(roomID)
 		if serr != nil {
 			b.log.Warn("cannot get %s settings: %v", roomID, err)
 			continue
@@ -79,32 +50,4 @@ func (b *Bot) syncRooms() error {
 	}
 
 	return nil
-}
-
-func (b *Bot) getThreadID(roomID id.RoomID, messageID string) id.EventID {
-	key := messagekey + "." + messageID
-	data := map[string]id.EventID{}
-	err := b.lp.GetClient().GetRoomAccountData(roomID, key, &data)
-	if err != nil {
-		if !strings.Contains(err.Error(), "M_NOT_FOUND") {
-			b.log.Error("cannot retrieve account data %s: %v", key, err)
-			return ""
-		}
-	}
-
-	return data["eventID"]
-}
-
-func (b *Bot) setThreadID(roomID id.RoomID, messageID string, eventID id.EventID) {
-	key := messagekey + "." + messageID
-	data := map[string]id.EventID{
-		"eventID": eventID,
-	}
-
-	err := b.lp.GetClient().SetRoomAccountData(roomID, key, data)
-	if err != nil {
-		if !strings.Contains(err.Error(), "M_NOT_FOUND") {
-			b.log.Error("cannot save account data %s: %v", key, err)
-		}
-	}
 }

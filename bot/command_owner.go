@@ -7,13 +7,13 @@ import (
 
 func (b *Bot) runStop(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	cfg, err := b.getSettings(evt.RoomID)
+	cfg, err := b.getRoomSettings(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
 	}
 
-	mailbox := cfg.Get(optionMailbox)
+	mailbox := cfg.Get(roomOptionMailbox)
 	if mailbox == "" {
 		b.SendNotice(ctx, evt.RoomID, "that room is not configured yet")
 		return
@@ -21,7 +21,7 @@ func (b *Bot) runStop(ctx context.Context) {
 
 	b.rooms.Delete(mailbox)
 
-	err = b.setSettings(evt.RoomID, settings{})
+	err = b.setRoomSettings(evt.RoomID, roomSettings{})
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
 		return
@@ -40,7 +40,7 @@ func (b *Bot) handleOption(ctx context.Context, cmd []string) {
 
 func (b *Bot) getOption(ctx context.Context, name string) {
 	evt := eventFromContext(ctx)
-	cfg, err := b.getSettings(evt.RoomID)
+	cfg, err := b.getRoomSettings(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
@@ -52,7 +52,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		return
 	}
 
-	if name == optionMailbox {
+	if name == roomOptionMailbox {
 		value = value + "@" + b.domain
 	}
 
@@ -66,7 +66,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	}
 
 	evt := eventFromContext(ctx)
-	if name == optionMailbox {
+	if name == roomOptionMailbox {
 		existingID, ok := b.GetMapping(value)
 		if ok && existingID != "" && existingID != evt.RoomID {
 			b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken, kupo", value, b.domain))
@@ -74,7 +74,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		}
 	}
 
-	cfg, err := b.getSettings(evt.RoomID)
+	cfg, err := b.getRoomSettings(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
@@ -83,8 +83,8 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	old := cfg.Get(name)
 	cfg.Set(name, value)
 
-	if name == optionMailbox {
-		cfg.Set(optionOwner, evt.Sender.String())
+	if name == roomOptionMailbox {
+		cfg.Set(roomOptionOwner, evt.Sender.String())
 		if old != "" {
 			b.rooms.Delete(old)
 		}
@@ -92,13 +92,13 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		value = fmt.Sprintf("%s@%s", value, b.domain)
 	}
 
-	err = b.setSettings(evt.RoomID, cfg)
+	err = b.setRoomSettings(evt.RoomID, cfg)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
 		return
 	}
 
-	if name == optionMailbox {
+	if name == roomOptionMailbox {
 		value = value + "@" + b.domain
 	}
 

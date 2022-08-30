@@ -12,7 +12,16 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
-func email2content(email *utils.Email, cfg settings, threadID id.EventID) *event.Content {
+// account data key
+const acMessagePrefix = "cc.etke.postmoogle.message"
+
+// event keys
+const (
+	eventMessageIDkey = "cc.etke.postmoogle.messageID"
+	eventInReplyToKey = "cc.etke.postmoogle.inReplyTo"
+)
+
+func email2content(email *utils.Email, cfg roomSettings, threadID id.EventID) *event.Content {
 	var text strings.Builder
 	if !cfg.NoSender() {
 		text.WriteString("From: ")
@@ -66,7 +75,7 @@ func (b *Bot) Send(ctx context.Context, email *utils.Email) error {
 	b.lock(roomID)
 	defer b.unlock(roomID)
 
-	cfg, err := b.getSettings(roomID)
+	cfg, err := b.getRoomSettings(roomID)
 	if err != nil {
 		b.Error(ctx, roomID, "cannot get settings: %v", err)
 	}
@@ -112,6 +121,34 @@ func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.Fi
 		})
 		if err != nil {
 			b.Error(ctx, roomID, "cannot send uploaded file %s: %v", req.FileName, err)
+		}
+	}
+}
+
+func (b *Bot) getThreadID(roomID id.RoomID, messageID string) id.EventID {
+	key := acMessagePrefix + "." + messageID
+	data := map[string]id.EventID{}
+	err := b.lp.GetClient().GetRoomAccountData(roomID, key, &data)
+	if err != nil {
+		if !strings.Contains(err.Error(), "M_NOT_FOUND") {
+			b.log.Error("cannot retrieve account data %s: %v", key, err)
+			return ""
+		}
+	}
+
+	return data["eventID"]
+}
+
+func (b *Bot) setThreadID(roomID id.RoomID, messageID string, eventID id.EventID) {
+	key := acMessagePrefix + "." + messageID
+	data := map[string]id.EventID{
+		"eventID": eventID,
+	}
+
+	err := b.lp.GetClient().SetRoomAccountData(roomID, key, data)
+	if err != nil {
+		if !strings.Contains(err.Error(), "M_NOT_FOUND") {
+			b.log.Error("cannot save account data %s: %v", key, err)
 		}
 	}
 }

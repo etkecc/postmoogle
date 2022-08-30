@@ -23,7 +23,8 @@ type Bot struct {
 	allowedAdmins           []*regexp.Regexp
 	commands                commandList
 	rooms                   sync.Map
-	cfg                     cache.Cache[settings]
+	botcfg                  cache.Cache[botSettings]
+	cfg                     cache.Cache[roomSettings]
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
 	mu                      map[id.RoomID]*sync.Mutex
@@ -36,34 +37,35 @@ func New(
 	log *logger.Logger,
 	prefix string,
 	domain string,
-	users []string,
+	envUsers []string,
 	admins []string,
 ) (*Bot, error) {
-	_, homeserver, err := lp.GetClient().UserID.Parse()
+	b := &Bot{
+		prefix: prefix,
+		domain: domain,
+		rooms:  sync.Map{},
+		botcfg: cache.NewLRU[botSettings](1),
+		cfg:    cache.NewLRU[roomSettings](1000),
+		log:    log,
+		lp:     lp,
+		mu:     map[id.RoomID]*sync.Mutex{},
+	}
+	users, err := b.initBotUsers(envUsers)
 	if err != nil {
 		return nil, err
 	}
-	var allowedUsers []*regexp.Regexp
-	allowedUsers, uerr := parseMXIDpatterns(users, "@*:"+homeserver)
+	allowedUsers, uerr := parseMXIDpatterns(users, "")
 	if uerr != nil {
 		return nil, uerr
 	}
+	b.allowedUsers = allowedUsers
+
 	allowedAdmins, aerr := parseMXIDpatterns(admins, "")
 	if aerr != nil {
 		return nil, aerr
 	}
+	b.allowedAdmins = allowedAdmins
 
-	b := &Bot{
-		prefix:        prefix,
-		domain:        domain,
-		allowedUsers:  allowedUsers,
-		allowedAdmins: allowedAdmins,
-		rooms:         sync.Map{},
-		cfg:           cache.NewLRU[settings](1000),
-		log:           log,
-		lp:            lp,
-		mu:            map[id.RoomID]*sync.Mutex{},
-	}
 	b.commands = b.buildCommandList()
 
 	return b, nil
