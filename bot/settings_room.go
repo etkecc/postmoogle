@@ -10,7 +10,7 @@ import (
 )
 
 // account data key
-const roomsettingskey = "cc.etke.postmoogle.settings"
+const acRoomSettingsKey = "cc.etke.postmoogle.settings"
 
 // option keys
 const (
@@ -73,7 +73,7 @@ func (s roomsettings) NoFiles() bool {
 // TODO: remove after migration
 func (b *Bot) migrateSettings(roomID id.RoomID) {
 	var config settingsOld
-	err := b.lp.GetClient().GetRoomAccountData(roomID, roomsettingskey, &config)
+	err := b.lp.GetClient().GetRoomAccountData(roomID, acRoomSettingsKey, &config)
 	if err != nil {
 		// any error = no need to migrate
 		return
@@ -100,7 +100,7 @@ func (b *Bot) getRoomSettings(roomID id.RoomID) (roomsettings, error) {
 	}
 
 	config := roomsettings{}
-	err := b.lp.GetClient().GetRoomAccountData(roomID, roomsettingskey, &config)
+	err := b.lp.GetClient().GetRoomAccountData(roomID, acRoomSettingsKey, &config)
 	if err != nil {
 		if strings.Contains(err.Error(), "M_NOT_FOUND") {
 			// Suppress `M_NOT_FOUND (HTTP 404): Room account data not found` errors.
@@ -117,5 +117,5 @@ func (b *Bot) getRoomSettings(roomID id.RoomID) (roomsettings, error) {
 
 func (b *Bot) setRoomSettings(roomID id.RoomID, cfg roomsettings) error {
 	b.cfg.Set(roomID.String(), cfg)
-	return utils.UnwrapError(b.lp.GetClient().SetRoomAccountData(roomID, roomsettingskey, cfg))
+	return utils.UnwrapError(b.lp.GetClient().SetRoomAccountData(roomID, acRoomSettingsKey, cfg))
 }
