@@ -3,7 +3,6 @@ package bot
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 func (b *Bot) runStop(ctx context.Context) {
@@ -49,15 +48,10 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 
 	value := cfg.Get(name)
 	if value == "" {
-		var msg strings.Builder
-		msg.WriteString(fmt.Sprintf("`%s` is not set, kupo.", name))
-		msg.WriteString("\n")
-		msg.WriteString(fmt.Sprintf(
+		msg := fmt.Sprintf("`%s` is not set, kupo.\n"+
 			"To set it, send a `%s %s VALUE` command.",
-			b.prefix,
-			name,
-		))
-		b.SendNotice(ctx, evt.RoomID, msg.String())
+			name, b.prefix, name)
+		b.SendNotice(ctx, evt.RoomID, msg)
 		return
 	}
 
@@ -65,15 +59,10 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		value = value + "@" + b.domain
 	}
 
-	var msg strings.Builder
-	msg.WriteString(fmt.Sprintf("`%s` of this room is `%s`", name, value))
-	msg.WriteString("\n")
-	msg.WriteString(fmt.Sprintf(
+	msg := fmt.Sprintf("`%s` of this room is `%s`\n"+
 		"To set it to a new value, send a `%s %s VALUE` command.",
-		b.prefix,
-		name,
-	))
-	b.SendNotice(ctx, evt.RoomID, msg.String())
+		name, value, b.prefix, name)
+	b.SendNotice(ctx, evt.RoomID, msg)
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
