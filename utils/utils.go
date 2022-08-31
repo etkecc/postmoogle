@@ -11,7 +11,7 @@ func Mailbox(email string) string {
 	if index == -1 {
 		return email
 	}
-	return email[:strings.LastIndex(email, "@")]
+	return email[:index]
 }
 
 // Hostname returns hostname part from email address
