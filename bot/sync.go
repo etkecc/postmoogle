@@ -5,9 +5,13 @@ import (
 
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/event"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 func (b *Bot) initSync() {
+	b.lp.SetJoinPermit(b.joinPermit)
+
 	b.lp.OnEventType(
 		event.StateMember,
 		func(_ mautrix.EventSource, evt *event.Event) {
@@ -24,6 +28,16 @@ func (b *Bot) initSync() {
 		func(_ mautrix.EventSource, evt *event.Event) {
 			go b.onEncryptedMessage(evt)
 		})
+}
+
+// joinPermit is called by linkpearl when processing "invite" events and deciding if rooms should be auto-joined or not
+func (b *Bot) joinPermit(evt *event.Event) bool {
+	if !utils.Match(evt.Sender.String(), b.allowedUsers) {
+		b.log.Debug("Rejecting room invitation from unallowed user: %s", evt.Sender)
+		return false
+	}
+
+	return true
 }
 
 func (b *Bot) onMembership(evt *event.Event) {
