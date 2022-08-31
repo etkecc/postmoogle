@@ -48,7 +48,10 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 
 	value := cfg.Get(name)
 	if value == "" {
-		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("`%s` is not set, kupo.", name))
+		msg := fmt.Sprintf("`%s` is not set, kupo.\n"+
+			"To set it, send a `%s %s VALUE` command.",
+			name, b.prefix, name)
+		b.SendNotice(ctx, evt.RoomID, msg)
 		return
 	}
 
@@ -56,7 +59,10 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		value = value + "@" + b.domain
 	}
 
-	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room is `%s`", name, value))
+	msg := fmt.Sprintf("`%s` of this room is `%s`\n"+
+		"To set it to a new value, send a `%s %s VALUE` command.",
+		name, value, b.prefix, name)
+	b.SendNotice(ctx, evt.RoomID, msg)
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {

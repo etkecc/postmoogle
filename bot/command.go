@@ -181,7 +181,7 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	msg.WriteString(b.prefix)
 	msg.WriteString(" ")
 	msg.WriteString(roomOptionMailbox)
-	msg.WriteString("` command.\n")
+	msg.WriteString(" SOME_INBOX` command.\n")
 
 	msg.WriteString("You will then be able to send emails to `SOME_INBOX@")
 	msg.WriteString(b.domain)
