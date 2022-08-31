@@ -83,7 +83,7 @@ func initBot(cfg *config.Config) {
 		log.Fatal("cannot initialize matrix bot: %v", err)
 	}
 
-	mxb, err = bot.New(lp, mxlog, cfg.Prefix, cfg.Domain, cfg.Users, cfg.Admins)
+	mxb, err = bot.New(lp, mxlog, cfg.Prefix, cfg.Domain, cfg.Admins)
 	if err != nil {
 		// nolint // Fatal = panic, not os.Exit()
 		log.Fatal("cannot start matrix bot: %v", err)

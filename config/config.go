@@ -20,7 +20,6 @@ func New() *Config {
 		NoEncryption: env.Bool("noencryption"),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
-		Users:        env.Slice("users"),
 		Admins:       env.Slice("admins"),
 		Sentry: Sentry{
 			DSN: env.String("sentry.dsn", defaultConfig.Sentry.DSN),

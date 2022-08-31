@@ -45,7 +45,6 @@ env vars
 * **POSTMOOGLE_DB_DIALECT** - database dialect (postgres, sqlite3)
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
 * **POSTMOOGLE_ADMINS** - a space-separated list of admin users. See `POSTMOOGLE_USERS` for syntax examples
-* <s>**POSTMOOGLE_USERS**</s> - deprecated and ignored, use `!pm users` instead
 
 You can find default values in [config/defaults.go](config/defaults.go)
 

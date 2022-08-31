@@ -37,7 +37,6 @@ func New(
 	log *logger.Logger,
 	prefix string,
 	domain string,
-	envUsers []string,
 	admins []string,
 ) (*Bot, error) {
 	b := &Bot{
@@ -50,7 +49,7 @@ func New(
 		lp:     lp,
 		mu:     map[id.RoomID]*sync.Mutex{},
 	}
-	users, err := b.initBotUsers(envUsers)
+	users, err := b.initBotUsers()
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +65,7 @@ func New(
 	}
 	b.allowedAdmins = allowedAdmins
 
-	b.commands = b.buildCommandList()
+	b.commands = b.initCommands()
 
 	return b, nil
 }

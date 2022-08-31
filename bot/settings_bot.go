@@ -40,25 +40,18 @@ func (s botSettings) Users() []string {
 	return []string{value}
 }
 
-func (b *Bot) initBotUsers(envUsers []string) ([]string, error) {
+func (b *Bot) initBotUsers() ([]string, error) {
 	config := b.getBotSettings()
 	cfgUsers := config.Users()
 	if len(cfgUsers) > 0 {
-		// already migrated
 		return cfgUsers, nil
 	}
-	if len(envUsers) == 0 {
-		_, homeserver, err := b.lp.GetClient().UserID.Parse()
-		if err != nil {
-			return nil, err
-		}
-		config.Set(botOptionUsers, "@*:"+homeserver)
-	} else {
-		// Initialize from environment variable
-		// TODO: remove this migration later and always initialize to `"@*:"+homeserver`
-		config.Set(botOptionUsers, strings.Join(envUsers, " "))
-	}
 
+	_, homeserver, err := b.lp.GetClient().UserID.Parse()
+	if err != nil {
+		return nil, err
+	}
+	config.Set(botOptionUsers, "@*:"+homeserver)
 	return config.Users(), b.setBotSettings(config)
 }
 

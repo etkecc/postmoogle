@@ -37,7 +37,6 @@ func (b *Bot) syncRooms() error {
 		return err
 	}
 	for _, roomID := range resp.JoinedRooms {
-		b.migrateSettings(roomID)
 		cfg, serr := b.getRoomSettings(roomID)
 		if serr != nil {
 			b.log.Warn("cannot get %s settings: %v", roomID, err)

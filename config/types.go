@@ -22,8 +22,6 @@ type Config struct {
 	MaxSize int
 	// StatusMsg of the bot
 	StatusMsg string
-	// Users DEPRECATED holds list of allowed users (wildcards supported), e.g.: @*:example.com, @bot.*:example.com, @admin:*. Empty = homeserver only
-	Users []string
 	// Admins holds list of admin users (wildcards supported), e.g.: @*:example.com, @bot.*:example.com, @admin:*. Empty = no admins
 	Admins []string
 

@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"strconv"
 	"strings"
 
 	"maunium.net/go/mautrix/id"
@@ -24,13 +23,6 @@ const (
 )
 
 type roomSettings map[string]string
-
-// settingsOld of a room
-type settingsOld struct {
-	Mailbox  string
-	Owner    id.UserID
-	NoSender bool
-}
 
 // Get option
 func (s roomSettings) Get(key string) string {
@@ -68,29 +60,6 @@ func (s roomSettings) NoThreads() bool {
 
 func (s roomSettings) NoFiles() bool {
 	return utils.Bool(s.Get(roomOptionNoFiles))
-}
-
-// TODO: remove after migration
-func (b *Bot) migrateSettings(roomID id.RoomID) {
-	var config settingsOld
-	err := b.lp.GetClient().GetRoomAccountData(roomID, acRoomSettingsKey, &config)
-	if err != nil {
-		// any error = no need to migrate
-		return
-	}
-
-	if config.Mailbox == "" {
-		return
-	}
-	cfg := roomSettings{}
-	cfg.Set(roomOptionMailbox, config.Mailbox)
-	cfg.Set(roomOptionOwner, config.Owner.String())
-	cfg.Set(roomOptionNoSender, strconv.FormatBool(config.NoSender))
-
-	err = b.setRoomSettings(roomID, cfg)
-	if err != nil {
-		b.log.Error("cannot migrate settings: %v", err)
-	}
 }
 
 func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {

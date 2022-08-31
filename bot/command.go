@@ -38,7 +38,7 @@ func (c commandList) get(key string) *command {
 	return nil
 }
 
-func (b *Bot) buildCommandList() commandList {
+func (b *Bot) initCommands() commandList {
 	return commandList{
 		// special commands
 		{
