@@ -20,11 +20,13 @@ It can't be used with arbitrary email providers, but setup your own provider "wi
 
 ### Send
 
-- [ ] SMTP client
+- [x] SMTP client
+- [x] Send a message to matrix room with special format to send a new email
 - [ ] Reply to matrix thread sends reply into email thread
-- [ ] Send a message to matrix room with special format to send a new email
 
 ## Configuration
+
+### 1. Bot (mandatory)
 
 env vars
 
@@ -47,6 +49,70 @@ env vars
 * **POSTMOOGLE_ADMINS** - a space-separated list of admin users. See `POSTMOOGLE_USERS` for syntax examples
 
 You can find default values in [config/defaults.go](config/defaults.go)
+
+</details>
+
+### 2. DNS (optional)
+
+The following configuration needed only if you want to send emails using postmoogle
+
+First, add new DMARC DNS record of `TXT` type for subdomain `_dmarc` with a proper policy, the easiest one is: `v=DMARC1; p=quarantine;`.
+
+<details>
+<summary>Example</summary>
+
+```bash
+$ dig txt _dmarc.DOMAIN
+
+; <<>> DiG 9.18.6 <<>> txt _dmarc.DOMAIN
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 57306
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;_dmarc.DOMAIN.			IN	TXT
+
+;; ANSWER SECTION:
+_dmarc.DOMAIN.		1799	IN	TXT	"v=DMARC1; p=quarantine;"
+
+;; Query time: 46 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Sun Sep 04 21:31:30 EEST 2022
+;; MSG SIZE  rcvd: 79
+```
+
+</details>
+
+Second, add new SPF DNS record of `TXT` type for your domain that will be used with postmoogle, with format: `v=spf1 ip4:SERVER_IP -all`
+
+<details>
+<summary>Example</summary>
+
+```bash
+$ dig txt DOMAIN
+
+; <<>> DiG 9.18.6 <<>> txt DOMAIN
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 24796
+;; flags: qr rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;DOMAIN.			IN	TXT
+
+;; ANSWER SECTION:
+DOMAIN.		1799	IN	TXT	"v=spf1 ip4:111.111.111.111 -all"
+
+;; Query time: 36 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Sun Sep 04 21:35:04 EEST 2022
+;; MSG SIZE  rcvd: 255
+```
 
 </details>
 

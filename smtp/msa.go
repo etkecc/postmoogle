@@ -10,14 +10,15 @@ import (
 	"gitlab.com/etke.cc/go/logger"
 )
 
-type backend struct {
+// msa is mail submission agent
+type msa struct {
 	log    *logger.Logger
 	domain string
 	client Client
 }
 
-func (b *backend) newSession() *session {
-	return &session{
+func (b *msa) newSession() *msasession {
+	return &msasession{
 		ctx:    sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
 		log:    b.log,
 		domain: b.domain,
@@ -25,28 +26,30 @@ func (b *backend) newSession() *session {
 	}
 }
 
-func (b *backend) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
+func (b *msa) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
 	return nil, smtp.ErrAuthUnsupported
 }
 
-func (b *backend) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
+func (b *msa) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
 	return b.newSession(), nil
 }
 
 func Start(domain, port, loglevel string, maxSize int, client Client) error {
 	log := logger.New("smtp.", loglevel)
-	be := &backend{
+	sender := NewMTA(loglevel)
+	receiver := &msa{
 		log:    log,
 		domain: domain,
 		client: client,
 	}
-	s := smtp.NewServer(be)
+	receiver.client.SetMTA(sender)
+	s := smtp.NewServer(receiver)
 	s.Addr = ":" + port
 	s.Domain = domain
-	s.AuthDisabled = true
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = maxSize * 1024 * 1024
+	s.AllowInsecureAuth = true
 	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
 		s.Debug = os.Stdout
 	}

@@ -14,6 +14,7 @@ import (
 const (
 	commandHelp      = "help"
 	commandStop      = "stop"
+	commandSend      = "send"
 	commandUsers     = botOptionUsers
 	commandDelete    = "delete"
 	commandMailboxes = "mailboxes"
@@ -51,6 +52,11 @@ func (b *Bot) initCommands() commandList {
 			description: "Disable bridge for the room and clear all configuration",
 			allowed:     b.allowOwner,
 		},
+		{
+			key:         commandSend,
+			description: "Send email",
+			allowed:     b.allowSend,
+		},
 		{allowed: b.allowOwner}, // delimiter
 		// options commands
 		{
@@ -66,6 +72,15 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowOwner,
 		},
 		{allowed: b.allowOwner}, // delimiter
+		{
+			key: roomOptionNoSend,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - enable email sending; `false` - disable email sending)",
+				roomOptionNoSend,
+			),
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
+		},
 		{
 			key: roomOptionNoSender,
 			description: fmt.Sprintf(
@@ -146,6 +161,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.sendHelp(ctx)
 	case commandStop:
 		b.runStop(ctx)
+	case commandSend:
+		b.runSend(ctx, commandSlice)
 	case commandUsers:
 		b.runUsers(ctx, commandSlice)
 	case commandDelete:
@@ -236,4 +253,31 @@ func (b *Bot) sendHelp(ctx context.Context) {
 	}
 
 	b.SendNotice(ctx, evt.RoomID, msg.String())
+}
+
+func (b *Bot) runSend(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	if !b.allowSend(evt.Sender, evt.RoomID) {
+		return
+	}
+
+	if len(commandSlice) < 3 {
+		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Usage:\n```\n%s send EMAIL\nSubject\nBody\n```", b.prefix))
+		return
+	}
+	message := strings.Join(commandSlice, " ")
+	lines := strings.Split(message, "\n")
+	commandSlice = strings.Split(lines[0], " ")
+	to := commandSlice[1]
+	subject := lines[1]
+	body := strings.Join(lines[2:], "\n")
+
+	b.log.Debug("to=%s subject=%s body=%s", to, subject, body)
+	err := b.Send2Email(ctx, to, subject, body)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
+		return
+	}
+
+	b.SendNotice(ctx, evt.RoomID, "Email has been sent")
 }

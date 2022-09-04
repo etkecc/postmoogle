@@ -12,7 +12,7 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
-type session struct {
+type msasession struct {
 	log    *logger.Logger
 	domain string
 	client Client
@@ -22,14 +22,14 @@ type session struct {
 	from string
 }
 
-func (s *session) Mail(from string, opts smtp.MailOptions) error {
+func (s *msasession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
 	s.from = from
 	s.log.Debug("mail from %s, options: %+v", from, opts)
 	return nil
 }
 
-func (s *session) Rcpt(to string) error {
+func (s *msasession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
 
 	if utils.Hostname(to) != s.domain {
@@ -48,7 +48,7 @@ func (s *session) Rcpt(to string) error {
 	return nil
 }
 
-func (s *session) parseAttachments(parts []*enmime.Part) []*utils.File {
+func (s *msasession) parseAttachments(parts []*enmime.Part) []*utils.File {
 	files := make([]*utils.File, 0, len(parts))
 	for _, attachment := range parts {
 		for _, err := range attachment.Errors {
@@ -61,7 +61,7 @@ func (s *session) parseAttachments(parts []*enmime.Part) []*utils.File {
 	return files
 }
 
-func (s *session) Data(r io.Reader) error {
+func (s *msasession) Data(r io.Reader) error {
 	parser := enmime.NewParser()
 	eml, err := parser.ReadEnvelope(r)
 	if err != nil {
@@ -84,11 +84,11 @@ func (s *session) Data(r io.Reader) error {
 		eml.HTML,
 		files)
 
-	return s.client.Send(s.ctx, email)
+	return s.client.Send2Matrix(s.ctx, email)
 }
 
-func (s *session) Reset() {}
+func (s *msasession) Reset() {}
 
-func (s *session) Logout() error {
+func (s *msasession) Logout() error {
 	return nil
 }

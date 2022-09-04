@@ -13,6 +13,8 @@ import (
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 // Bot represents matrix bot
@@ -25,6 +27,7 @@ type Bot struct {
 	rooms                   sync.Map
 	botcfg                  cache.Cache[botSettings]
 	cfg                     cache.Cache[roomSettings]
+	mta                     utils.MTA
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
 	mu                      map[id.RoomID]*sync.Mutex
@@ -77,7 +80,7 @@ func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args 
 
 	sentry.GetHubFromContext(ctx).CaptureException(err)
 	if roomID != "" {
-		b.SendError(ctx, roomID, message)
+		b.SendError(ctx, roomID, err.Error())
 	}
 }
 

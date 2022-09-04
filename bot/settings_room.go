@@ -15,6 +15,7 @@ const acRoomSettingsKey = "cc.etke.postmoogle.settings"
 const (
 	roomOptionOwner     = "owner"
 	roomOptionMailbox   = "mailbox"
+	roomOptionNoSend    = "nosend"
 	roomOptionNoSender  = "nosender"
 	roomOptionNoSubject = "nosubject"
 	roomOptionNoHTML    = "nohtml"
@@ -40,6 +41,10 @@ func (s roomSettings) Mailbox() string {
 
 func (s roomSettings) Owner() string {
 	return s.Get(roomOptionOwner)
+}
+
+func (s roomSettings) NoSend() bool {
+	return utils.Bool(s.Get(roomOptionNoSend))
 }
 
 func (s roomSettings) NoSender() bool {

@@ -1,5 +1,10 @@
 package utils
 
+// MTA is mail transfer agent
+type MTA interface {
+	Send(from, to, data string) error
+}
+
 // Email object
 type Email struct {
 	MessageID string
