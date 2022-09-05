@@ -18,6 +18,15 @@ It can't be used with arbitrary email providers, but setup your own provider "wi
 - [x] Receive attachments
 - [x] Map email threads to matrix threads
 
+#### deep dive
+
+> features in that section considered as "nice to have", but not a priority
+
+- [ ] DKIM verification
+- [ ] SPF verification
+- [ ] DMARC verification
+- [ ] Blocklists 
+
 ### Send
 
 - [x] SMTP client
