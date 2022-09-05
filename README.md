@@ -56,7 +56,7 @@ You can find default values in [config/defaults.go](config/defaults.go)
 
 The following configuration needed only if you want to send emails using postmoogle
 
-First, add new DMARC DNS record of `TXT` type for subdomain `_dmarc` with a proper policy, the easiest one is: `v=DMARC1; p=quarantine;`.
+**First**, add new DMARC DNS record of `TXT` type for subdomain `_dmarc` with a proper policy, the easiest one is: `v=DMARC1; p=quarantine;`.
 
 <details>
 <summary>Example</summary>
@@ -86,7 +86,7 @@ _dmarc.DOMAIN.		1799	IN	TXT	"v=DMARC1; p=quarantine;"
 
 </details>
 
-Second, add new SPF DNS record of `TXT` type for your domain that will be used with postmoogle, with format: `v=spf1 ip4:SERVER_IP -all`
+**Second**, add new SPF DNS record of `TXT` type for your domain that will be used with postmoogle, with format: `v=spf1 ip4:SERVER_IP -all`
 
 <details>
 <summary>Example</summary>
@@ -112,6 +112,52 @@ DOMAIN.		1799	IN	TXT	"v=spf1 ip4:111.111.111.111 -all"
 ;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
 ;; WHEN: Sun Sep 04 21:35:04 EEST 2022
 ;; MSG SIZE  rcvd: 255
+```
+
+</details>
+
+**Third**, add new DKIM DNS record of `TXT` type for subdomain `postmoogle._domainkey` that will be used with postmoogle.
+
+You can get that signature using the `!pm dkim` command:
+
+<details>
+<summary>!pm dkim</summary>
+DKIM signature is: `v=DKIM1; k=ed25519; p=OcVzOwAONDfgbJX/5vwzlXOs9gUDO0YKlXHaDnBJtXw=`.
+You need to add it to your DNS records (if not already):
+Add new DNS record with type = `TXT`, key (subdomain/from): `postmoogle._domainkey` and value (to):
+
+```
+v=DKIM1; k=ed25519; p=OcVzOwAONDfgbJX/5vwzlXOs9gUDO0YKlXHaDnBJtXw=
+```
+
+Without that record other email servers may reject your emails as spam, kupo.
+
+</details>
+
+<details>
+<summary>Example</summary>
+
+```bash
+$ dig TXT postmoogle._domainkey.DOMAIN
+
+; <<>> DiG 9.18.6 <<>> TXT postmoogle._domainkey.DOMAIN
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 59014
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;postmoogle._domainkey.DOMAIN.	IN	TXT
+
+;; ANSWER SECTION:
+postmoogle._domainkey.DOMAIN. 600	IN TXT  "v=DKIM1; k=ed25519; p=OcVzOwAONDfgbJX/5vwzlXOs9gUDO0YKlXHaDnBJtXw="
+
+;; Query time: 90 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Mon Sep 05 16:16:21 EEST 2022
+;; MSG SIZE  rcvd: 525
 ```
 
 </details>
@@ -147,8 +193,9 @@ If you want to change them - check available options in the help message (`!pm h
 
 ---
 
-* **!pm mailboxes** - Show the list of all mailboxes
+* **!pm dkim** - Get DKIM signature
 * **!pm users** - Get or set allowed users patterns
+* **!pm mailboxes** - Show the list of all mailboxes
 * **!pm delete** &lt;mailbox&gt; - Delete specific mailbox
 
 </details>

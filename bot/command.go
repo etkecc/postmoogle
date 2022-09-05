@@ -15,6 +15,7 @@ const (
 	commandHelp      = "help"
 	commandStop      = "stop"
 	commandSend      = "send"
+	commandDKIM      = "dkim"
 	commandUsers     = botOptionUsers
 	commandDelete    = "delete"
 	commandMailboxes = "mailboxes"
@@ -133,6 +134,11 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowAdmin,
 		},
 		{
+			key:         commandDKIM,
+			description: "Get DKIM signature",
+			allowed:     b.allowAdmin,
+		},
+		{
 			key:         commandMailboxes,
 			description: "Show the list of all mailboxes",
 			allowed:     b.allowAdmin,
@@ -163,6 +169,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.runStop(ctx)
 	case commandSend:
 		b.runSend(ctx, commandSlice)
+	case commandDKIM:
+		b.runDKIM(ctx)
 	case commandUsers:
 		b.runUsers(ctx, commandSlice)
 	case commandDelete:
@@ -272,7 +280,6 @@ func (b *Bot) runSend(ctx context.Context, commandSlice []string) {
 	subject := lines[1]
 	body := strings.Join(lines[2:], "\n")
 
-	b.log.Debug("to=%s subject=%s body=%s", to, subject, body)
 	err := b.Send2Email(ctx, to, subject, body)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)

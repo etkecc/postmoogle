@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"gitlab.com/etke.cc/go/secgen"
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
@@ -129,4 +130,33 @@ func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 	}
 	b.allowedUsers = allowedUsers
 	b.SendNotice(ctx, evt.RoomID, "allowed users updated")
+}
+
+func (b *Bot) runDKIM(ctx context.Context) {
+	evt := eventFromContext(ctx)
+	cfg := b.getBotSettings()
+	signature := cfg.DKIMSignature()
+	if signature == "" {
+		var private string
+		var derr error
+		signature, private, derr = secgen.DKIM()
+		if derr != nil {
+			b.Error(ctx, evt.RoomID, "cannot generate DKIM signature: %v", derr)
+			return
+		}
+		cfg.Set(botOptionDKIMSignature, signature)
+		cfg.Set(botOptionDKIMPrivateKey, private)
+		err := b.setBotSettings(cfg)
+		if err != nil {
+			b.Error(ctx, evt.RoomID, "cannot save bot options: %v", err)
+			return
+		}
+	}
+
+	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf(
+		"DKIM signature is: `%s`.\n"+
+			"You need to add it to your DNS records (if not already):\n"+
+			"Add new DNS record with type = `TXT`, key (subdomain/from): `postmoogle._domainkey` and value (to):\n ```\n%s\n```\n"+
+			"Without that record other email servers may reject your emails as spam, kupo.",
+		signature, signature))
 }

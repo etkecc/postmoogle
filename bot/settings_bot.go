@@ -11,7 +11,9 @@ const acBotSettingsKey = "cc.etke.postmoogle.config"
 
 // bot options keys
 const (
-	botOptionUsers = "users"
+	botOptionUsers          = "users"
+	botOptionDKIMSignature  = "dkim.pub"
+	botOptionDKIMPrivateKey = "dkim.pem"
 )
 
 type botSettings map[string]string
@@ -38,6 +40,16 @@ func (s botSettings) Users() []string {
 	}
 
 	return []string{value}
+}
+
+// DKIMSignature (DNS TXT record)
+func (s botSettings) DKIMSignature() string {
+	return s.Get(botOptionDKIMSignature)
+}
+
+// DKIMPrivateKey keep it secret
+func (s botSettings) DKIMPrivateKey() string {
+	return s.Get(botOptionDKIMPrivateKey)
 }
 
 func (b *Bot) initBotUsers() ([]string, error) {
