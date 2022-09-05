@@ -2,15 +2,10 @@ package bot
 
 import (
 	"context"
-	"crypto"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/emersion/go-msgauth/dkim"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
@@ -206,75 +201,11 @@ func (b *Bot) Send2Email(ctx context.Context, to, subject, body string) error {
 		body = b.getBody(content)
 	}
 
-	var msg strings.Builder
-	msg.WriteString("From: ")
-	msg.WriteString(from)
-	msg.WriteString("\r\n")
-
-	msg.WriteString("To: ")
-	msg.WriteString(to)
-	msg.WriteString("\r\n")
-
-	msg.WriteString("Message-Id: ")
-	msg.WriteString(evt.ID.String()[1:] + "@" + b.domain)
-	msg.WriteString("\r\n")
-
-	msg.WriteString("Date: ")
-	msg.WriteString(time.Now().UTC().Format(time.RFC1123Z))
-	msg.WriteString("\r\n")
-
-	if inReplyTo != "" {
-		msg.WriteString("In-Reply-To: ")
-		msg.WriteString(inReplyTo)
-		msg.WriteString("\r\n")
-	}
-
-	msg.WriteString("Subject: ")
-	msg.WriteString(subject)
-	msg.WriteString("\r\n")
-
-	msg.WriteString("\r\n")
-
-	msg.WriteString(body)
-	msg.WriteString("\r\n")
-
-	msg = b.signDKIM(msg)
-
-	return b.mta.Send(from, to, msg.String())
-}
-
-func (b *Bot) signDKIM(body strings.Builder) strings.Builder {
-	privkey := b.getBotSettings().DKIMPrivateKey()
-	if privkey == "" {
-		b.log.Warn("DKIM private key not found, email will be sent unsigned")
-		return body
-	}
-	pemblock, _ := pem.Decode([]byte(privkey))
-	if pemblock == nil {
-		b.log.Error("cannot decode DKIM private key")
-		return body
-	}
-	parsedkey, err := x509.ParsePKCS8PrivateKey(pemblock.Bytes)
-	if err != nil {
-		b.log.Error("cannot parse PKCS8 private key: %v", err)
-		return body
-	}
-	signer := parsedkey.(crypto.Signer)
-
-	options := &dkim.SignOptions{
-		Domain:   b.domain,
-		Selector: "postmoogle",
-		Signer:   signer,
-	}
-
-	var msg strings.Builder
-	err = dkim.Sign(&msg, strings.NewReader(body.String()), options)
-	if err != nil {
-		b.log.Error("cannot sign email: %v", err)
-		return body
-	}
-
-	return msg
+	ID := evt.ID.String()[1:] + "@" + b.domain
+	data := utils.
+		NewEmail(ID, inReplyTo, subject, from, to, body, "", nil).
+		Compose(b.getBotSettings().DKIMPrivateKey())
+	return b.mta.Send(from, to, data)
 }
 
 func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.File, noThreads bool, parentID id.EventID) {
