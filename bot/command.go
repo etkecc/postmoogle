@@ -268,19 +268,22 @@ func (b *Bot) runSend(ctx context.Context, commandSlice []string) {
 	if !b.allowSend(evt.Sender, evt.RoomID) {
 		return
 	}
-
-	if len(commandSlice) < 3 {
-		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Usage:\n```\n%s send EMAIL\nSubject\nBody\n```", b.prefix))
+	to, subject, body, err := utils.ParseSend(commandSlice)
+	if err == utils.ErrInvalidArgs {
+		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf(
+			"Usage:\n"+
+				"```\n"+
+				"%s send someone@example.com\n"+
+				"Subject goes here on a line of its own\n"+
+				"Email content goes here\n"+
+				"on as many lines\n"+
+				"as you want.\n"+
+				"```",
+			b.prefix))
 		return
 	}
-	message := strings.Join(commandSlice, " ")
-	lines := strings.Split(message, "\n")
-	commandSlice = strings.Split(lines[0], " ")
-	to := commandSlice[1]
-	subject := lines[1]
-	body := strings.Join(lines[2:], "\n")
 
-	err := b.Send2Email(ctx, to, subject, body)
+	err = b.Send2Email(ctx, to, subject, body)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
 		return
