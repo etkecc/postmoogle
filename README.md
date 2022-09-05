@@ -122,6 +122,7 @@ You can get that signature using the `!pm dkim` command:
 
 <details>
 <summary>!pm dkim</summary>
+
 DKIM signature is: `v=DKIM1; k=ed25519; p=OcVzOwAONDfgbJX/5vwzlXOs9gUDO0YKlXHaDnBJtXw=`.
 You need to add it to your DNS records (if not already):
 Add new DNS record with type = `TXT`, key (subdomain/from): `postmoogle._domainkey` and value (to):
