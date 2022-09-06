@@ -6,7 +6,7 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
-// RelatesTo block of matrix event content
+// RelatesTo returns relation object of a matrix event (either threads or reply-to)
 func RelatesTo(threads bool, parentID id.EventID) *event.RelatesTo {
 	if parentID == "" {
 		return nil
@@ -26,7 +26,7 @@ func RelatesTo(threads bool, parentID id.EventID) *event.RelatesTo {
 	}
 }
 
-// EventParent returns parent event - either thread ID or reply-to ID
+// EventParent returns parent event ID (either from thread or from reply-to relation)
 func EventParent(currentID id.EventID, content *event.MessageEventContent) id.EventID {
 	if content == nil {
 		return currentID
