@@ -20,8 +20,6 @@ type MTA interface {
 
 // Email object
 type Email struct {
-	data strings.Builder
-
 	Date      string
 	MessageID string
 	InReplyTo string
@@ -109,54 +107,54 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 
 // Compose converts email object to string and (optionally) signs it
 func (e *Email) Compose(privkey string) string {
+	var data strings.Builder
+
 	domain := strings.SplitN(e.From, "@", 2)[0]
+	data.WriteString("From: ")
+	data.WriteString(e.From)
+	data.WriteString("\r\n")
 
-	e.data.WriteString("From: ")
-	e.data.WriteString(e.From)
-	e.data.WriteString("\r\n")
+	data.WriteString("To: ")
+	data.WriteString(e.To)
+	data.WriteString("\r\n")
 
-	e.data.WriteString("To: ")
-	e.data.WriteString(e.To)
-	e.data.WriteString("\r\n")
+	data.WriteString("Message-Id: ")
+	data.WriteString(e.MessageID)
+	data.WriteString("\r\n")
 
-	e.data.WriteString("Message-Id: ")
-	e.data.WriteString(e.MessageID)
-	e.data.WriteString("\r\n")
-
-	e.data.WriteString("Date: ")
-	e.data.WriteString(e.Date)
-	e.data.WriteString("\r\n")
+	data.WriteString("Date: ")
+	data.WriteString(e.Date)
+	data.WriteString("\r\n")
 
 	if e.InReplyTo != "" {
-		e.data.WriteString("In-Reply-To: ")
-		e.data.WriteString(e.InReplyTo)
-		e.data.WriteString("\r\n")
+		data.WriteString("In-Reply-To: ")
+		data.WriteString(e.InReplyTo)
+		data.WriteString("\r\n")
 	}
 
-	e.data.WriteString("Subject: ")
-	e.data.WriteString(e.Subject)
-	e.data.WriteString("\r\n")
+	data.WriteString("Subject: ")
+	data.WriteString(e.Subject)
+	data.WriteString("\r\n")
 
-	e.data.WriteString("\r\n")
+	data.WriteString("\r\n")
 
-	e.data.WriteString(e.Text)
-	e.data.WriteString("\r\n")
+	data.WriteString(e.Text)
+	data.WriteString("\r\n")
 
-	e.sign(domain, privkey)
-	return e.data.String()
+	return e.sign(domain, privkey, data)
 }
 
-func (e *Email) sign(domain, privkey string) {
+func (e *Email) sign(domain, privkey string, data strings.Builder) string {
 	if privkey == "" {
-		return
+		return data.String()
 	}
 	pemblock, _ := pem.Decode([]byte(privkey))
 	if pemblock == nil {
-		return
+		return data.String()
 	}
 	parsedkey, err := x509.ParsePKCS8PrivateKey(pemblock.Bytes)
 	if err != nil {
-		return
+		return data.String()
 	}
 	signer := parsedkey.(crypto.Signer)
 
@@ -167,10 +165,10 @@ func (e *Email) sign(domain, privkey string) {
 	}
 
 	var msg strings.Builder
-	err = dkim.Sign(&msg, strings.NewReader(e.data.String()), options)
+	err = dkim.Sign(&msg, strings.NewReader(data.String()), options)
 	if err != nil {
-		return
+		return data.String()
 	}
 
-	e.data = msg
+	return msg.String()
 }
