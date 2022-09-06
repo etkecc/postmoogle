@@ -97,7 +97,9 @@ func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
 			// In such cases, just return a default (empty) settings object.
 			err = nil
 		}
-	} else {
+	}
+
+	if err == nil {
 		b.cfg.Set(roomID.String(), config)
 	}
 
