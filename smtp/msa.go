@@ -49,7 +49,6 @@ func Start(domain, port, loglevel string, maxSize int, client Client) error {
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = maxSize * 1024 * 1024
-	s.AllowInsecureAuth = true
 	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
 		s.Debug = os.Stdout
 	}
