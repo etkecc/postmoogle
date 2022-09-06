@@ -71,7 +71,7 @@ func NewEmail(messageID, inReplyTo, subject, from, to, text, html string, files 
 	return email
 }
 
-// Content converts email to matrix event content
+// Content converts the email object to a Matrix event content
 func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Content {
 	var text strings.Builder
 	if options.Sender {
