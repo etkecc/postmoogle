@@ -14,35 +14,35 @@ import (
 type msa struct {
 	log    *logger.Logger
 	domain string
-	client Client
+	bot    Bot
 }
 
-func (b *msa) newSession() *msasession {
+func (m *msa) newSession() *msasession {
 	return &msasession{
 		ctx:    sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
-		log:    b.log,
-		domain: b.domain,
-		client: b.client,
+		log:    m.log,
+		bot:    m.bot,
+		domain: m.domain,
 	}
 }
 
-func (b *msa) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
+func (m *msa) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
 	return nil, smtp.ErrAuthUnsupported
 }
 
-func (b *msa) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
-	return b.newSession(), nil
+func (m *msa) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
+	return m.newSession(), nil
 }
 
-func Start(domain, port, loglevel string, maxSize int, client Client) error {
+func Start(domain, port, loglevel string, maxSize int, bot Bot) error {
 	log := logger.New("smtp.", loglevel)
 	sender := NewMTA(loglevel)
 	receiver := &msa{
 		log:    log,
+		bot:    bot,
 		domain: domain,
-		client: client,
 	}
-	receiver.client.SetMTA(sender)
+	receiver.bot.SetMTA(sender)
 	s := smtp.NewServer(receiver)
 	s.Addr = ":" + port
 	s.Domain = domain

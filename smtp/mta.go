@@ -15,8 +15,8 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
-// Client interface to send emails into matrix
-type Client interface {
+// Bot interface to send emails into matrix
+type Bot interface {
 	GetMapping(string) (id.RoomID, bool)
 	Send2Matrix(ctx context.Context, email *utils.Email) error
 	SetMTA(mta utils.MTA)

@@ -14,8 +14,8 @@ import (
 
 type msasession struct {
 	log    *logger.Logger
+	bot    Bot
 	domain string
-	client Client
 
 	ctx  context.Context
 	to   string
@@ -37,7 +37,7 @@ func (s *msasession) Rcpt(to string) error {
 		return smtp.ErrAuthRequired
 	}
 
-	_, ok := s.client.GetMapping(utils.Mailbox(to))
+	_, ok := s.bot.GetMapping(utils.Mailbox(to))
 	if !ok {
 		s.log.Debug("mapping for %s not found", to)
 		return smtp.ErrAuthRequired
@@ -84,7 +84,7 @@ func (s *msasession) Data(r io.Reader) error {
 		eml.HTML,
 		files)
 
-	return s.client.Send2Matrix(s.ctx, email)
+	return s.bot.Send2Matrix(s.ctx, email)
 }
 
 func (s *msasession) Reset() {}
