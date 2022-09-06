@@ -125,7 +125,38 @@ DOMAIN.		1799	IN	TXT	"v=spf1 ip4:111.111.111.111 -all"
 
 </details>
 
-**Third**, add new DKIM DNS record of `TXT` type for subdomain `postmoogle._domainkey` that will be used with postmoogle.
+**Third**, add new MX DNS record of `MX` type for your domain that will be used with postmoogle, it should point to the same (sub-)domain.
+Looks odd, but some mail servers will refuse to interact with your mail server (and Postmoogle is already a mail server) without MX records.
+
+<details>
+<summary>Example</summary>
+
+```bash
+dig MX DOMAIN
+
+; <<>> DiG 9.18.6 <<>> MX DOMAIN
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 12688
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;DOMAIN.			IN	MX
+
+;; ANSWER SECTION:
+DOMAIN.		1799	IN	MX	10 DOMAIN.
+
+;; Query time: 40 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Tue Sep 06 16:44:47 EEST 2022
+;; MSG SIZE  rcvd: 59
+```
+
+</details>
+
+**Fourth** (and the last one), add new DKIM DNS record of `TXT` type for subdomain `postmoogle._domainkey` that will be used with postmoogle.
 
 You can get that signature using the `!pm dkim` command:
 
