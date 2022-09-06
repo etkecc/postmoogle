@@ -283,7 +283,24 @@ func (b *Bot) runSend(ctx context.Context, commandSlice []string) {
 		return
 	}
 
-	err = b.Send2Email(ctx, to, subject, body)
+	cfg, err := b.getRoomSettings(evt.RoomID)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "failed to retrieve room settings: %v", err)
+		return
+	}
+
+	mailbox := cfg.Mailbox()
+	if mailbox == "" {
+		b.SendNotice(ctx, evt.RoomID, "mailbox is not configured, kupo")
+		return
+	}
+
+	from := mailbox + "@" + b.domain
+	ID := evt.ID.String()[1:] + "@" + b.domain
+	data := utils.
+		NewEmail(ID, "", subject, from, to, body, "", nil).
+		Compose(b.getBotSettings().DKIMPrivateKey())
+	err = b.mta.Send(from, to, data)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
 		return

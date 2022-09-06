@@ -121,6 +121,7 @@ func (b *Bot) getParentEmail(evt *event.Event) (string, string, string) {
 }
 
 // Send2Email sends message to email
+// TODO rewrite to thread replies only
 func (b *Bot) Send2Email(ctx context.Context, to, subject, body string) error {
 	var inReplyTo string
 	evt := eventFromContext(ctx)
