@@ -105,7 +105,7 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 	return &content
 }
 
-// Compose converts email object to string and (optionally) signs it
+// Compose converts the email object to a string (to be used for delivery via SMTP) and possibly DKIM-signs it
 func (e *Email) Compose(privkey string) string {
 	var data strings.Builder
 
