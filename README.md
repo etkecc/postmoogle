@@ -95,7 +95,7 @@ _dmarc.example.com.		1799	IN	TXT	"v=DMARC1; p=quarantine;"
 
 </details>
 
-**Second**, add new SPF DNS record of `TXT` type for your domain that will be used with postmoogle, with format: `v=spf1 ip4:SERVER_IP -all`
+**Second**, add a new SPF DNS record of the `TXT` type for your domain that will be used with Postmoogle, with format: `v=spf1 ip4:SERVER_IP -all` (replace `SERVER_IP` with your server's IP address)
 
 <details>
 <summary>Example</summary>
