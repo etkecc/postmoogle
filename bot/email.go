@@ -84,22 +84,6 @@ func (b *Bot) Send2Matrix(ctx context.Context, email *utils.Email) error {
 	return nil
 }
 
-func (b *Bot) getBody(content *event.MessageEventContent) string {
-	if content.FormattedBody != "" {
-		return content.FormattedBody
-	}
-
-	return content.Body
-}
-
-func (b *Bot) getSubject(content *event.MessageEventContent) string {
-	if content.Body == "" {
-		return ""
-	}
-
-	return strings.SplitN(content.Body, "\n", 1)[0]
-}
-
 func (b *Bot) getParentEmail(evt *event.Event) (string, string, string) {
 	content := evt.Content.AsMessage()
 	parentID := utils.EventParent(evt.ID, content)
@@ -160,10 +144,14 @@ func (b *Bot) Send2Email(ctx context.Context, to, subject, body string) error {
 
 	content := evt.Content.AsMessage()
 	if subject == "" {
-		subject = b.getSubject(content)
+		subject = strings.SplitN(content.Body, "\n", 1)[0]
 	}
 	if body == "" {
-		body = b.getBody(content)
+		if content.FormattedBody != "" {
+			body = content.FormattedBody
+		} else {
+			body = content.Body
+		}
 	}
 
 	ID := evt.ID.String()[1:] + "@" + b.domain
