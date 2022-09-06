@@ -112,5 +112,14 @@ func (m *mta) connect(from, to string) (*smtp.Client, error) {
 		}
 	}
 
+	// If there are no MX records, according to https://datatracker.ietf.org/doc/html/rfc5321#section-5.1,
+	// we're supposed to try talking directly to the host.
+	if len(mxs) == 0 {
+		client := m.tryServer(localname, hostname)
+		if client != nil {
+			return client, nil
+		}
+	}
+
 	return nil, fmt.Errorf("target SMTP server not found")
 }
