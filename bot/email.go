@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"maunium.net/go/mautrix/event"
-	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
@@ -26,39 +25,6 @@ const (
 	eventSubjectKey   = "cc.etke.postmoogle.subject"
 	eventFromKey      = "cc.etke.postmoogle.from"
 )
-
-func email2content(email *utils.Email, cfg roomSettings, threadID id.EventID) *event.Content {
-	var text strings.Builder
-	if !cfg.NoSender() {
-		text.WriteString("From: ")
-		text.WriteString(email.From)
-		text.WriteString("\n\n")
-	}
-	if !cfg.NoSubject() {
-		text.WriteString("# ")
-		text.WriteString(email.Subject)
-		text.WriteString("\n\n")
-	}
-	if email.HTML != "" && !cfg.NoHTML() {
-		text.WriteString(format.HTMLToMarkdown(email.HTML))
-	} else {
-		text.WriteString(email.Text)
-	}
-
-	parsed := format.RenderMarkdown(text.String(), true, true)
-	parsed.RelatesTo = utils.RelatesTo(cfg.NoThreads(), threadID)
-
-	content := event.Content{
-		Raw: map[string]interface{}{
-			eventMessageIDkey: email.MessageID,
-			eventInReplyToKey: email.InReplyTo,
-			eventSubjectKey:   email.Subject,
-			eventFromKey:      email.From,
-		},
-		Parsed: parsed,
-	}
-	return &content
-}
 
 // SetSMTPAuth sets dynamic login and password to auth against built-in smtp server
 func (b *Bot) SetMTA(mta utils.MTA) {
@@ -100,8 +66,7 @@ func (b *Bot) Send2Matrix(ctx context.Context, email *utils.Email) error {
 			b.setThreadID(roomID, email.MessageID, threadID)
 		}
 	}
-
-	content := email2content(email, cfg, threadID)
+	content := email.Content(threadID, cfg.ContentOptions())
 	eventID, serr := b.lp.Send(roomID, content)
 	if serr != nil {
 		return utils.UnwrapError(serr)
@@ -220,7 +185,7 @@ func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.Fi
 			MsgType:   event.MsgFile,
 			Body:      req.FileName,
 			URL:       resp.ContentURI.CUString(),
-			RelatesTo: utils.RelatesTo(noThreads, parentID),
+			RelatesTo: utils.RelatesTo(!noThreads, parentID),
 		})
 		if err != nil {
 			b.Error(ctx, roomID, "cannot send uploaded file %s: %v", req.FileName, err)

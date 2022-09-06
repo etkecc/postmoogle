@@ -7,22 +7,22 @@ import (
 )
 
 // RelatesTo block of matrix event content
-func RelatesTo(noThreads bool, parentID id.EventID) *event.RelatesTo {
+func RelatesTo(threads bool, parentID id.EventID) *event.RelatesTo {
 	if parentID == "" {
 		return nil
 	}
 
-	if noThreads {
+	if threads {
 		return &event.RelatesTo{
-			InReplyTo: &event.InReplyTo{
-				EventID: parentID,
-			},
+			Type:    event.RelThread,
+			EventID: parentID,
 		}
 	}
 
 	return &event.RelatesTo{
-		Type:    event.RelThread,
-		EventID: parentID,
+		InReplyTo: &event.InReplyTo{
+			EventID: parentID,
+		},
 	}
 }
 

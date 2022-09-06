@@ -67,6 +67,21 @@ func (s roomSettings) NoFiles() bool {
 	return utils.Bool(s.Get(roomOptionNoFiles))
 }
 
+// ContentOptions converts room display settings to content options
+func (s roomSettings) ContentOptions() *utils.ContentOptions {
+	return &utils.ContentOptions{
+		HTML:    !s.NoHTML(),
+		Sender:  !s.NoSender(),
+		Subject: !s.NoSubject(),
+		Threads: !s.NoThreads(),
+
+		FromKey:      eventFromKey,
+		SubjectKey:   eventSubjectKey,
+		MessageIDKey: eventMessageIDkey,
+		InReplyToKey: eventInReplyToKey,
+	}
+}
+
 func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
 	cfg := b.cfg.Get(roomID.String())
 	if cfg != nil {
