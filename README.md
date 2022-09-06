@@ -65,7 +65,7 @@ You can find default values in [config/defaults.go](config/defaults.go)
 
 The following configuration is needed only if you want to send outgoing emails via Postmoogle (it's not necessary if you only want to receive emails).
 
-**First**, add new DMARC DNS record of `TXT` type for subdomain `_dmarc` with a proper policy, the easiest one is: `v=DMARC1; p=quarantine;`.
+**First**, add a new DMARC DNS record of the `TXT` type for subdomain `_dmarc` with a proper policy. The simplest policy you can use is: `v=DMARC1; p=quarantine;`.
 
 <details>
 <summary>Example</summary>
