@@ -26,7 +26,7 @@ const (
 	eventFromKey      = "cc.etke.postmoogle.from"
 )
 
-// SetSMTPAuth sets dynamic login and password to auth against built-in smtp server
+// SetMTA sets mail transfer agent instance to the bot
 func (b *Bot) SetMTA(mta utils.MTA) {
 	b.mta = mta
 }
