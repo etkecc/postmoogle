@@ -71,9 +71,9 @@ The following configuration is needed only if you want to send outgoing emails v
 <summary>Example</summary>
 
 ```bash
-$ dig txt _dmarc.DOMAIN
+$ dig txt _dmarc.example.com
 
-; <<>> DiG 9.18.6 <<>> txt _dmarc.DOMAIN
+; <<>> DiG 9.18.6 <<>> txt _dmarc.example.com
 ;; global options: +cmd
 ;; Got answer:
 ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 57306
@@ -82,10 +82,10 @@ $ dig txt _dmarc.DOMAIN
 ;; OPT PSEUDOSECTION:
 ; EDNS: version: 0, flags:; udp: 1232
 ;; QUESTION SECTION:
-;_dmarc.DOMAIN.			IN	TXT
+;_dmarc.example.com.			IN	TXT
 
 ;; ANSWER SECTION:
-_dmarc.DOMAIN.		1799	IN	TXT	"v=DMARC1; p=quarantine;"
+_dmarc.example.com.		1799	IN	TXT	"v=DMARC1; p=quarantine;"
 
 ;; Query time: 46 msec
 ;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
@@ -101,9 +101,9 @@ _dmarc.DOMAIN.		1799	IN	TXT	"v=DMARC1; p=quarantine;"
 <summary>Example</summary>
 
 ```bash
-$ dig txt DOMAIN
+$ dig txt example.com
 
-; <<>> DiG 9.18.6 <<>> txt DOMAIN
+; <<>> DiG 9.18.6 <<>> txt example.com
 ;; global options: +cmd
 ;; Got answer:
 ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 24796
@@ -112,10 +112,10 @@ $ dig txt DOMAIN
 ;; OPT PSEUDOSECTION:
 ; EDNS: version: 0, flags:; udp: 1232
 ;; QUESTION SECTION:
-;DOMAIN.			IN	TXT
+;example.com.			IN	TXT
 
 ;; ANSWER SECTION:
-DOMAIN.		1799	IN	TXT	"v=spf1 ip4:111.111.111.111 -all"
+example.com.		1799	IN	TXT	"v=spf1 ip4:111.111.111.111 -all"
 
 ;; Query time: 36 msec
 ;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
@@ -132,9 +132,9 @@ Looks odd, but some mail servers will refuse to interact with your mail server (
 <summary>Example</summary>
 
 ```bash
-dig MX DOMAIN
+dig MX example.com
 
-; <<>> DiG 9.18.6 <<>> MX DOMAIN
+; <<>> DiG 9.18.6 <<>> MX example.com
 ;; global options: +cmd
 ;; Got answer:
 ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 12688
@@ -143,10 +143,10 @@ dig MX DOMAIN
 ;; OPT PSEUDOSECTION:
 ; EDNS: version: 0, flags:; udp: 1232
 ;; QUESTION SECTION:
-;DOMAIN.			IN	MX
+;example.com.			IN	MX
 
 ;; ANSWER SECTION:
-DOMAIN.		1799	IN	MX	10 DOMAIN.
+example.com.		1799	IN	MX	10 example.com.
 
 ;; Query time: 40 msec
 ;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
@@ -179,9 +179,9 @@ Without that record other email servers may reject your emails as spam, kupo.
 <summary>Example</summary>
 
 ```bash
-$ dig TXT postmoogle._domainkey.DOMAIN
+$ dig TXT postmoogle._domainkey.example.com
 
-; <<>> DiG 9.18.6 <<>> TXT postmoogle._domainkey.DOMAIN
+; <<>> DiG 9.18.6 <<>> TXT postmoogle._domainkey.example.com
 ;; global options: +cmd
 ;; Got answer:
 ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 59014
@@ -190,10 +190,10 @@ $ dig TXT postmoogle._domainkey.DOMAIN
 ;; OPT PSEUDOSECTION:
 ; EDNS: version: 0, flags:; udp: 1232
 ;; QUESTION SECTION:
-;postmoogle._domainkey.DOMAIN.	IN	TXT
+;postmoogle._domainkey.example.com.	IN	TXT
 
 ;; ANSWER SECTION:
-postmoogle._domainkey.DOMAIN. 600	IN TXT  "v=DKIM1; k=ed25519; p=OcVzOwAONDfgbJX/5vwzlXOs9gUDO0YKlXHaDnBJtXw="
+postmoogle._domainkey.example.com. 600	IN TXT  "v=DKIM1; k=ed25519; p=OcVzOwAONDfgbJX/5vwzlXOs9gUDO0YKlXHaDnBJtXw="
 
 ;; Query time: 90 msec
 ;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
