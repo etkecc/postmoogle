@@ -125,7 +125,7 @@ example.com.		1799	IN	TXT	"v=spf1 ip4:111.111.111.111 -all"
 
 </details>
 
-**Third**, add new MX DNS record of `MX` type for your domain that will be used with postmoogle, it should point to the same (sub-)domain.
+**Third**, add a new MX DNS record of the `MX` type for your domain that will be used with postmoogle. It should point to the same (sub-)domain.
 Looks odd, but some mail servers will refuse to interact with your mail server (and Postmoogle is already a mail server) without MX records.
 
 <details>
