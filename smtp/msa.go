@@ -10,7 +10,7 @@ import (
 	"gitlab.com/etke.cc/go/logger"
 )
 
-// msa is mail submission agent
+// msa is mail submission agent, implements smtp.Backend
 type msa struct {
 	log    *logger.Logger
 	domain string
