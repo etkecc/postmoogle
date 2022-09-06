@@ -31,7 +31,7 @@ type Email struct {
 	Files     []*File
 }
 
-// ContentOptions used to convert email to matrix event content
+// ContentOptions represents settings that specify how an email is to be converted to a Matrix message
 type ContentOptions struct {
 	// On/Off
 	Sender  bool
