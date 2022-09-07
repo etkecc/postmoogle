@@ -13,7 +13,7 @@ func (b *Bot) handle(ctx context.Context) {
 		return
 	}
 	message := strings.TrimSpace(content.Body)
-	cmd := b.parseCommand(message)
+	cmd := b.parseCommand(message, true)
 	if cmd == nil {
 		return
 	}

@@ -168,7 +168,7 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 	case commandStop:
 		b.runStop(ctx)
 	case commandSend:
-		b.runSend(ctx, commandSlice)
+		b.runSend(ctx)
 	case commandDKIM:
 		b.runDKIM(ctx)
 	case commandUsers:
@@ -182,7 +182,7 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 	}
 }
 
-func (b *Bot) parseCommand(message string) []string {
+func (b *Bot) parseCommand(message string, toLower bool) []string {
 	if message == "" {
 		return nil
 	}
@@ -192,7 +192,10 @@ func (b *Bot) parseCommand(message string) []string {
 		return nil
 	}
 
-	message = strings.ToLower(strings.TrimSpace(strings.Replace(message, b.prefix, "", 1)))
+	message = strings.Replace(message, b.prefix, "", 1)
+	if toLower {
+		message = strings.ToLower(message)
+	}
 	return strings.Split(message, " ")
 }
 
@@ -263,11 +266,12 @@ func (b *Bot) sendHelp(ctx context.Context) {
 	b.SendNotice(ctx, evt.RoomID, msg.String())
 }
 
-func (b *Bot) runSend(ctx context.Context, commandSlice []string) {
+func (b *Bot) runSend(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	if !b.allowSend(evt.Sender, evt.RoomID) {
 		return
 	}
+	commandSlice := b.parseCommand(evt.Content.AsMessage().Body, false)
 	to, subject, body, err := utils.ParseSend(commandSlice)
 	if err == utils.ErrInvalidArgs {
 		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf(
