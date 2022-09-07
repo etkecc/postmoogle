@@ -15,6 +15,7 @@ const acRoomSettingsKey = "cc.etke.postmoogle.settings"
 const (
 	roomOptionOwner     = "owner"
 	roomOptionMailbox   = "mailbox"
+	roomOptionNoSend    = "nosend"
 	roomOptionNoSender  = "nosender"
 	roomOptionNoSubject = "nosubject"
 	roomOptionNoHTML    = "nohtml"
@@ -42,6 +43,10 @@ func (s roomSettings) Owner() string {
 	return s.Get(roomOptionOwner)
 }
 
+func (s roomSettings) NoSend() bool {
+	return utils.Bool(s.Get(roomOptionNoSend))
+}
+
 func (s roomSettings) NoSender() bool {
 	return utils.Bool(s.Get(roomOptionNoSender))
 }
@@ -62,6 +67,21 @@ func (s roomSettings) NoFiles() bool {
 	return utils.Bool(s.Get(roomOptionNoFiles))
 }
 
+// ContentOptions converts room display settings to content options
+func (s roomSettings) ContentOptions() *utils.ContentOptions {
+	return &utils.ContentOptions{
+		HTML:    !s.NoHTML(),
+		Sender:  !s.NoSender(),
+		Subject: !s.NoSubject(),
+		Threads: !s.NoThreads(),
+
+		FromKey:      eventFromKey,
+		SubjectKey:   eventSubjectKey,
+		MessageIDKey: eventMessageIDkey,
+		InReplyToKey: eventInReplyToKey,
+	}
+}
+
 func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
 	cfg := b.cfg.Get(roomID.String())
 	if cfg != nil {
@@ -77,7 +97,9 @@ func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
 			// In such cases, just return a default (empty) settings object.
 			err = nil
 		}
-	} else {
+	}
+
+	if err == nil {
 		b.cfg.Set(roomID.String(), config)
 	}
 

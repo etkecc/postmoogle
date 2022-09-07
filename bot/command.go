@@ -14,6 +14,8 @@ import (
 const (
 	commandHelp      = "help"
 	commandStop      = "stop"
+	commandSend      = "send"
+	commandDKIM      = "dkim"
 	commandUsers     = botOptionUsers
 	commandDelete    = "delete"
 	commandMailboxes = "mailboxes"
@@ -51,6 +53,11 @@ func (b *Bot) initCommands() commandList {
 			description: "Disable bridge for the room and clear all configuration",
 			allowed:     b.allowOwner,
 		},
+		{
+			key:         commandSend,
+			description: "Send email",
+			allowed:     b.allowSend,
+		},
 		{allowed: b.allowOwner}, // delimiter
 		// options commands
 		{
@@ -66,6 +73,15 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowOwner,
 		},
 		{allowed: b.allowOwner}, // delimiter
+		{
+			key: roomOptionNoSend,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - enable email sending; `false` - disable email sending)",
+				roomOptionNoSend,
+			),
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
+		},
 		{
 			key: roomOptionNoSender,
 			description: fmt.Sprintf(
@@ -118,6 +134,11 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowAdmin,
 		},
 		{
+			key:         commandDKIM,
+			description: "Get DKIM signature",
+			allowed:     b.allowAdmin,
+		},
+		{
 			key:         commandMailboxes,
 			description: "Show the list of all mailboxes",
 			allowed:     b.allowAdmin,
@@ -146,6 +167,10 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.sendHelp(ctx)
 	case commandStop:
 		b.runStop(ctx)
+	case commandSend:
+		b.runSend(ctx, commandSlice)
+	case commandDKIM:
+		b.runDKIM(ctx)
 	case commandUsers:
 		b.runUsers(ctx, commandSlice)
 	case commandDelete:
@@ -236,4 +261,50 @@ func (b *Bot) sendHelp(ctx context.Context) {
 	}
 
 	b.SendNotice(ctx, evt.RoomID, msg.String())
+}
+
+func (b *Bot) runSend(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	if !b.allowSend(evt.Sender, evt.RoomID) {
+		return
+	}
+	to, subject, body, err := utils.ParseSend(commandSlice)
+	if err == utils.ErrInvalidArgs {
+		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf(
+			"Usage:\n"+
+				"```\n"+
+				"%s send someone@example.com\n"+
+				"Subject goes here on a line of its own\n"+
+				"Email content goes here\n"+
+				"on as many lines\n"+
+				"as you want.\n"+
+				"```",
+			b.prefix))
+		return
+	}
+
+	cfg, err := b.getRoomSettings(evt.RoomID)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "failed to retrieve room settings: %v", err)
+		return
+	}
+
+	mailbox := cfg.Mailbox()
+	if mailbox == "" {
+		b.SendNotice(ctx, evt.RoomID, "mailbox is not configured, kupo")
+		return
+	}
+
+	from := mailbox + "@" + b.domain
+	ID := evt.ID.String()[1:] + "@" + b.domain
+	data := utils.
+		NewEmail(ID, "", subject, from, to, body, "", nil).
+		Compose(b.getBotSettings().DKIMPrivateKey())
+	err = b.mta.Send(from, to, data)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
+		return
+	}
+
+	b.SendNotice(ctx, evt.RoomID, "Email has been sent")
 }

@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	git.sr.ht/~xn/cache/v2 v2.0.0
+	github.com/emersion/go-msgauth v0.6.6
 	github.com/emersion/go-smtp v0.15.0
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/jhillyerd/enmime v0.10.0
@@ -11,6 +12,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.14
 	gitlab.com/etke.cc/go/env v1.0.0
 	gitlab.com/etke.cc/go/logger v1.1.0
+	gitlab.com/etke.cc/go/secgen v1.1.0
 	gitlab.com/etke.cc/linkpearl v0.0.0-20220831124140-598117f26c77
 	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
 	maunium.net/go/mautrix v0.12.0
@@ -27,6 +29,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.12 // indirect
+	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect

@@ -10,40 +10,42 @@ import (
 	"gitlab.com/etke.cc/go/logger"
 )
 
-type backend struct {
+// msa is mail submission agent, implements smtp.Backend
+type msa struct {
 	log    *logger.Logger
 	domain string
-	client Client
+	bot    Bot
 }
 
-func (b *backend) newSession() *session {
-	return &session{
+func (m *msa) newSession() *msasession {
+	return &msasession{
 		ctx:    sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
-		log:    b.log,
-		domain: b.domain,
-		client: b.client,
+		log:    m.log,
+		bot:    m.bot,
+		domain: m.domain,
 	}
 }
 
-func (b *backend) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
+func (m *msa) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
 	return nil, smtp.ErrAuthUnsupported
 }
 
-func (b *backend) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
-	return b.newSession(), nil
+func (m *msa) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
+	return m.newSession(), nil
 }
 
-func Start(domain, port, loglevel string, maxSize int, client Client) error {
+func Start(domain, port, loglevel string, maxSize int, bot Bot) error {
 	log := logger.New("smtp.", loglevel)
-	be := &backend{
+	sender := NewMTA(loglevel)
+	receiver := &msa{
 		log:    log,
+		bot:    bot,
 		domain: domain,
-		client: client,
 	}
-	s := smtp.NewServer(be)
+	receiver.bot.SetMTA(sender)
+	s := smtp.NewServer(receiver)
 	s.Addr = ":" + port
 	s.Domain = domain
-	s.AuthDisabled = true
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = maxSize * 1024 * 1024

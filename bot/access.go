@@ -17,17 +17,24 @@ func parseMXIDpatterns(patterns []string, defaultPattern string) ([]*regexp.Rege
 	return utils.WildcardMXIDsToRegexes(patterns)
 }
 
-func (b *Bot) allowAnyone(actorID id.UserID, targetRoomID id.RoomID) bool {
-	return true
-}
-
-func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
+func (b *Bot) allowUsers(actorID id.UserID) bool {
 	if len(b.allowedUsers) != 0 {
 		if !utils.Match(actorID.String(), b.allowedUsers) {
 			return false
 		}
 	}
 
+	return true
+}
+
+func (b *Bot) allowAnyone(actorID id.UserID, targetRoomID id.RoomID) bool {
+	return true
+}
+
+func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
+	if !b.allowUsers(actorID) {
+		return false
+	}
 	cfg, err := b.getRoomSettings(targetRoomID)
 	if err != nil {
 		b.Error(context.Background(), targetRoomID, "failed to retrieve settings: %v", err)
@@ -44,4 +51,18 @@ func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
 
 func (b *Bot) allowAdmin(actorID id.UserID, targetRoomID id.RoomID) bool {
 	return utils.Match(actorID.String(), b.allowedAdmins)
+}
+
+func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
+	if !b.allowUsers(actorID) {
+		return false
+	}
+
+	cfg, err := b.getRoomSettings(targetRoomID)
+	if err != nil {
+		b.Error(context.Background(), targetRoomID, "failed to retrieve settings: %v", err)
+		return false
+	}
+
+	return !cfg.NoSend()
 }
