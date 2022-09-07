@@ -196,7 +196,7 @@ func (b *Bot) parseCommand(message string, toLower bool) []string {
 	if toLower {
 		message = strings.ToLower(message)
 	}
-	return strings.Split(message, " ")
+	return strings.Split(strings.TrimSpace(message), " ")
 }
 
 func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
