@@ -109,7 +109,7 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 func (e *Email) Compose(privkey string) string {
 	var data strings.Builder
 
-	domain := strings.SplitN(e.From, "@", 2)[0]
+	domain := strings.SplitN(e.From, "@", 2)[1]
 	data.WriteString("From: ")
 	data.WriteString(e.From)
 	data.WriteString("\r\n")
