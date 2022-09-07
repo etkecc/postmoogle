@@ -2,8 +2,6 @@ package smtp
 
 import (
 	"context"
-	"os"
-	"time"
 
 	"github.com/emersion/go-smtp"
 	"github.com/getsentry/sentry-go"
@@ -32,27 +30,4 @@ func (m *msa) Login(state *smtp.ConnectionState, username, password string) (smt
 
 func (m *msa) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
 	return m.newSession(), nil
-}
-
-func Start(domain, port, loglevel string, maxSize int, bot Bot) error {
-	log := logger.New("smtp.", loglevel)
-	sender := NewMTA(loglevel)
-	receiver := &msa{
-		log:    log,
-		bot:    bot,
-		domain: domain,
-	}
-	receiver.bot.SetMTA(sender)
-	s := smtp.NewServer(receiver)
-	s.Addr = ":" + port
-	s.Domain = domain
-	s.ReadTimeout = 10 * time.Second
-	s.WriteTimeout = 10 * time.Second
-	s.MaxMessageBytes = maxSize * 1024 * 1024
-	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
-		s.Debug = os.Stdout
-	}
-
-	log.Info("Starting SMTP server on %s:%s", domain, port)
-	return s.ListenAndServe()
 }

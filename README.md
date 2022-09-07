@@ -11,7 +11,7 @@ It can't be used with arbitrary email providers, but setup your own provider "wi
 
 ### Receive
 
-- [x] SMTP server
+- [x] SMTP server (plaintext and SSL)
 - [x] Matrix bot
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms
@@ -43,11 +43,15 @@ env vars
 * **POSTMOOGLE_LOGIN** - user login/localpart, eg: `moogle`
 * **POSTMOOGLE_PASSWORD** - user password
 * **POSTMOOGLE_DOMAIN** - SMTP domain to listen for new emails
-* **POSTMOOGLE_PORT** - SMTP port to listen for new emails
 
 <details>
 <summary>other optional config parameters</summary>
 
+* **POSTMOOGLE_PORT** - SMTP port to listen for new emails
+* **POSTMOOGLE_TLS_PORT** - secure SMTP port to listen for new emails. Requires valid cert and key as well
+* **POSTMOOGLE_TLS_CERT** - path to your SSL certificate (chain)
+* **POSTMOOGLE_TLS_KEY** - path to your SSL certificate's private key
+* **POSTMOOGLE_TLS_REQUIRED** - require TLS connection
 * **POSTMOOGLE_NOENCRYPTION** - disable encryption support
 * **POSTMOOGLE_STATUSMSG** - presence status message
 * **POSTMOOGLE_SENTRY_DSN** - sentry DSN

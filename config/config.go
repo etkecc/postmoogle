@@ -21,6 +21,12 @@ func New() *Config {
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
 		Admins:       env.Slice("admins"),
+		TLS: TLS{
+			Cert:     env.String("tls.cert", defaultConfig.TLS.Cert),
+			Key:      env.String("tls.key", defaultConfig.TLS.Key),
+			Required: env.Bool("tls.required"),
+			Port:     env.String("tls.port", defaultConfig.TLS.Port),
+		},
 		Sentry: Sentry{
 			DSN: env.String("sentry.dsn", defaultConfig.Sentry.DSN),
 		},
