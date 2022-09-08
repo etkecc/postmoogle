@@ -132,9 +132,14 @@ func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 	b.SendNotice(ctx, evt.RoomID, "allowed users updated")
 }
 
-func (b *Bot) runDKIM(ctx context.Context) {
+func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
 	cfg := b.getBotSettings()
+	if len(commandSlice) > 1 && commandSlice[1] == "reset" {
+		cfg.Set(botOptionDKIMPrivateKey, "")
+		cfg.Set(botOptionDKIMSignature, "")
+	}
+
 	signature := cfg.DKIMSignature()
 	if signature == "" {
 		var private string
@@ -157,6 +162,7 @@ func (b *Bot) runDKIM(ctx context.Context) {
 		"DKIM signature is: `%s`.\n"+
 			"You need to add it to your DNS records (if not already):\n"+
 			"Add new DNS record with type = `TXT`, key (subdomain/from): `postmoogle._domainkey` and value (to):\n ```\n%s\n```\n"+
-			"Without that record other email servers may reject your emails as spam, kupo.",
-		signature, signature))
+			"Without that record other email servers may reject your emails as spam, kupo.\n"+
+			"To reset the signature, send `%s dkim reset`",
+		signature, signature, b.prefix))
 }

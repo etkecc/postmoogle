@@ -170,7 +170,7 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 	case commandSend:
 		b.runSend(ctx)
 	case commandDKIM:
-		b.runDKIM(ctx)
+		b.runDKIM(ctx, commandSlice)
 	case commandUsers:
 		b.runUsers(ctx, commandSlice)
 	case commandDelete:
