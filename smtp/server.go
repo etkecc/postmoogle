@@ -96,7 +96,6 @@ func (s *Server) listen(port string, tlsCfg *tls.Config) {
 	if err != nil {
 		s.log.Error("cannot start listener on %s: %v", port, err)
 		s.errs <- err
-		close(s.errs)
 		return
 	}
 
