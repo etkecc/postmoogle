@@ -300,7 +300,7 @@ func (b *Bot) runSend(ctx context.Context) {
 	}
 
 	from := mailbox + "@" + b.domain
-	ID := evt.ID.String()[1:] + "@" + b.domain
+	ID := fmt.Sprintf("<%s@%s>", evt.ID, b.domain)
 	data := utils.
 		NewEmail(ID, "", subject, from, to, body, "", nil).
 		Compose(b.getBotSettings().DKIMPrivateKey())
