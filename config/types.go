@@ -28,6 +28,9 @@ type Config struct {
 	// DB config
 	DB DB
 
+	// TLS config
+	TLS TLS
+
 	// Sentry config
 	Sentry Sentry
 }
@@ -38,6 +41,14 @@ type DB struct {
 	DSN string
 	// Dialect of database, one of sqlite3, postgres
 	Dialect string
+}
+
+// TLS config
+type TLS struct {
+	Cert     string
+	Key      string
+	Port     string
+	Required bool
 }
 
 // Sentry config

@@ -20,8 +20,9 @@ import (
 )
 
 var (
-	mxb *bot.Bot
-	log *logger.Logger
+	mxb      *bot.Bot
+	smtpserv *smtp.Server
+	log      *logger.Logger
 )
 
 func main() {
@@ -38,11 +39,13 @@ func main() {
 	log.Debug("starting internal components...")
 	initSentry(cfg)
 	initBot(cfg)
+	initSMTP(cfg)
 	initShutdown(quit)
 	defer recovery()
 
 	go startBot(cfg.StatusMsg)
-	if err := smtp.Start(cfg.Domain, cfg.Port, cfg.LogLevel, cfg.MaxSize, mxb); err != nil {
+
+	if err := smtpserv.Start(); err != nil {
 		//nolint:gocritic
 		log.Fatal("SMTP server crashed: %v", err)
 	}
@@ -91,6 +94,20 @@ func initBot(cfg *config.Config) {
 	log.Debug("bot has been created")
 }
 
+func initSMTP(cfg *config.Config) {
+	smtpserv = smtp.NewServer(&smtp.Config{
+		Domain:      cfg.Domain,
+		Port:        cfg.Port,
+		TLSCert:     cfg.TLS.Cert,
+		TLSKey:      cfg.TLS.Key,
+		TLSPort:     cfg.TLS.Port,
+		TLSRequired: cfg.TLS.Required,
+		LogLevel:    cfg.LogLevel,
+		MaxSize:     cfg.MaxSize,
+		Bot:         mxb,
+	})
+}
+
 func initShutdown(quit chan struct{}) {
 	listener := make(chan os.Signal, 1)
 	signal.Notify(listener, os.Interrupt, syscall.SIGABRT, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
@@ -114,6 +131,7 @@ func startBot(statusMsg string) {
 
 func shutdown() {
 	log.Info("Shutting down...")
+	smtpserv.Stop()
 	mxb.Stop()
 
 	sentry.Flush(5 * time.Second)

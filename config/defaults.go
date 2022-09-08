@@ -11,4 +11,7 @@ var defaultConfig = &Config{
 		DSN:     "local.db",
 		Dialect: "sqlite3",
 	},
+	TLS: TLS{
+		Port: "587",
+	},
 }
