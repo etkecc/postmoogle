@@ -27,6 +27,9 @@ type mta struct {
 	log *logger.Logger
 }
 
+// SMTPAddrs priority list
+var SMTPAddrs = []string{":465", ":587", ":25"}
+
 func NewMTA(loglevel string) utils.MTA {
 	return &mta{
 		log: logger.New("smtp/mta.", loglevel),
@@ -70,16 +73,16 @@ func (m *mta) Send(from, to, data string) error {
 	return nil
 }
 
-func (m *mta) tryServer(localname, mxhost string) *smtp.Client {
-	m.log.Debug("trying SMTP connection to %s", mxhost)
-	conn, err := smtp.Dial(mxhost + ":smtp")
+func (m *mta) tryServer(localname, mxhost, addr string) *smtp.Client {
+	m.log.Debug("trying SMTP connection to %s%s", mxhost, addr)
+	conn, err := smtp.Dial(mxhost + addr)
 	if err != nil {
-		m.log.Warn("cannot connect to the %s: %v", mxhost, err)
+		m.log.Warn("cannot connect to the %s%s: %v", mxhost, addr, err)
 		return nil
 	}
 	err = conn.Hello(localname)
 	if err != nil {
-		m.log.Warn("cannot call HELLO command of the %s: %v", mxhost, err)
+		m.log.Warn("cannot call HELLO command of the %s%s: %v", mxhost, addr, err)
 		return nil
 	}
 	if ok, _ := conn.Extension("STARTTLS"); ok {
@@ -106,18 +109,22 @@ func (m *mta) connect(from, to string) (*smtp.Client, error) {
 	}
 
 	for _, mx := range mxs {
-		client := m.tryServer(localname, mx.Host)
-		if client != nil {
-			return client, nil
+		for _, addr := range SMTPAddrs {
+			client := m.tryServer(localname, strings.TrimSuffix(mx.Host, "."), addr)
+			if client != nil {
+				return client, nil
+			}
 		}
 	}
 
 	// If there are no MX records, according to https://datatracker.ietf.org/doc/html/rfc5321#section-5.1,
 	// we're supposed to try talking directly to the host.
 	if len(mxs) == 0 {
-		client := m.tryServer(localname, hostname)
-		if client != nil {
-			return client, nil
+		for _, addr := range SMTPAddrs {
+			client := m.tryServer(localname, hostname, addr)
+			if client != nil {
+				return client, nil
+			}
 		}
 	}
 
