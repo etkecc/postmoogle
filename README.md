@@ -51,7 +51,7 @@ env vars
 * **POSTMOOGLE_TLS_PORT** - secure SMTP port to listen for new emails. Requires valid cert and key as well
 * **POSTMOOGLE_TLS_CERT** - path to your SSL certificate (chain)
 * **POSTMOOGLE_TLS_KEY** - path to your SSL certificate's private key
-* **POSTMOOGLE_TLS_REQUIRED** - require TLS connection
+* **POSTMOOGLE_TLS_REQUIRED** - require TLS connection, **even** on the non-TLS port (`POSTMOOGLE_PORT`). TLS connections are always required on the TLS port (`POSTMOOGLE_TLS_PORT`) regardless of this setting.
 * **POSTMOOGLE_NOENCRYPTION** - disable encryption support
 * **POSTMOOGLE_STATUSMSG** - presence status message
 * **POSTMOOGLE_SENTRY_DSN** - sentry DSN
