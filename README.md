@@ -65,6 +65,16 @@ You can find default values in [config/defaults.go](config/defaults.go)
 
 The following configuration is needed only if you want to send outgoing emails via Postmoogle (it's not necessary if you only want to receive emails).
 
+<details>
+<summary>TL;DR</summary>
+
+1. Configure DMARC record
+2. Configure SPF record
+3. Configure MX record
+4. Configure DKIM record (use `!pm dkim`)
+
+</details>
+
 **First**, add a new DMARC DNS record of the `TXT` type for subdomain `_dmarc` with a proper policy. The simplest policy you can use is: `v=DMARC1; p=quarantine;`.
 
 <details>
@@ -163,12 +173,12 @@ You can get that signature using the `!pm dkim` command:
 <details>
 <summary>!pm dkim</summary>
 
-DKIM signature is: `v=DKIM1; k=ed25519; p=OcVzOwAONDfgbJX/5vwzlXOs9gUDO0YKlXHaDnBJtXw=`.
+DKIM signature is: `v=DKIM1; k=rsa; p=MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAxJVqmBHhK9FY93q1o3WEaP2GKMh/3LNMyvi1uSjOKxIyfWv685KxX1EUrbHakQRCTtUM7efKEsXsXBh+DQru2TE32yFpL9afA5BbHj3KePGFY8KJ2m0sQxbQcvn2KjJC0IQ15mk0rninPhtphU/2zLsd6e7Rl1m3L+9Osk320GbfDgSKjRPcSiwVMbLJpSOP0H0F3cIu+c1fHZHfmWy0O+us42C3HTLTlD779LTnQnKlAOQD/+DYYqz6TGGxEwUG2BRQ8O8w7/wXEkg/6a/MxNtPnc59g29CpqRsDkuYiR3UIpqzLDoqHlaoKNbYy34R+4aIjfNpmZyR5kIumws+3MJtJt9UhBTMloqd8lZDPaPmX2NEDqbcSTkHMQrphk+EWSCc7OvbKRaXZ0SyJLpLjxRwKrpeO0JAI0ZpnAFS11uBEe9GSS8uzIIFNYVD1vHloAFKvUJEhyuVyz9/SyqTnArN3ZTiC5cqD1MB86q5QPrKqZfp1dAnv7xAJThL0AP/AgMBAAE=`.
 You need to add it to your DNS records (if not already):
 Add new DNS record with type = `TXT`, key (subdomain/from): `postmoogle._domainkey` and value (to):
 
 ```
-v=DKIM1; k=ed25519; p=OcVzOwAONDfgbJX/5vwzlXOs9gUDO0YKlXHaDnBJtXw=
+v=DKIM1; k=rsa; p=MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAxJVqmBHhK9FY93q1o3WEaP2GKMh/3LNMyvi1uSjOKxIyfWv685KxX1EUrbHakQRCTtUM7efKEsXsXBh+DQru2TE32yFpL9afA5BbHj3KePGFY8KJ2m0sQxbQcvn2KjJC0IQ15mk0rninPhtphU/2zLsd6e7Rl1m3L+9Osk320GbfDgSKjRPcSiwVMbLJpSOP0H0F3cIu+c1fHZHfmWy0O+us42C3HTLTlD779LTnQnKlAOQD/+DYYqz6TGGxEwUG2BRQ8O8w7/wXEkg/6a/MxNtPnc59g29CpqRsDkuYiR3UIpqzLDoqHlaoKNbYy34R+4aIjfNpmZyR5kIumws+3MJtJt9UhBTMloqd8lZDPaPmX2NEDqbcSTkHMQrphk+EWSCc7OvbKRaXZ0SyJLpLjxRwKrpeO0JAI0ZpnAFS11uBEe9GSS8uzIIFNYVD1vHloAFKvUJEhyuVyz9/SyqTnArN3ZTiC5cqD1MB86q5QPrKqZfp1dAnv7xAJThL0AP/AgMBAAE=
 ```
 
 Without that record other email servers may reject your emails as spam, kupo.
@@ -193,7 +203,7 @@ $ dig TXT postmoogle._domainkey.example.com
 ;postmoogle._domainkey.example.com.	IN	TXT
 
 ;; ANSWER SECTION:
-postmoogle._domainkey.example.com. 600	IN TXT  "v=DKIM1; k=ed25519; p=OcVzOwAONDfgbJX/5vwzlXOs9gUDO0YKlXHaDnBJtXw="
+postmoogle._domainkey.example.com. 600	IN TXT  "v=DKIM1; k=rsa; p=MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAxJVqmBHhK9FY93q1o3WEaP2GKMh/3LNMyvi1uSjOKxIyfWv685KxX1EUrbHakQRCTtUM7efKEsXsXBh+DQru2TE32yFpL9afA5BbHj3KePGFY8KJ2m0sQxbQcvn2KjJC0IQ15mk0rninPhtphU/2zLsd6e7Rl1m3L+9Osk320GbfDgSKjRPcSiwVMbLJpSOP0H0F3cIu+c1fHZHfmWy0O+us42C3HTLTlD779LTnQnKlAOQD/+DYYqz6TGGxEwUG2BRQ8O8w7/wXEkg/6a/MxNtPnc59g29CpqRsDkuYiR3UIpqzLDoqHlaoKNbYy34R+4aIjfNpmZyR5kIumws+3MJtJt9UhBTMloqd8lZDPaPmX2NEDqbcSTkHMQrphk+EWSCc7OvbKRaXZ0SyJLpLjxRwKrpeO0JAI0ZpnAFS11uBEe9GSS8uzIIFNYVD1vHloAFKvUJEhyuVyz9/SyqTnArN3ZTiC5cqD1MB86q5QPrKqZfp1dAnv7xAJThL0AP/AgMBAAE="
 
 ;; Query time: 90 msec
 ;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
