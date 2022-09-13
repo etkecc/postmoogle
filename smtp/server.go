@@ -121,4 +121,5 @@ func (s *Server) loadTLSConfig(cert, key string) {
 		return
 	}
 	s.tlsCfg = &tls.Config{Certificates: []tls.Certificate{tlsCert}}
+	s.msa.TLSConfig = s.tlsCfg
 }
