@@ -28,7 +28,7 @@ type mta struct {
 }
 
 // SMTPAddrs priority list
-var SMTPAddrs = []string{":465", ":587", ":25"}
+var SMTPAddrs = []string{":25", ":587", ":465"}
 
 func NewMTA(loglevel string) utils.MTA {
 	return &mta{
