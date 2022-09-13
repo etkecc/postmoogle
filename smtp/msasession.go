@@ -68,11 +68,7 @@ func (s *msasession) Data(r io.Reader) error {
 		return err
 	}
 
-	attachments := s.parseAttachments(eml.Attachments)
-	inlines := s.parseAttachments(eml.Inlines)
-	files := make([]*utils.File, 0, len(attachments)+len(inlines))
-	files = append(files, attachments...)
-	files = append(files, inlines...)
+	files := s.parseAttachments(eml.Attachments)
 
 	email := utils.NewEmail(
 		eml.GetHeader("Message-Id"),
