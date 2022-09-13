@@ -54,7 +54,7 @@ func (s *msasession) parseAttachments(parts []*enmime.Part) []*utils.File {
 		for _, err := range attachment.Errors {
 			s.log.Warn("attachment error: %v", err)
 		}
-		file := utils.NewFile(attachment.FileName, attachment.ContentType, attachment.Content)
+		file := utils.NewFile(attachment.FileName, attachment.Content)
 		files = append(files, file)
 	}
 

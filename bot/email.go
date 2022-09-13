@@ -171,7 +171,7 @@ func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.Fi
 			continue
 		}
 		_, err = b.lp.Send(roomID, &event.MessageEventContent{
-			MsgType:   event.MsgFile,
+			MsgType:   file.MsgType,
 			Body:      req.FileName,
 			URL:       resp.ContentURI.CUString(),
 			RelatesTo: utils.RelatesTo(!noThreads, parentID),

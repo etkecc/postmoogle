@@ -6,6 +6,7 @@ require (
 	git.sr.ht/~xn/cache/v2 v2.0.0
 	github.com/emersion/go-msgauth v0.6.6
 	github.com/emersion/go-smtp v0.15.0
+	github.com/gabriel-vasile/mimetype v1.4.1
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/jhillyerd/enmime v0.10.0
 	github.com/lib/pq v1.10.6
