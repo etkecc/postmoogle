@@ -48,7 +48,7 @@ func mimeMsgType(mime string) event.MessageType {
 	if !strings.Contains(mime, "/") {
 		return event.MsgFile
 	}
-	msection := strings.SplitN(mime, "/", 1)[0]
+	msection := strings.Split(mime, "/")[0]
 	switch msection {
 	case "image":
 		return event.MsgImage
