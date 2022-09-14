@@ -4,9 +4,8 @@ import (
 	"context"
 	"regexp"
 
+	"gitlab.com/etke.cc/go/mxidwc"
 	"maunium.net/go/mautrix/id"
-
-	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 func parseMXIDpatterns(patterns []string, defaultPattern string) ([]*regexp.Regexp, error) {
@@ -14,12 +13,12 @@ func parseMXIDpatterns(patterns []string, defaultPattern string) ([]*regexp.Rege
 		patterns = []string{defaultPattern}
 	}
 
-	return utils.WildcardMXIDsToRegexes(patterns)
+	return mxidwc.ParsePatterns(patterns)
 }
 
 func (b *Bot) allowUsers(actorID id.UserID) bool {
 	if len(b.allowedUsers) != 0 {
-		if !utils.Match(actorID.String(), b.allowedUsers) {
+		if !mxidwc.Match(actorID.String(), b.allowedUsers) {
 			return false
 		}
 	}
@@ -50,7 +49,7 @@ func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
 }
 
 func (b *Bot) allowAdmin(actorID id.UserID, targetRoomID id.RoomID) bool {
-	return utils.Match(actorID.String(), b.allowedAdmins)
+	return mxidwc.Match(actorID.String(), b.allowedAdmins)
 }
 
 func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {

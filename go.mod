@@ -13,6 +13,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.14
 	gitlab.com/etke.cc/go/env v1.0.0
 	gitlab.com/etke.cc/go/logger v1.1.0
+	gitlab.com/etke.cc/go/mxidwc v1.0.0
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/linkpearl v0.0.0-20220831124140-598117f26c77
 	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b

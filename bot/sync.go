@@ -3,10 +3,9 @@ package bot
 import (
 	"context"
 
+	"gitlab.com/etke.cc/go/mxidwc"
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/event"
-
-	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 func (b *Bot) initSync() {
@@ -32,7 +31,7 @@ func (b *Bot) initSync() {
 
 // joinPermit is called by linkpearl when processing "invite" events and deciding if rooms should be auto-joined or not
 func (b *Bot) joinPermit(evt *event.Event) bool {
-	if !utils.Match(evt.Sender.String(), b.allowedUsers) {
+	if !mxidwc.Match(evt.Sender.String(), b.allowedUsers) {
 		b.log.Debug("Rejecting room invitation from unallowed user: %s", evt.Sender)
 		return false
 	}
