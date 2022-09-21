@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
@@ -156,6 +157,11 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 	if cmd == nil {
 		return
 	}
+	_, err := b.lp.GetClient().UserTyping(evt.RoomID, true, 30*time.Second)
+	if err != nil {
+		b.log.Error("cannot send typing notification: %v", err)
+	}
+	defer b.lp.GetClient().UserTyping(evt.RoomID, false, 30*time.Second) //nolint:errcheck
 
 	if !cmd.allowed(evt.Sender, evt.RoomID) {
 		b.SendNotice(ctx, evt.RoomID, "not allowed to do that, kupo")
