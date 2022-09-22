@@ -4,8 +4,9 @@
 
 An Email to Matrix bridge. 1 room = 1 mailbox.
 
-Postmoogle is an actual SMTP server that allows you to receive emails on your matrix server.
-It can't be used with arbitrary email providers, but setup your own provider "with matrix interface" instead.
+Postmoogle is an actual SMTP server that allows you to send and receive emails on your matrix server.
+It can't be used with arbitrary email providers, because it acts as an actual email provider itself,
+so you can use it to send emails from your apps and scripts as well.
 
 ## Roadmap
 
