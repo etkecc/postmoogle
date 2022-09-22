@@ -110,6 +110,10 @@ func (e *Email) Compose(privkey string) string {
 	var data strings.Builder
 
 	domain := strings.SplitN(e.From, "@", 2)[1]
+
+	data.WriteString("Content-Type: text/plain; charset=\"UTF-8\"")
+	data.WriteString("\r\n")
+
 	data.WriteString("From: ")
 	data.WriteString(e.From)
 	data.WriteString("\r\n")

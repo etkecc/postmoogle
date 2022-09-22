@@ -51,6 +51,7 @@ func NewServer(cfg *Config) *Server {
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = cfg.MaxSize * 1024 * 1024
 	s.EnableREQUIRETLS = cfg.TLSRequired
+	s.EnableSMTPUTF8 = true
 	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
 		s.Debug = os.Stdout
 	}
