@@ -77,7 +77,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: roomOptionNoSend,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - enable email sending; `false` - disable email sending)",
+				"Get or set `%s` of the room (`true` - disable email sending; `false` - enable email sending)",
 				roomOptionNoSend,
 			),
 			sanitizer: utils.SanitizeBoolString,
