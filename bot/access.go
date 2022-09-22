@@ -65,3 +65,18 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 
 	return !cfg.NoSend()
 }
+
+// AllowAuth check if SMTP login (mailbox) and password are valid
+func (b *Bot) AllowAuth(mailbox, password string) bool {
+	roomID, ok := b.GetMapping(mailbox)
+	if !ok {
+		return false
+	}
+	cfg, err := b.getRoomSettings(roomID)
+	if err != nil {
+		b.log.Error("failed to retrieve settings: %v", err)
+		return false
+	}
+
+	return cfg.Password() != "" && cfg.Password() == password
+}

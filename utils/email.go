@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
+	"regexp"
 	"strings"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 )
+
+var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 // MTA is mail transfer agent
 type MTA interface {
@@ -46,6 +49,11 @@ type ContentOptions struct {
 	FromKey      string
 }
 
+// AddressValid checks if email address is valid
+func AddressValid(email string) bool {
+	return !emailRegex.MatchString(email)
+}
+
 // NewEmail constructs Email object
 func NewEmail(messageID, inReplyTo, subject, from, to, text, html string, files []*File) *Email {
 	email := &Email{
@@ -69,6 +77,14 @@ func NewEmail(messageID, inReplyTo, subject, from, to, text, html string, files 
 	}
 
 	return email
+}
+
+// Mailbox returns postmoogle's mailbox, parsing it from FROM (if local=false) or TO (local=true)
+func (e *Email) Mailbox(local bool) string {
+	if local {
+		return Mailbox(e.To)
+	}
+	return Mailbox(e.From)
 }
 
 // Content converts the email object to a Matrix event content

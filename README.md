@@ -30,6 +30,7 @@ It can't be used with arbitrary email providers, but setup your own provider "wi
 ### Send
 
 - [x] SMTP client
+- [x] SMTP server (you can use Postmoogle as general purpose SMTP server to send emails from your scripts or apps)
 - [x] Send a message to matrix room with special format to send a new email
 - [ ] Reply to matrix thread sends reply into email thread
 
@@ -237,6 +238,7 @@ If you want to change them - check available options in the help message (`!pm h
 
 * **!pm mailbox** - Get or set mailbox of the room
 * **!pm owner** - Get or set owner of the room
+* **!pm password** - Get or set SMTP password of the room's mailbox
 
 ---
 

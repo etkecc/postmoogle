@@ -2,6 +2,7 @@ package smtp
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/emersion/go-smtp"
@@ -15,32 +16,41 @@ import (
 type msasession struct {
 	log    *logger.Logger
 	bot    Bot
+	mta    utils.MTA
 	domain string
 
-	ctx  context.Context
-	to   string
-	from string
+	ctx   context.Context
+	local bool
+	to    string
+	from  string
 }
 
 func (s *msasession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
-	s.from = from
-	s.log.Debug("mail from %s, options: %+v", from, opts)
+	if !utils.AddressValid(from) {
+		return errors.New("please, provide email address")
+	}
+	if s.local {
+		s.from = from
+		s.log.Debug("mail from %s, options: %+v", from, opts)
+	}
 	return nil
 }
 
 func (s *msasession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
 
-	if utils.Hostname(to) != s.domain {
-		s.log.Debug("wrong domain of %s", to)
-		return smtp.ErrAuthRequired
-	}
+	if s.local {
+		if utils.Hostname(to) != s.domain {
+			s.log.Debug("wrong domain of %s", to)
+			return smtp.ErrAuthRequired
+		}
 
-	_, ok := s.bot.GetMapping(utils.Mailbox(to))
-	if !ok {
-		s.log.Debug("mapping for %s not found", to)
-		return smtp.ErrAuthRequired
+		_, ok := s.bot.GetMapping(utils.Mailbox(to))
+		if !ok {
+			s.log.Debug("mapping for %s not found", to)
+			return smtp.ErrAuthRequired
+		}
 	}
 
 	s.to = to
@@ -80,7 +90,7 @@ func (s *msasession) Data(r io.Reader) error {
 		eml.HTML,
 		files)
 
-	return s.bot.Send2Matrix(s.ctx, email)
+	return s.bot.Send2Matrix(s.ctx, email, s.local)
 }
 
 func (s *msasession) Reset() {}
