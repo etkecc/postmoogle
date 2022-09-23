@@ -4,7 +4,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
-	"regexp"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -13,8 +13,6 @@ import (
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 )
-
-var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 // MTA is mail transfer agent
 type MTA interface {
@@ -51,7 +49,8 @@ type ContentOptions struct {
 
 // AddressValid checks if email address is valid
 func AddressValid(email string) bool {
-	return !emailRegex.MatchString(email)
+	_, err := mail.ParseAddress(email)
+	return err == nil
 }
 
 // NewEmail constructs Email object
