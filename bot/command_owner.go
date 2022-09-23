@@ -65,11 +65,11 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		"To set it to a new value, send a `%s %s VALUE` command.",
 		name, value, b.prefix, name)
 	if name == roomOptionPassword {
-		msg = fmt.Sprintf("Password hash of this room is `%s`\n"+
-			"To set it to a new value, send a `%s %s VALUE` command.\n\n"+
-			"---\n\n"+
-			"**Please, remove that message after reading.**",
-			value, b.prefix, name)
+		msg = fmt.Sprintf("There is an SMTP password already set for this room/mailbox. "+
+			"It's stored in a secure hashed manner, so we can't tell you what the original raw password was. "+
+			"To find the raw password, try to find your old message which had originally set it, "+
+			"or just set a new one with `%s %s NEW_PASSWORD`.",
+			b.prefix, name)
 	}
 	b.SendNotice(ctx, evt.RoomID, msg)
 }
@@ -124,8 +124,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 
 	msg := fmt.Sprintf("`%s` of this room set to `%s`", name, value)
 	if name == roomOptionPassword {
-		msg = msg + "\n\n---\n\n" +
-			"**Please, remove that message and the previous one.**"
+		msg = "SMTP password has been set"
 	}
 	b.SendNotice(ctx, evt.RoomID, msg)
 }
