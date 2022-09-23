@@ -68,9 +68,13 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 	return !cfg.NoSend()
 }
 
-// AllowAuth check if SMTP login (mailbox) and password are valid
-func (b *Bot) AllowAuth(mailbox, password string) bool {
-	roomID, ok := b.GetMapping(mailbox)
+// AllowAuth check if SMTP login (email) and password are valid
+func (b *Bot) AllowAuth(email, password string) bool {
+	if !strings.HasSuffix(email, "@"+b.domain) {
+		return false
+	}
+
+	roomID, ok := b.GetMapping(utils.Mailbox(email))
 	if !ok {
 		return false
 	}
