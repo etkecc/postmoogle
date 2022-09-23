@@ -33,7 +33,7 @@ func (m *msa) newSession(from string, incoming bool) *msasession {
 
 func (m *msa) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
 	if !utils.AddressValid(username) {
-		return nil, errors.New("please, provide email address")
+		return nil, errors.New("please, provide an email address")
 	}
 
 	mailbox := utils.Mailbox(username)
