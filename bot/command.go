@@ -76,7 +76,6 @@ func (b *Bot) initCommands() commandList {
 		{
 			key:         roomOptionPassword,
 			description: "Get or set SMTP password of the room's mailbox",
-			sanitizer:   func(s string) string { return strings.TrimSpace(s) },
 			allowed:     b.allowOwner,
 		},
 		{allowed: b.allowOwner}, // delimiter

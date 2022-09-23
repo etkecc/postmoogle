@@ -62,12 +62,17 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	msg := fmt.Sprintf("`%s` of this room is `%s`\n"+
 		"To set it to a new value, send a `%s %s VALUE` command.",
 		name, value, b.prefix, name)
+	if name == roomOptionPassword {
+		msg = msg + "\n\n---\n\n" +
+			"**Please, remove that message after reading.**"
+	}
 	b.SendNotice(ctx, evt.RoomID, msg)
 }
 
+//nolint:gocognit
 func (b *Bot) setOption(ctx context.Context, name, value string) {
 	cmd := b.commands.get(name)
-	if cmd != nil {
+	if cmd != nil && cmd.sanitizer != nil {
 		value = cmd.sanitizer(value)
 	}
 
@@ -104,5 +109,10 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room set to `%s`", name, value))
+	msg := fmt.Sprintf("`%s` of this room set to `%s`", name, value)
+	if name == roomOptionPassword {
+		msg = msg + "\n\n---\n\n" +
+			"**Please, remove that message and the previous one.**"
+	}
+	b.SendNotice(ctx, evt.RoomID, msg)
 }

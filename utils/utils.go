@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/subtle"
 	"strconv"
 	"strings"
 )
@@ -32,4 +33,25 @@ func Bool(str string) bool {
 // SanitizeBoolString converts string to boolean and back to string
 func SanitizeBoolString(str string) string {
 	return strconv.FormatBool(Bool(str))
+}
+
+// Compare strings with constant time to prevent timing attacks
+func Compare(actual, expected string) bool {
+	actualb := []byte(actual)
+	expectedb := []byte(expected)
+
+	if expected == "" {
+		// Just to keep constant time
+		_ = subtle.ConstantTimeCompare(expectedb, expectedb) == 1
+		return false
+	}
+
+	// actual comparison
+	if subtle.ConstantTimeEq(int32(len(actual)), int32(len(expected))) == 1 {
+		return subtle.ConstantTimeCompare(actualb, expectedb) == 1
+	}
+
+	// Just to keep constant time
+	_ = subtle.ConstantTimeCompare(expectedb, expectedb) == 1
+	return false
 }

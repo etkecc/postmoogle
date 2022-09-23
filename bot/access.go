@@ -6,6 +6,8 @@ import (
 
 	"gitlab.com/etke.cc/go/mxidwc"
 	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 func parseMXIDpatterns(patterns []string, defaultPattern string) ([]*regexp.Regexp, error) {
@@ -78,5 +80,5 @@ func (b *Bot) AllowAuth(mailbox, password string) bool {
 		return false
 	}
 
-	return cfg.Password() != "" && cfg.Password() == password
+	return utils.Compare(password, cfg.Password())
 }
