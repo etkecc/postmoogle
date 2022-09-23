@@ -5,12 +5,14 @@ go 1.18
 require (
 	git.sr.ht/~xn/cache/v2 v2.0.0
 	github.com/emersion/go-msgauth v0.6.6
+	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
 	github.com/emersion/go-smtp v0.15.0
 	github.com/gabriel-vasile/mimetype v1.4.1
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/jhillyerd/enmime v0.10.0
 	github.com/lib/pq v1.10.6
 	github.com/mattn/go-sqlite3 v1.14.15
+	github.com/raja/argon2pw v1.0.2-0.20210910183755-a391af63bd39
 	gitlab.com/etke.cc/go/env v1.0.0
 	gitlab.com/etke.cc/go/logger v1.1.0
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
@@ -22,7 +24,6 @@ require (
 
 require (
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
-	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21 // indirect
 	github.com/gogs/chardet v0.0.0-20191104214054-4b6791f73a28 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect

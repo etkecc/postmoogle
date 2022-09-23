@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -46,6 +47,12 @@ type ContentOptions struct {
 	FromKey      string
 }
 
+// AddressValid checks if email address is valid
+func AddressValid(email string) bool {
+	_, err := mail.ParseAddress(email)
+	return err == nil
+}
+
 // NewEmail constructs Email object
 func NewEmail(messageID, inReplyTo, subject, from, to, text, html string, files []*File) *Email {
 	email := &Email{
@@ -69,6 +76,14 @@ func NewEmail(messageID, inReplyTo, subject, from, to, text, html string, files 
 	}
 
 	return email
+}
+
+// Mailbox returns postmoogle's mailbox, parsing it from FROM (if incoming=false) or TO (incoming=true)
+func (e *Email) Mailbox(incoming bool) string {
+	if incoming {
+		return Mailbox(e.To)
+	}
+	return Mailbox(e.From)
 }
 
 // Content converts the email object to a Matrix event content

@@ -3,9 +3,13 @@ package bot
 import (
 	"context"
 	"regexp"
+	"strings"
 
+	"github.com/raja/argon2pw"
 	"gitlab.com/etke.cc/go/mxidwc"
 	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 func parseMXIDpatterns(patterns []string, defaultPattern string) ([]*regexp.Regexp, error) {
@@ -64,4 +68,27 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 	}
 
 	return !cfg.NoSend()
+}
+
+// AllowAuth check if SMTP login (email) and password are valid
+func (b *Bot) AllowAuth(email, password string) bool {
+	if !strings.HasSuffix(email, "@"+b.domain) {
+		return false
+	}
+
+	roomID, ok := b.GetMapping(utils.Mailbox(email))
+	if !ok {
+		return false
+	}
+	cfg, err := b.getRoomSettings(roomID)
+	if err != nil {
+		b.log.Error("failed to retrieve settings: %v", err)
+		return false
+	}
+
+	allow, err := argon2pw.CompareHashWithPassword(cfg.Password(), password)
+	if err != nil {
+		b.log.Warn("Password for %s is not valid: %v", email, err)
+	}
+	return allow
 }

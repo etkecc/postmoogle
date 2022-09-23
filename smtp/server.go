@@ -40,6 +40,7 @@ func NewServer(cfg *Config) *Server {
 	sender := NewMTA(cfg.LogLevel)
 	receiver := &msa{
 		log:    log,
+		mta:    sender,
 		bot:    cfg.Bot,
 		domain: cfg.Domain,
 	}
@@ -50,6 +51,7 @@ func NewServer(cfg *Config) *Server {
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = cfg.MaxSize * 1024 * 1024
+	s.AllowInsecureAuth = !cfg.TLSRequired
 	s.EnableREQUIRETLS = cfg.TLSRequired
 	s.EnableSMTPUTF8 = true
 	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {

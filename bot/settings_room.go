@@ -21,6 +21,7 @@ const (
 	roomOptionNoHTML    = "nohtml"
 	roomOptionNoThreads = "nothreads"
 	roomOptionNoFiles   = "nofiles"
+	roomOptionPassword  = "password"
 )
 
 type roomSettings map[string]string
@@ -41,6 +42,10 @@ func (s roomSettings) Mailbox() string {
 
 func (s roomSettings) Owner() string {
 	return s.Get(roomOptionOwner)
+}
+
+func (s roomSettings) Password() string {
+	return s.Get(roomOptionPassword)
 }
 
 func (s roomSettings) NoSend() bool {

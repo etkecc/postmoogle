@@ -1,3 +1,4 @@
 /local.db
 /local.db-journal
 /cover.out
+/e2e/main.go

@@ -17,8 +17,9 @@ import (
 
 // Bot interface to send emails into matrix
 type Bot interface {
+	AllowAuth(string, string) bool
 	GetMapping(string) (id.RoomID, bool)
-	Send2Matrix(ctx context.Context, email *utils.Email) error
+	Send2Matrix(ctx context.Context, email *utils.Email, incoming bool) error
 	SetMTA(mta utils.MTA)
 }
 

@@ -73,6 +73,11 @@ func (b *Bot) initCommands() commandList {
 			sanitizer:   func(s string) string { return s },
 			allowed:     b.allowOwner,
 		},
+		{
+			key:         roomOptionPassword,
+			description: "Get or set SMTP password of the room's mailbox",
+			allowed:     b.allowOwner,
+		},
 		{allowed: b.allowOwner}, // delimiter
 		{
 			key: roomOptionNoSend,
@@ -290,6 +295,11 @@ func (b *Bot) runSend(ctx context.Context) {
 				"as you want.\n"+
 				"```",
 			b.prefix))
+		return
+	}
+
+	if !utils.AddressValid(to) {
+		b.Error(ctx, evt.RoomID, "email address is not valid")
 		return
 	}
 

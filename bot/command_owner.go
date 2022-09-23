@@ -3,6 +3,8 @@ package bot
 import (
 	"context"
 	"fmt"
+
+	"github.com/raja/argon2pw"
 )
 
 func (b *Bot) runStop(ctx context.Context) {
@@ -62,12 +64,20 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	msg := fmt.Sprintf("`%s` of this room is `%s`\n"+
 		"To set it to a new value, send a `%s %s VALUE` command.",
 		name, value, b.prefix, name)
+	if name == roomOptionPassword {
+		msg = fmt.Sprintf("There is an SMTP password already set for this room/mailbox. "+
+			"It's stored in a secure hashed manner, so we can't tell you what the original raw password was. "+
+			"To find the raw password, try to find your old message which had originally set it, "+
+			"or just set a new one with `%s %s NEW_PASSWORD`.",
+			b.prefix, name)
+	}
 	b.SendNotice(ctx, evt.RoomID, msg)
 }
 
+//nolint:gocognit
 func (b *Bot) setOption(ctx context.Context, name, value string) {
 	cmd := b.commands.get(name)
-	if cmd != nil {
+	if cmd != nil && cmd.sanitizer != nil {
 		value = cmd.sanitizer(value)
 	}
 
@@ -84,6 +94,14 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
+	}
+
+	if name == roomOptionPassword {
+		value, err = argon2pw.GenerateSaltedHash(value)
+		if err != nil {
+			b.Error(ctx, evt.RoomID, "failed to hash password: %v", err)
+			return
+		}
 	}
 
 	old := cfg.Get(name)
@@ -104,5 +122,9 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("`%s` of this room set to `%s`", name, value))
+	msg := fmt.Sprintf("`%s` of this room set to `%s`", name, value)
+	if name == roomOptionPassword {
+		msg = "SMTP password has been set"
+	}
+	b.SendNotice(ctx, evt.RoomID, msg)
 }
