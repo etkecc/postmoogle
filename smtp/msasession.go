@@ -13,6 +13,10 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
+// msasession represents an SMTP-submission session.
+// This can be used in 2 directions:
+// - receiving emails from remote servers, in which case: `incoming = true`
+// - sending emails from local users, in which case: `incoming = false`
 type msasession struct {
 	log    *logger.Logger
 	bot    Bot
