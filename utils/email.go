@@ -78,9 +78,9 @@ func NewEmail(messageID, inReplyTo, subject, from, to, text, html string, files 
 	return email
 }
 
-// Mailbox returns postmoogle's mailbox, parsing it from FROM (if local=false) or TO (local=true)
-func (e *Email) Mailbox(local bool) string {
-	if local {
+// Mailbox returns postmoogle's mailbox, parsing it from FROM (if incoming=false) or TO (incoming=true)
+func (e *Email) Mailbox(incoming bool) string {
+	if incoming {
 		return Mailbox(e.To)
 	}
 	return Mailbox(e.From)

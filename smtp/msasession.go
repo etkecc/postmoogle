@@ -19,10 +19,10 @@ type msasession struct {
 	mta    utils.MTA
 	domain string
 
-	ctx   context.Context
-	local bool
-	to    string
-	from  string
+	ctx      context.Context
+	incoming bool
+	to       string
+	from     string
 }
 
 func (s *msasession) Mail(from string, opts smtp.MailOptions) error {
@@ -30,7 +30,7 @@ func (s *msasession) Mail(from string, opts smtp.MailOptions) error {
 	if !utils.AddressValid(from) {
 		return errors.New("please, provide email address")
 	}
-	if s.local {
+	if s.incoming {
 		s.from = from
 		s.log.Debug("mail from %s, options: %+v", from, opts)
 	}
@@ -40,7 +40,7 @@ func (s *msasession) Mail(from string, opts smtp.MailOptions) error {
 func (s *msasession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
 
-	if s.local {
+	if s.incoming {
 		if utils.Hostname(to) != s.domain {
 			s.log.Debug("wrong domain of %s", to)
 			return smtp.ErrAuthRequired
@@ -90,7 +90,7 @@ func (s *msasession) Data(r io.Reader) error {
 		eml.HTML,
 		files)
 
-	return s.bot.Send2Matrix(s.ctx, email, s.local)
+	return s.bot.Send2Matrix(s.ctx, email, s.incoming)
 }
 
 func (s *msasession) Reset() {}

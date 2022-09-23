@@ -19,15 +19,15 @@ type msa struct {
 	mta    utils.MTA
 }
 
-func (m *msa) newSession(from string, local bool) *msasession {
+func (m *msa) newSession(from string, incoming bool) *msasession {
 	return &msasession{
-		ctx:    sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
-		mta:    m.mta,
-		from:   from,
-		local:  local,
-		log:    m.log,
-		bot:    m.bot,
-		domain: m.domain,
+		ctx:      sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
+		mta:      m.mta,
+		from:     from,
+		incoming: incoming,
+		log:      m.log,
+		bot:      m.bot,
+		domain:   m.domain,
 	}
 }
 

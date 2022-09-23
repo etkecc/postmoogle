@@ -46,8 +46,8 @@ func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
 }
 
 // Send email to matrix room
-func (b *Bot) Send2Matrix(ctx context.Context, email *utils.Email, local bool) error {
-	roomID, ok := b.GetMapping(email.Mailbox(local))
+func (b *Bot) Send2Matrix(ctx context.Context, email *utils.Email, incoming bool) error {
+	roomID, ok := b.GetMapping(email.Mailbox(incoming))
 	if !ok {
 		return errors.New("room not found")
 	}
@@ -59,7 +59,7 @@ func (b *Bot) Send2Matrix(ctx context.Context, email *utils.Email, local bool) e
 		b.Error(ctx, roomID, "cannot get settings: %v", err)
 	}
 
-	if !local && cfg.NoSend() {
+	if !incoming && cfg.NoSend() {
 		return errors.New("that mailbox is receive-only")
 	}
 
@@ -86,7 +86,7 @@ func (b *Bot) Send2Matrix(ctx context.Context, email *utils.Email, local bool) e
 		b.sendFiles(ctx, roomID, email.Files, cfg.NoThreads(), threadID)
 	}
 
-	if !local {
+	if !incoming {
 		email.MessageID = fmt.Sprintf("<%s@%s>", eventID, b.domain)
 		return b.mta.Send(email.From, email.To, email.Compose(b.getBotSettings().DKIMPrivateKey()))
 	}
