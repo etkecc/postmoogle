@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/raja/argon2pw"
 	"gitlab.com/etke.cc/go/mxidwc"
 	"maunium.net/go/mautrix/id"
 
@@ -85,5 +86,9 @@ func (b *Bot) AllowAuth(email, password string) bool {
 		return false
 	}
 
-	return utils.Compare(password, cfg.Password())
+	allow, err := argon2pw.CompareHashWithPassword(cfg.Password(), password)
+	if err != nil {
+		b.log.Warn("Password for %s is not valid: %v", email, err)
+	}
+	return allow
 }

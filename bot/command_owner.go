@@ -3,6 +3,8 @@ package bot
 import (
 	"context"
 	"fmt"
+
+	"github.com/raja/argon2pw"
 )
 
 func (b *Bot) runStop(ctx context.Context) {
@@ -63,8 +65,11 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		"To set it to a new value, send a `%s %s VALUE` command.",
 		name, value, b.prefix, name)
 	if name == roomOptionPassword {
-		msg = msg + "\n\n---\n\n" +
-			"**Please, remove that message after reading.**"
+		msg = fmt.Sprintf("Password hash of this room is `%s`\n"+
+			"To set it to a new value, send a `%s %s VALUE` command.\n\n"+
+			"---\n\n"+
+			"**Please, remove that message after reading.**",
+			value, b.prefix, name)
 	}
 	b.SendNotice(ctx, evt.RoomID, msg)
 }
@@ -89,6 +94,14 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
+	}
+
+	if name == roomOptionPassword {
+		value, err = argon2pw.GenerateSaltedHash(value)
+		if err != nil {
+			b.Error(ctx, evt.RoomID, "failed to hash password: %v", err)
+			return
+		}
 	}
 
 	old := cfg.Get(name)
