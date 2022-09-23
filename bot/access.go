@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"regexp"
+	"strings"
 
 	"gitlab.com/etke.cc/go/mxidwc"
 	"maunium.net/go/mautrix/id"

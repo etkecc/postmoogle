@@ -36,8 +36,7 @@ func (m *msa) Login(state *smtp.ConnectionState, username, password string) (smt
 		return nil, errors.New("please, provide an email address")
 	}
 
-	mailbox := utils.Mailbox(username)
-	if !m.bot.AllowAuth(mailbox, password) {
+	if !m.bot.AllowAuth(username, password) {
 		return nil, errors.New("email or password is invalid")
 	}
 
