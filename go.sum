@@ -95,8 +95,8 @@ gitlab.com/etke.cc/go/mxidwc v1.0.0 h1:6EAlJXvs3nU4RaMegYq6iFlyVvLw7JZYnZmNCGMYQ
 gitlab.com/etke.cc/go/mxidwc v1.0.0/go.mod h1:E/0kh45SAN9+ntTG0cwkAEKdaPxzvxVmnjwivm9nmz8=
 gitlab.com/etke.cc/go/secgen v1.1.1 h1:RmKOki725HIhWJHzPtAc9X4YvBneczndchpMgoDkE8w=
 gitlab.com/etke.cc/go/secgen v1.1.1/go.mod h1:3pJqRGeWApzx7qXjABqz2o2SMCNpKSZao/gXVdasqE8=
-gitlab.com/etke.cc/linkpearl v0.0.0-20221002104708-53f8146c2323 h1:o+n56CVfX3N4lYsDLcokg4Knzbcm9osquuT7eVIpoJc=
-gitlab.com/etke.cc/linkpearl v0.0.0-20221002104708-53f8146c2323/go.mod h1:3uV/5kgK5H7LDBwVUZxLw8kw2iPiXEGmwqKR8CRImKc=
+gitlab.com/etke.cc/linkpearl v0.0.0-20221002130603-2ee25abf8373 h1:+lF/qMr9Cz9X579cELiP6Tuma4BHoEBRaoBb198Zi3s=
+gitlab.com/etke.cc/linkpearl v0.0.0-20221002130603-2ee25abf8373/go.mod h1:hjn0SVswej+Jo3+MycLm+lTsAVFy047Df+adX6MoXoE=
 golang.org/x/crypto v0.0.0-20220518034528-6f7dac969898/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be h1:fmw3UbQh+nxngCAHrDCCztao/kbYFnWjoqop8dHx05A=
 golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
