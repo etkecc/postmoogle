@@ -68,29 +68,15 @@ func (b *Bot) initBotUsers() ([]string, error) {
 }
 
 func (b *Bot) getBotSettings() botSettings {
-	cfg := b.botcfg.Get(acBotSettingsKey)
-	if cfg != nil {
-		return cfg
-	}
-
 	config := botSettings{}
-	err := b.lp.GetClient().GetAccountData(acBotSettingsKey, &config)
+	err := b.lp.GetAccountData(acBotSettingsKey, &config)
 	if err != nil {
-		if strings.Contains(err.Error(), "M_NOT_FOUND") {
-			err = nil
-		} else {
-			b.log.Error("cannot get bot settings: %v", utils.UnwrapError(err))
-		}
-	}
-
-	if err == nil {
-		b.botcfg.Set(acBotSettingsKey, config)
+		b.log.Error("cannot get bot settings: %v", utils.UnwrapError(err))
 	}
 
 	return config
 }
 
 func (b *Bot) setBotSettings(cfg botSettings) error {
-	b.botcfg.Set(acBotSettingsKey, cfg)
-	return utils.UnwrapError(b.lp.GetClient().SetAccountData(acBotSettingsKey, cfg))
+	return utils.UnwrapError(b.lp.SetAccountData(acBotSettingsKey, cfg))
 }

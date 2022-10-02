@@ -88,30 +88,11 @@ func (s roomSettings) ContentOptions() *utils.ContentOptions {
 }
 
 func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
-	cfg := b.cfg.Get(roomID.String())
-	if cfg != nil {
-		return cfg, nil
-	}
-
 	config := roomSettings{}
-	err := b.lp.GetClient().GetRoomAccountData(roomID, acRoomSettingsKey, &config)
-	if err != nil {
-		if strings.Contains(err.Error(), "M_NOT_FOUND") {
-			// Suppress `M_NOT_FOUND (HTTP 404): Room account data not found` errors.
-			// Until some settings are explicitly set, we don't store any.
-			// In such cases, just return a default (empty) settings object.
-			err = nil
-		}
-	}
-
-	if err == nil {
-		b.cfg.Set(roomID.String(), config)
-	}
-
+	err := b.lp.GetRoomAccountData(roomID, acRoomSettingsKey, &config)
 	return config, utils.UnwrapError(err)
 }
 
 func (b *Bot) setRoomSettings(roomID id.RoomID, cfg roomSettings) error {
-	b.cfg.Set(roomID.String(), cfg)
-	return utils.UnwrapError(b.lp.GetClient().SetRoomAccountData(roomID, acRoomSettingsKey, cfg))
+	return utils.UnwrapError(b.lp.SetRoomAccountData(roomID, acRoomSettingsKey, cfg))
 }

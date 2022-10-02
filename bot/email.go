@@ -174,20 +174,8 @@ func (b *Bot) Send2Email(ctx context.Context, to, subject, body string) error {
 func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.File, noThreads bool, parentID id.EventID) {
 	for _, file := range files {
 		req := file.Convert()
-		resp, err := b.lp.GetClient().UploadMedia(req)
-		if err != nil {
-			b.Error(ctx, roomID, "cannot upload file %s: %v", req.FileName, err)
-			continue
-		}
-		_, err = b.lp.Send(roomID, &event.MessageEventContent{
-			MsgType:   file.MsgType,
-			Body:      req.FileName,
-			URL:       resp.ContentURI.CUString(),
-			RelatesTo: utils.RelatesTo(!noThreads, parentID),
-		})
-		if err != nil {
-			b.Error(ctx, roomID, "cannot send uploaded file %s: %v", req.FileName, err)
-		}
+		err := b.lp.SendFile(roomID, req, file.MsgType, utils.RelatesTo(!noThreads, parentID))
+		b.Error(ctx, roomID, "cannot upload file %s: %v", req.FileName, err)
 	}
 }
 

@@ -31,8 +31,8 @@ func NewFile(name string, content []byte) *File {
 	return file
 }
 
-func (f *File) Convert() mautrix.ReqUploadMedia {
-	return mautrix.ReqUploadMedia{
+func (f *File) Convert() *mautrix.ReqUploadMedia {
+	return &mautrix.ReqUploadMedia{
 		ContentBytes:  f.Content,
 		Content:       bytes.NewReader(f.Content),
 		ContentLength: int64(f.Length),

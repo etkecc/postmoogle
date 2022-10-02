@@ -2,8 +2,9 @@ module gitlab.com/etke.cc/postmoogle
 
 go 1.18
 
+// replace gitlab.com/etke.cc/linkpearl => ../linkpearl
+
 require (
-	git.sr.ht/~xn/cache/v2 v2.0.0
 	github.com/emersion/go-msgauth v0.6.6
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
 	github.com/emersion/go-smtp v0.15.0
@@ -17,8 +18,8 @@ require (
 	gitlab.com/etke.cc/go/logger v1.1.0
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
 	gitlab.com/etke.cc/go/secgen v1.1.1
-	gitlab.com/etke.cc/linkpearl v0.0.0-20220921080011-9407dc599571
-	golang.org/x/net v0.0.0-20220920203100-d0c6ba3f52d9
+	gitlab.com/etke.cc/linkpearl v0.0.0-20221002104708-53f8146c2323
+	golang.org/x/net v0.0.0-20221002022538-bcab6841153b
 	maunium.net/go/mautrix v0.12.1
 )
 
@@ -28,6 +29,7 @@ require (
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/jaytaylor/html2text v0.0.0-20200412013138-3577fbdbcff7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
@@ -40,11 +42,11 @@ require (
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/tidwall/gjson v1.14.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
-	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yuin/goldmark v1.4.13 // indirect
-	golang.org/x/crypto v0.0.0-20220919173607-35f4265a4bc0 // indirect
-	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
+	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be // indirect
+	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	maunium.net/go/maulogger/v2 v2.3.2 // indirect
