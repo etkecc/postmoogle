@@ -68,8 +68,7 @@ func (b *Bot) initBotUsers() ([]string, error) {
 }
 
 func (b *Bot) getBotSettings() botSettings {
-	config := botSettings{}
-	err := b.lp.GetAccountData(acBotSettingsKey, &config)
+	config, err := b.lp.GetAccountData(acBotSettingsKey)
 	if err != nil {
 		b.log.Error("cannot get bot settings: %v", utils.UnwrapError(err))
 	}

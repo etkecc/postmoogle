@@ -88,8 +88,7 @@ func (s roomSettings) ContentOptions() *utils.ContentOptions {
 }
 
 func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
-	config := roomSettings{}
-	err := b.lp.GetRoomAccountData(roomID, acRoomSettingsKey, &config)
+	config, err := b.lp.GetRoomAccountData(roomID, acRoomSettingsKey)
 	return config, utils.UnwrapError(err)
 }
 

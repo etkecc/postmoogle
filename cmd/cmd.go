@@ -70,16 +70,17 @@ func initBot(cfg *config.Config) {
 	}
 	mxlog := logger.New("matrix.", cfg.LogLevel)
 	lp, err := linkpearl.New(&lpcfg.Config{
-		Homeserver:   cfg.Homeserver,
-		Login:        cfg.Login,
-		Password:     cfg.Password,
-		DB:           db,
-		Dialect:      cfg.DB.Dialect,
-		NoEncryption: cfg.NoEncryption,
-		LPLogger:     mxlog,
-		APILogger:    logger.New("api.", cfg.LogLevel),
-		StoreLogger:  logger.New("store.", cfg.LogLevel),
-		CryptoLogger: logger.New("olm.", cfg.LogLevel),
+		Homeserver:        cfg.Homeserver,
+		Login:             cfg.Login,
+		Password:          cfg.Password,
+		DB:                db,
+		Dialect:           cfg.DB.Dialect,
+		NoEncryption:      cfg.NoEncryption,
+		AccountDataSecret: cfg.DataSecret,
+		LPLogger:          mxlog,
+		APILogger:         logger.New("api.", cfg.LogLevel),
+		StoreLogger:       logger.New("store.", cfg.LogLevel),
+		CryptoLogger:      logger.New("olm.", cfg.LogLevel),
 	})
 	if err != nil {
 		// nolint // Fatal = panic, not os.Exit()

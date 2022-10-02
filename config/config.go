@@ -18,6 +18,7 @@ func New() *Config {
 		Domain:       env.String("domain", defaultConfig.Domain),
 		Port:         env.String("port", defaultConfig.Port),
 		NoEncryption: env.Bool("noencryption"),
+		DataSecret:   env.String("data.secret", defaultConfig.DataSecret),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
 		Admins:       env.Slice("admins"),

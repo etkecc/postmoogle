@@ -14,6 +14,8 @@ type Config struct {
 	Port string
 	// RoomID of the admin room
 	LogLevel string
+	// DataSecret is account data secret key (password) to encrypt all account data values
+	DataSecret string
 	// NoEncryption disabled encryption support
 	NoEncryption bool
 	// Prefix for commands

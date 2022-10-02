@@ -54,7 +54,8 @@ env vars
 * **POSTMOOGLE_TLS_CERT** - path to your SSL certificate (chain)
 * **POSTMOOGLE_TLS_KEY** - path to your SSL certificate's private key
 * **POSTMOOGLE_TLS_REQUIRED** - require TLS connection, **even** on the non-TLS port (`POSTMOOGLE_PORT`). TLS connections are always required on the TLS port (`POSTMOOGLE_TLS_PORT`) regardless of this setting.
-* **POSTMOOGLE_NOENCRYPTION** - disable encryption support
+* **POSTMOOGLE_DATA_SECRET** - secure key (password) to encrypt account data, must be 16, 24, or 32 bytes long
+* **POSTMOOGLE_NOENCRYPTION** - disable matrix encryption (libolm) support
 * **POSTMOOGLE_STATUSMSG** - presence status message
 * **POSTMOOGLE_SENTRY_DSN** - sentry DSN
 * **POSTMOOGLE_LOGLEVEL** - log level
