@@ -129,6 +129,9 @@ func (e *Email) Compose(privkey string) string {
 	data.WriteString("Content-Type: text/plain; charset=\"UTF-8\"")
 	data.WriteString("\r\n")
 
+	data.WriteString("Content-Transfer-Encoding: 8BIT")
+	data.WriteString("\r\n")
+
 	data.WriteString("From: ")
 	data.WriteString(e.From)
 	data.WriteString("\r\n")
