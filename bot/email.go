@@ -31,15 +31,29 @@ func (b *Bot) SetMTA(mta utils.MTA) {
 	b.mta = mta
 }
 
-// GetMapping returns mapping of mailbox = room
-func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
+func (b *Bot) getMapping(mailbox string) (id.RoomID, bool) {
 	v, ok := b.rooms.Load(mailbox)
 	if !ok {
 		return "", ok
 	}
+
 	roomID, ok := v.(id.RoomID)
 	if !ok {
 		return "", ok
+	}
+
+	return roomID, ok
+}
+
+// GetMapping returns mapping of mailbox = room
+func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
+	roomID, ok := b.getMapping(mailbox)
+	if !ok {
+		catchAll := b.getBotSettings().CatchAll()
+		if catchAll == "" {
+			return roomID, ok
+		}
+		return b.getMapping(catchAll)
 	}
 
 	return roomID, ok

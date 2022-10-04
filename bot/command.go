@@ -17,6 +17,7 @@ const (
 	commandStop      = "stop"
 	commandSend      = "send"
 	commandDKIM      = "dkim"
+	commandCatchAll  = botOptionCatchAll
 	commandUsers     = botOptionUsers
 	commandDelete    = "delete"
 	commandMailboxes = "mailboxes"
@@ -145,6 +146,11 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowAdmin,
 		},
 		{
+			key:         commandCatchAll,
+			description: "Get or set catch-all mailbox",
+			allowed:     b.allowAdmin,
+		},
+		{
 			key:         commandMailboxes,
 			description: "Show the list of all mailboxes",
 			allowed:     b.allowAdmin,
@@ -184,6 +190,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.runDKIM(ctx, commandSlice)
 	case commandUsers:
 		b.runUsers(ctx, commandSlice)
+	case commandCatchAll:
+		b.runCatchAll(ctx, commandSlice)
 	case commandDelete:
 		b.runDelete(ctx, commandSlice)
 	case commandMailboxes:

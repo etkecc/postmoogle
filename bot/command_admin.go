@@ -166,3 +166,41 @@ func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 			"To reset the signature, send `%s dkim reset`",
 		signature, signature, b.prefix))
 }
+
+func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	cfg := b.getBotSettings()
+	if len(commandSlice) < 2 {
+		var msg strings.Builder
+		msg.WriteString("Currently: `")
+		if cfg.CatchAll() != "" {
+			msg.WriteString(cfg.CatchAll())
+		} else {
+			msg.WriteString("not set")
+		}
+		msg.WriteString("`\n\n")
+		msg.WriteString("Usage: `")
+		msg.WriteString(b.prefix)
+		msg.WriteString(" catch-all MAILBOX`")
+		msg.WriteString("where mailbox is valid and existing mailbox name\n")
+
+		b.SendNotice(ctx, evt.RoomID, msg.String())
+		return
+	}
+
+	mailbox := utils.Mailbox(commandSlice[1])
+	_, ok := b.GetMapping(mailbox)
+	if !ok {
+		b.SendError(ctx, evt.RoomID, "mailbox does not exist, kupo.")
+		return
+	}
+
+	cfg.Set(botOptionCatchAll, mailbox)
+	err := b.setBotSettings(cfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot save bot options: %v", err)
+		return
+	}
+
+	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s@%s`.", mailbox, b.domain))
+}

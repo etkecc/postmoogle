@@ -12,6 +12,7 @@ const acBotSettingsKey = "cc.etke.postmoogle.config"
 // bot options keys
 const (
 	botOptionUsers          = "users"
+	botOptionCatchAll       = "catch-all"
 	botOptionDKIMSignature  = "dkim.pub"
 	botOptionDKIMPrivateKey = "dkim.pem"
 )
@@ -40,6 +41,11 @@ func (s botSettings) Users() []string {
 	}
 
 	return []string{value}
+}
+
+// CatchAll option
+func (s botSettings) CatchAll() string {
+	return s.Get(botOptionCatchAll)
 }
 
 // DKIMSignature (DNS TXT record)
