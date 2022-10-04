@@ -18,6 +18,7 @@ require (
 	gitlab.com/etke.cc/go/logger v1.1.0
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
 	gitlab.com/etke.cc/go/secgen v1.1.1
+	gitlab.com/etke.cc/go/trysmtp v1.0.0
 	gitlab.com/etke.cc/linkpearl v0.0.0-20221002171411-bb783f7e50f0
 	golang.org/x/net v0.0.0-20221002022538-bcab6841153b
 	maunium.net/go/mautrix v0.12.1
