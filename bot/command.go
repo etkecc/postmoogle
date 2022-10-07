@@ -143,6 +143,46 @@ func (b *Bot) initCommands() commandList {
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
+		{allowed: b.allowOwner}, // delimiter
+		{
+			key:         roomOptionSecurityEmail,
+			description: "Enforce sender email address validation (`true` - enforce, `false` - disable)",
+			sanitizer:   utils.SanitizeBoolString,
+			allowed:     b.allowOwner,
+		},
+		{
+			key:         roomOptionSecuritySMTP,
+			description: "Enforce sender email SMTP check (`true` - enforce, `false` - disable)",
+			sanitizer:   utils.SanitizeBoolString,
+			allowed:     b.allowOwner,
+		},
+		{
+			key: roomOptionSpamEmails,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (comma-separated list)",
+				roomOptionSpamEmails,
+			),
+			sanitizer: utils.SanitizeStringSlice,
+			allowed:   b.allowOwner,
+		},
+		{
+			key: roomOptionSpamHosts,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (comma-separated list)",
+				roomOptionSpamHosts,
+			),
+			sanitizer: utils.SanitizeStringSlice,
+			allowed:   b.allowOwner,
+		},
+		{
+			key: roomOptionSpamLocalparts,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (comma-separated list)",
+				roomOptionSpamLocalparts,
+			),
+			sanitizer: utils.SanitizeStringSlice,
+			allowed:   b.allowOwner,
+		},
 		{allowed: b.allowAdmin}, // delimiter
 		{
 			key:         botOptionUsers,

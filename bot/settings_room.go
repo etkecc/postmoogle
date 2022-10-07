@@ -13,16 +13,21 @@ const acRoomSettingsKey = "cc.etke.postmoogle.settings"
 
 // option keys
 const (
-	roomOptionOwner       = "owner"
-	roomOptionMailbox     = "mailbox"
-	roomOptionNoSend      = "nosend"
-	roomOptionNoSender    = "nosender"
-	roomOptionNoRecipient = "norecipient"
-	roomOptionNoSubject   = "nosubject"
-	roomOptionNoHTML      = "nohtml"
-	roomOptionNoThreads   = "nothreads"
-	roomOptionNoFiles     = "nofiles"
-	roomOptionPassword    = "password"
+	roomOptionOwner          = "owner"
+	roomOptionMailbox        = "mailbox"
+	roomOptionNoSend         = "nosend"
+	roomOptionNoSender       = "nosender"
+	roomOptionNoRecipient    = "norecipient"
+	roomOptionNoSubject      = "nosubject"
+	roomOptionNoHTML         = "nohtml"
+	roomOptionNoThreads      = "nothreads"
+	roomOptionNoFiles        = "nofiles"
+	roomOptionPassword       = "password"
+	roomOptionSecuritySMTP   = "security:smtp"
+	roomOptionSecurityEmail  = "security:email"
+	roomOptionSpamEmails     = "spam:emails"
+	roomOptionSpamHosts      = "spam:hosts"
+	roomOptionSpamLocalparts = "spam:localparts"
 )
 
 type roomSettings map[string]string
@@ -75,6 +80,26 @@ func (s roomSettings) NoThreads() bool {
 
 func (s roomSettings) NoFiles() bool {
 	return utils.Bool(s.Get(roomOptionNoFiles))
+}
+
+func (s roomSettings) SecuritySMTP() bool {
+	return utils.Bool(s.Get(roomOptionSecuritySMTP))
+}
+
+func (s roomSettings) SecurityEmail() bool {
+	return utils.Bool(s.Get(roomOptionSecurityEmail))
+}
+
+func (s roomSettings) SpamEmails() []string {
+	return utils.StringSlice(s.Get(roomOptionSpamEmails))
+}
+
+func (s roomSettings) SpamHosts() []string {
+	return utils.StringSlice(s.Get(roomOptionSpamHosts))
+}
+
+func (s roomSettings) SpamLocalparts() []string {
+	return utils.StringSlice(s.Get(roomOptionSpamLocalparts))
 }
 
 // ContentOptions converts room display settings to content options
