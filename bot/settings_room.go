@@ -13,15 +13,16 @@ const acRoomSettingsKey = "cc.etke.postmoogle.settings"
 
 // option keys
 const (
-	roomOptionOwner     = "owner"
-	roomOptionMailbox   = "mailbox"
-	roomOptionNoSend    = "nosend"
-	roomOptionNoSender  = "nosender"
-	roomOptionNoSubject = "nosubject"
-	roomOptionNoHTML    = "nohtml"
-	roomOptionNoThreads = "nothreads"
-	roomOptionNoFiles   = "nofiles"
-	roomOptionPassword  = "password"
+	roomOptionOwner       = "owner"
+	roomOptionMailbox     = "mailbox"
+	roomOptionNoSend      = "nosend"
+	roomOptionNoSender    = "nosender"
+	roomOptionNoRecipient = "norecipient"
+	roomOptionNoSubject   = "nosubject"
+	roomOptionNoHTML      = "nohtml"
+	roomOptionNoThreads   = "nothreads"
+	roomOptionNoFiles     = "nofiles"
+	roomOptionPassword    = "password"
 )
 
 type roomSettings map[string]string
@@ -56,6 +57,10 @@ func (s roomSettings) NoSender() bool {
 	return utils.Bool(s.Get(roomOptionNoSender))
 }
 
+func (s roomSettings) NoRecipient() bool {
+	return utils.Bool(s.Get(roomOptionNoRecipient))
+}
+
 func (s roomSettings) NoSubject() bool {
 	return utils.Bool(s.Get(roomOptionNoSubject))
 }
@@ -75,10 +80,11 @@ func (s roomSettings) NoFiles() bool {
 // ContentOptions converts room display settings to content options
 func (s roomSettings) ContentOptions() *utils.ContentOptions {
 	return &utils.ContentOptions{
-		HTML:    !s.NoHTML(),
-		Sender:  !s.NoSender(),
-		Subject: !s.NoSubject(),
-		Threads: !s.NoThreads(),
+		HTML:      !s.NoHTML(),
+		Sender:    !s.NoSender(),
+		Recipient: !s.NoRecipient(),
+		Subject:   !s.NoSubject(),
+		Threads:   !s.NoThreads(),
 
 		FromKey:      eventFromKey,
 		SubjectKey:   eventSubjectKey,

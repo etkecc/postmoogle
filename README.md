@@ -246,6 +246,7 @@ If you want to change them - check available options in the help message (`!pm h
 ---
 
 * **!pm nosender** - Get or set `nosender` of the room (`true` - hide email sender; `false` - show email sender)
+* **!pm norecipient** - Get or set `norecipient` of the room (`true` - hide recipient; `false` - show recipient)
 * **!pm nosubject** - Get or set `nosubject` of the room (`true` - hide email subject; `false` - show email subject)
 * **!pm nohtml** - Get or set `nohtml` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)
 * **!pm nothreads** - Get or set `nothreads` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)

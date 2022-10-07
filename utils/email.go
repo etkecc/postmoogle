@@ -35,10 +35,11 @@ type Email struct {
 // ContentOptions represents settings that specify how an email is to be converted to a Matrix message
 type ContentOptions struct {
 	// On/Off
-	Sender  bool
-	Subject bool
-	HTML    bool
-	Threads bool
+	Sender    bool
+	Recipient bool
+	Subject   bool
+	HTML      bool
+	Threads   bool
 
 	// Keys
 	MessageIDKey string
@@ -92,7 +93,12 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 	if options.Sender {
 		text.WriteString("From: ")
 		text.WriteString(e.From)
-		text.WriteString("\n\n")
+		text.WriteString("\n")
+	}
+	if options.Recipient {
+		text.WriteString("To: ")
+		text.WriteString(e.To)
+		text.WriteString("\n")
 	}
 	if options.Subject {
 		text.WriteString("# ")
