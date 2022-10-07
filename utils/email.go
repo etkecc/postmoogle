@@ -19,6 +19,15 @@ type MTA interface {
 	Send(from, to, data string) error
 }
 
+// ValidationOptions for incoming mail
+type ValidationOptions interface {
+	SecuritySMTP() bool
+	SecurityMX() bool
+	SpamEmails() []string
+	SpamHosts() []string
+	SpamLocalparts() []string
+}
+
 // Email object
 type Email struct {
 	Date      string

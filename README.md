@@ -254,6 +254,14 @@ If you want to change them - check available options in the help message (`!pm h
 
 ---
 
+* **!pm security:mx** - Enforce sender email MX check (`true` - enforce, `false` - disable)
+* **!pm security:smtp** - Enforce sender email SMTP check (`true` - enforce, `false` - disable)
+* **!pm spam:emails** - Get or set `spam:emails` of the room (comma-separated list)
+* **!pm spam:hosts** - Get or set `spam:hosts` of the room (comma-separated list)
+* **!pm spam:localparts** - Get or set `spam:localparts` of the room (comma-separated list)
+
+---
+
 * **!pm dkim** - Get DKIM signature
 * **!pm catch-all** - Configure catch-all mailbox
 * **!pm users** - Get or set allowed users patterns

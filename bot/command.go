@@ -145,8 +145,8 @@ func (b *Bot) initCommands() commandList {
 		},
 		{allowed: b.allowOwner}, // delimiter
 		{
-			key:         roomOptionSecurityEmail,
-			description: "Enforce sender email address validation (`true` - enforce, `false` - disable)",
+			key:         roomOptionSecurityMX,
+			description: "Enforce sender email MX check (`true` - enforce, `false` - disable)",
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},

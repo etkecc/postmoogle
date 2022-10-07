@@ -24,7 +24,7 @@ const (
 	roomOptionNoFiles        = "nofiles"
 	roomOptionPassword       = "password"
 	roomOptionSecuritySMTP   = "security:smtp"
-	roomOptionSecurityEmail  = "security:email"
+	roomOptionSecurityMX     = "security:mx"
 	roomOptionSpamEmails     = "spam:emails"
 	roomOptionSpamHosts      = "spam:hosts"
 	roomOptionSpamLocalparts = "spam:localparts"
@@ -86,8 +86,8 @@ func (s roomSettings) SecuritySMTP() bool {
 	return utils.Bool(s.Get(roomOptionSecuritySMTP))
 }
 
-func (s roomSettings) SecurityEmail() bool {
-	return utils.Bool(s.Get(roomOptionSecurityEmail))
+func (s roomSettings) SecurityMX() bool {
+	return utils.Bool(s.Get(roomOptionSecurityMX))
 }
 
 func (s roomSettings) SpamEmails() []string {
