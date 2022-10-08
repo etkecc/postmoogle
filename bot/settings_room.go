@@ -23,11 +23,11 @@ const (
 	roomOptionNoThreads      = "nothreads"
 	roomOptionNoFiles        = "nofiles"
 	roomOptionPassword       = "password"
-	roomOptionSecuritySMTP   = "security:smtp"
-	roomOptionSecurityMX     = "security:mx"
-	roomOptionSpamEmails     = "spam:emails"
-	roomOptionSpamHosts      = "spam:hosts"
-	roomOptionSpamLocalparts = "spam:localparts"
+	roomOptionSecuritySMTP   = "spamcheck:smtp"
+	roomOptionSecurityMX     = "spamcheck:mx"
+	roomOptionSpamEmails     = "spamlist:emails"
+	roomOptionSpamHosts      = "spamlist:hosts"
+	roomOptionSpamLocalparts = "spamlist:localparts"
 )
 
 type roomSettings map[string]string
