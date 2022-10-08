@@ -254,11 +254,11 @@ If you want to change them - check available options in the help message (`!pm h
 
 ---
 
-* **!pm security:mx** - Enforce sender email MX check (`true` - enforce, `false` - disable)
-* **!pm security:smtp** - Enforce sender email SMTP check (`true` - enforce, `false` - disable)
-* **!pm spam:emails** - Get or set `spam:emails` of the room (comma-separated list)
-* **!pm spam:hosts** - Get or set `spam:hosts` of the room (comma-separated list)
-* **!pm spam:localparts** - Get or set `spam:localparts` of the room (comma-separated list)
+* **!pm spamcheck:mx** - only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)
+* **!pm spamcheck:smtp** - only accept email from servers which seem prepared to receive it (those listening on an SMTP port) (`true` - enable, `false` - disable)
+* **!pm spamlist:emails** - Get or set `spamlist:emails` of the room (comma-separated list), eg: `spammer@example.com,sspam@example.org`
+* **!pm spamlist:hosts** - Get or set `spamlist:hosts` of the room (comma-separated list), eg: `gmail.com,hotmail.com,outlook.com`
+* **!pm spamlist:localparts** - Get or set `spamlist:localparts` of the room (comma-separated list), eg: `notspam,noreply,no-rely`
 
 ---
 
