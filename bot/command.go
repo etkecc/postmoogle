@@ -146,20 +146,20 @@ func (b *Bot) initCommands() commandList {
 		{allowed: b.allowOwner}, // delimiter
 		{
 			key:         roomOptionSecurityMX,
-			description: "Enforce sender email MX check (`true` - enforce, `false` - disable)",
+			description: "only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)",
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},
 		{
 			key:         roomOptionSecuritySMTP,
-			description: "Enforce sender email SMTP check (`true` - enforce, `false` - disable)",
+			description: "only accept email from servers which seem prepared to receive it (those listening on an SMTP port) (`true` - enable, `false` - disable)",
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},
 		{
 			key: roomOptionSpamEmails,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (comma-separated list)",
+				"Get or set `%s` of the room (comma-separated list), eg: `spammer@example.com,sspam@example.org`",
 				roomOptionSpamEmails,
 			),
 			sanitizer: utils.SanitizeStringSlice,
@@ -168,7 +168,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: roomOptionSpamHosts,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (comma-separated list)",
+				"Get or set `%s` of the room (comma-separated list), eg: `gmail.com,hotmail.com,outlook.com`",
 				roomOptionSpamHosts,
 			),
 			sanitizer: utils.SanitizeStringSlice,
@@ -177,7 +177,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: roomOptionSpamLocalparts,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (comma-separated list)",
+				"Get or set `%s` of the room (comma-separated list), eg: `notspam,noreply,no-rely`",
 				roomOptionSpamLocalparts,
 			),
 			sanitizer: utils.SanitizeStringSlice,
