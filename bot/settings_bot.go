@@ -78,6 +78,9 @@ func (b *Bot) getBotSettings() botSettings {
 	if err != nil {
 		b.log.Error("cannot get bot settings: %v", utils.UnwrapError(err))
 	}
+	if config == nil {
+		config = map[string]string{}
+	}
 
 	return config
 }
