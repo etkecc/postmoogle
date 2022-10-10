@@ -19,13 +19,13 @@ type MTA interface {
 	Send(from, to, data string) error
 }
 
-// ValidationOptions for incoming mail
-type ValidationOptions interface {
-	SecuritySMTP() bool
-	SecurityMX() bool
-	SpamEmails() []string
-	SpamHosts() []string
-	SpamLocalparts() []string
+// IncomingFilteringOptions for incoming mail
+type IncomingFilteringOptions interface {
+	SpamcheckSMTP() bool
+	SpamcheckMX() bool
+	SpamlistEmails() []string
+	SpamlistHosts() []string
+	SpamlistLocalparts() []string
 }
 
 // Email object

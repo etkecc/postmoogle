@@ -145,40 +145,40 @@ func (b *Bot) initCommands() commandList {
 		},
 		{allowed: b.allowOwner}, // delimiter
 		{
-			key:         roomOptionSecurityMX,
+			key:         roomOptionSpamcheckMX,
 			description: "only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)",
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},
 		{
-			key:         roomOptionSecuritySMTP,
+			key:         roomOptionSpamcheckSMTP,
 			description: "only accept email from servers which seem prepared to receive it (those listening on an SMTP port) (`true` - enable, `false` - disable)",
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},
 		{
-			key: roomOptionSpamEmails,
+			key: roomOptionSpamlistEmails,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (comma-separated list), eg: `spammer@example.com,sspam@example.org`",
-				roomOptionSpamEmails,
+				roomOptionSpamlistEmails,
 			),
 			sanitizer: utils.SanitizeStringSlice,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: roomOptionSpamHosts,
+			key: roomOptionSpamlistHosts,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (comma-separated list), eg: `gmail.com,hotmail.com,outlook.com`",
-				roomOptionSpamHosts,
+				"Get or set `%s` of the room (comma-separated list), eg: `spammer.com,scammer.com,morespam.com`",
+				roomOptionSpamlistHosts,
 			),
 			sanitizer: utils.SanitizeStringSlice,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: roomOptionSpamLocalparts,
+			key: roomOptionSpamlistLocalparts,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (comma-separated list), eg: `notspam,noreply,no-rely`",
-				roomOptionSpamLocalparts,
+				"Get or set `%s` of the room (comma-separated list), eg: `notspam,noreply,no-reply`",
+				roomOptionSpamlistLocalparts,
 			),
 			sanitizer: utils.SanitizeStringSlice,
 			allowed:   b.allowOwner,

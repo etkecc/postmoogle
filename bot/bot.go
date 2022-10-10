@@ -73,7 +73,9 @@ func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args 
 	b.log.Error(message, args...)
 	err := fmt.Errorf(message, args...)
 
-	sentry.GetHubFromContext(ctx).CaptureException(err)
+	if hub := sentry.GetHubFromContext(ctx); hub != nil {
+		sentry.GetHubFromContext(ctx).CaptureException(err)
+	}
 	if roomID != "" {
 		b.SendError(ctx, roomID, err.Error())
 	}

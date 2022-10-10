@@ -58,7 +58,7 @@ func (s *msasession) Rcpt(to string) error {
 			return smtp.ErrAuthRequired
 		}
 
-		validations := s.bot.GetOptions(roomID)
+		validations := s.bot.GetIFOptions(roomID)
 		if !s.validate(validations) {
 			return smtp.ErrAuthRequired
 		}
@@ -81,15 +81,15 @@ func (s *msasession) parseAttachments(parts []*enmime.Part) []*utils.File {
 	return files
 }
 
-func (s *msasession) validate(options utils.ValidationOptions) bool {
+func (s *msasession) validate(options utils.IncomingFilteringOptions) bool {
 	spam := validator.Spam{
-		Emails:     options.SpamEmails(),
-		Hosts:      options.SpamHosts(),
-		Localparts: options.SpamLocalparts(),
+		Emails:     options.SpamlistEmails(),
+		Hosts:      options.SpamlistHosts(),
+		Localparts: options.SpamlistLocalparts(),
 	}
 	enforce := validator.Enforce{
-		MX:   options.SecurityMX(),
-		SMTP: options.SecuritySMTP(),
+		MX:   options.SpamcheckMX(),
+		SMTP: options.SpamcheckMX(),
 	}
 	v := validator.New(spam, enforce, s.to, s.log)
 

@@ -13,21 +13,21 @@ const acRoomSettingsKey = "cc.etke.postmoogle.settings"
 
 // option keys
 const (
-	roomOptionOwner          = "owner"
-	roomOptionMailbox        = "mailbox"
-	roomOptionNoSend         = "nosend"
-	roomOptionNoSender       = "nosender"
-	roomOptionNoRecipient    = "norecipient"
-	roomOptionNoSubject      = "nosubject"
-	roomOptionNoHTML         = "nohtml"
-	roomOptionNoThreads      = "nothreads"
-	roomOptionNoFiles        = "nofiles"
-	roomOptionPassword       = "password"
-	roomOptionSecuritySMTP   = "spamcheck:smtp"
-	roomOptionSecurityMX     = "spamcheck:mx"
-	roomOptionSpamEmails     = "spamlist:emails"
-	roomOptionSpamHosts      = "spamlist:hosts"
-	roomOptionSpamLocalparts = "spamlist:localparts"
+	roomOptionOwner              = "owner"
+	roomOptionMailbox            = "mailbox"
+	roomOptionNoSend             = "nosend"
+	roomOptionNoSender           = "nosender"
+	roomOptionNoRecipient        = "norecipient"
+	roomOptionNoSubject          = "nosubject"
+	roomOptionNoHTML             = "nohtml"
+	roomOptionNoThreads          = "nothreads"
+	roomOptionNoFiles            = "nofiles"
+	roomOptionPassword           = "password"
+	roomOptionSpamcheckSMTP      = "spamcheck:smtp"
+	roomOptionSpamcheckMX        = "spamcheck:mx"
+	roomOptionSpamlistEmails     = "spamlist:emails"
+	roomOptionSpamlistHosts      = "spamlist:hosts"
+	roomOptionSpamlistLocalparts = "spamlist:mailboxes"
 )
 
 type roomSettings map[string]string
@@ -82,24 +82,24 @@ func (s roomSettings) NoFiles() bool {
 	return utils.Bool(s.Get(roomOptionNoFiles))
 }
 
-func (s roomSettings) SecuritySMTP() bool {
-	return utils.Bool(s.Get(roomOptionSecuritySMTP))
+func (s roomSettings) SpamcheckSMTP() bool {
+	return utils.Bool(s.Get(roomOptionSpamcheckSMTP))
 }
 
-func (s roomSettings) SecurityMX() bool {
-	return utils.Bool(s.Get(roomOptionSecurityMX))
+func (s roomSettings) SpamcheckMX() bool {
+	return utils.Bool(s.Get(roomOptionSpamcheckMX))
 }
 
-func (s roomSettings) SpamEmails() []string {
-	return utils.StringSlice(s.Get(roomOptionSpamEmails))
+func (s roomSettings) SpamlistEmails() []string {
+	return utils.StringSlice(s.Get(roomOptionSpamlistEmails))
 }
 
-func (s roomSettings) SpamHosts() []string {
-	return utils.StringSlice(s.Get(roomOptionSpamHosts))
+func (s roomSettings) SpamlistHosts() []string {
+	return utils.StringSlice(s.Get(roomOptionSpamlistHosts))
 }
 
-func (s roomSettings) SpamLocalparts() []string {
-	return utils.StringSlice(s.Get(roomOptionSpamLocalparts))
+func (s roomSettings) SpamlistLocalparts() []string {
+	return utils.StringSlice(s.Get(roomOptionSpamlistLocalparts))
 }
 
 // ContentOptions converts room display settings to content options

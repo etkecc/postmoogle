@@ -59,8 +59,8 @@ func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
 	return roomID, ok
 }
 
-// GetOptions returns room settings
-func (b *Bot) GetOptions(roomID id.RoomID) utils.ValidationOptions {
+// GetIFOptions returns incoming email filtering options (room settings)
+func (b *Bot) GetIFOptions(roomID id.RoomID) utils.IncomingFilteringOptions {
 	cfg, err := b.getRoomSettings(roomID)
 	if err != nil {
 		b.log.Error("cannot retrieve room settings: %v", err)

@@ -16,7 +16,7 @@ import (
 type Bot interface {
 	AllowAuth(string, string) bool
 	GetMapping(string) (id.RoomID, bool)
-	GetOptions(id.RoomID) utils.ValidationOptions
+	GetIFOptions(id.RoomID) utils.IncomingFilteringOptions
 	Send2Matrix(ctx context.Context, email *utils.Email, incoming bool) error
 	SetMTA(mta utils.MTA)
 }
