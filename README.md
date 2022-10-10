@@ -254,6 +254,14 @@ If you want to change them - check available options in the help message (`!pm h
 
 ---
 
+* **!pm spamcheck:mx** - only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)
+* **!pm spamcheck:smtp** - only accept email from servers which seem prepared to receive it (those listening on an SMTP port) (`true` - enable, `false` - disable)
+* **!pm spamlist:emails** - Get or set `spamlist:emails` of the room (comma-separated list), eg: `spammer@example.com,sspam@example.org`
+* **!pm spamlist:hosts** - Get or set `spamlist:hosts` of the room (comma-separated list), eg: `spammer.com,scammer.com,morespam.com`
+* **!pm spamlist:mailboxes** - Get or set `spamlist:mailboxes` of the room (comma-separated list), eg: `notspam,noreply,no-reply`
+
+---
+
 * **!pm dkim** - Get DKIM signature
 * **!pm catch-all** - Configure catch-all mailbox
 * **!pm users** - Get or set allowed users patterns

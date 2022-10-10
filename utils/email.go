@@ -19,6 +19,15 @@ type MTA interface {
 	Send(from, to, data string) error
 }
 
+// IncomingFilteringOptions for incoming mail
+type IncomingFilteringOptions interface {
+	SpamcheckSMTP() bool
+	SpamcheckMX() bool
+	SpamlistEmails() []string
+	SpamlistHosts() []string
+	SpamlistLocalparts() []string
+}
+
 // Email object
 type Email struct {
 	Date      string

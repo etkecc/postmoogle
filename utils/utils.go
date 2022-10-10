@@ -33,3 +33,31 @@ func Bool(str string) bool {
 func SanitizeBoolString(str string) string {
 	return strconv.FormatBool(Bool(str))
 }
+
+// StringSlice converts comma-separated string to slice
+func StringSlice(str string) []string {
+	if str == "" {
+		return nil
+	}
+
+	str = strings.TrimSpace(str)
+	if strings.IndexByte(str, ',') == -1 {
+		return []string{str}
+	}
+
+	return strings.Split(str, ",")
+}
+
+// SanitizeBoolString converts string to slice and back to string
+func SanitizeStringSlice(str string) string {
+	parts := StringSlice(str)
+	if len(parts) == 0 {
+		return str
+	}
+
+	for i, part := range parts {
+		parts[i] = strings.TrimSpace(part)
+	}
+
+	return strings.Join(parts, ",")
+}

@@ -9,6 +9,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/jhillyerd/enmime"
 	"gitlab.com/etke.cc/go/logger"
+	"gitlab.com/etke.cc/go/validator"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
@@ -43,6 +44,7 @@ func (s *msasession) Mail(from string, opts smtp.MailOptions) error {
 
 func (s *msasession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
+	s.to = to
 
 	if s.incoming {
 		if utils.Hostname(to) != s.domain {
@@ -50,14 +52,18 @@ func (s *msasession) Rcpt(to string) error {
 			return smtp.ErrAuthRequired
 		}
 
-		_, ok := s.bot.GetMapping(utils.Mailbox(to))
+		roomID, ok := s.bot.GetMapping(utils.Mailbox(to))
 		if !ok {
 			s.log.Debug("mapping for %s not found", to)
 			return smtp.ErrAuthRequired
 		}
+
+		validations := s.bot.GetIFOptions(roomID)
+		if !s.validate(validations) {
+			return smtp.ErrAuthRequired
+		}
 	}
 
-	s.to = to
 	s.log.Debug("mail to %s", to)
 	return nil
 }
@@ -73,6 +79,21 @@ func (s *msasession) parseAttachments(parts []*enmime.Part) []*utils.File {
 	}
 
 	return files
+}
+
+func (s *msasession) validate(options utils.IncomingFilteringOptions) bool {
+	spam := validator.Spam{
+		Emails:     options.SpamlistEmails(),
+		Hosts:      options.SpamlistHosts(),
+		Localparts: options.SpamlistLocalparts(),
+	}
+	enforce := validator.Enforce{
+		MX:   options.SpamcheckMX(),
+		SMTP: options.SpamcheckMX(),
+	}
+	v := validator.New(spam, enforce, s.to, s.log)
+
+	return v.Email(s.from)
 }
 
 func (s *msasession) Data(r io.Reader) error {
