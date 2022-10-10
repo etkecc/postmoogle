@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/raja/argon2pw"
 	"gitlab.com/etke.cc/go/mxidwc"
 	"maunium.net/go/mautrix/id"
@@ -40,7 +41,7 @@ func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
 	}
 	cfg, err := b.getRoomSettings(targetRoomID)
 	if err != nil {
-		b.Error(context.Background(), targetRoomID, "failed to retrieve settings: %v", err)
+		b.Error(sentry.SetHubOnContext(context.Background(), sentry.CurrentHub()), targetRoomID, "failed to retrieve settings: %v", err)
 		return false
 	}
 
@@ -63,7 +64,7 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 
 	cfg, err := b.getRoomSettings(targetRoomID)
 	if err != nil {
-		b.Error(context.Background(), targetRoomID, "failed to retrieve settings: %v", err)
+		b.Error(sentry.SetHubOnContext(context.Background(), sentry.CurrentHub()), targetRoomID, "failed to retrieve settings: %v", err)
 		return false
 	}
 

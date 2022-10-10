@@ -120,6 +120,10 @@ func (s roomSettings) ContentOptions() *utils.ContentOptions {
 
 func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
 	config, err := b.lp.GetRoomAccountData(roomID, acRoomSettingsKey)
+	if config == nil {
+		config = map[string]string{}
+	}
+
 	return config, utils.UnwrapError(err)
 }
 

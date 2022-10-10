@@ -20,7 +20,7 @@ require (
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/go/trysmtp v1.0.0
 	gitlab.com/etke.cc/go/validator v1.0.1
-	gitlab.com/etke.cc/linkpearl v0.0.0-20221002171411-bb783f7e50f0
+	gitlab.com/etke.cc/linkpearl v0.0.0-20221008191655-865ae3362a01
 	golang.org/x/net v0.0.0-20221004154528-8021a29435af
 	maunium.net/go/mautrix v0.12.1
 )
@@ -47,8 +47,8 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yuin/goldmark v1.4.13 // indirect
-	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be // indirect
-	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
+	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b // indirect
+	golang.org/x/sys v0.0.0-20221006211917-84dc82d7e875 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	maunium.net/go/maulogger/v2 v2.3.2 // indirect
