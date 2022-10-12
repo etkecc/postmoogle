@@ -39,7 +39,6 @@ func (b *Bot) syncRooms() error {
 	for _, roomID := range resp.JoinedRooms {
 		cfg, serr := b.getRoomSettings(roomID)
 		if serr != nil {
-			b.log.Warn("cannot get %s settings: %v", roomID, err)
 			continue
 		}
 		mailbox := cfg.Mailbox()
