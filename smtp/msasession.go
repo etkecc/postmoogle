@@ -82,16 +82,12 @@ func (s *msasession) parseAttachments(parts []*enmime.Part) []*utils.File {
 }
 
 func (s *msasession) validate(options utils.IncomingFilteringOptions) bool {
-	spam := validator.Spam{
-		Emails:     options.SpamlistEmails(),
-		Hosts:      options.SpamlistHosts(),
-		Localparts: options.SpamlistLocalparts(),
-	}
 	enforce := validator.Enforce{
-		MX:   options.SpamcheckMX(),
-		SMTP: options.SpamcheckMX(),
+		Email: true,
+		MX:    options.SpamcheckMX(),
+		SMTP:  options.SpamcheckMX(),
 	}
-	v := validator.New(spam, enforce, s.to, s.log)
+	v := validator.New(options.Spamlist(), enforce, s.to, s.log)
 
 	return v.Email(s.from)
 }

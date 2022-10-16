@@ -13,21 +13,19 @@ const acRoomSettingsKey = "cc.etke.postmoogle.settings"
 
 // option keys
 const (
-	roomOptionOwner              = "owner"
-	roomOptionMailbox            = "mailbox"
-	roomOptionNoSend             = "nosend"
-	roomOptionNoSender           = "nosender"
-	roomOptionNoRecipient        = "norecipient"
-	roomOptionNoSubject          = "nosubject"
-	roomOptionNoHTML             = "nohtml"
-	roomOptionNoThreads          = "nothreads"
-	roomOptionNoFiles            = "nofiles"
-	roomOptionPassword           = "password"
-	roomOptionSpamcheckSMTP      = "spamcheck:smtp"
-	roomOptionSpamcheckMX        = "spamcheck:mx"
-	roomOptionSpamlistEmails     = "spamlist:emails"
-	roomOptionSpamlistHosts      = "spamlist:hosts"
-	roomOptionSpamlistLocalparts = "spamlist:mailboxes"
+	roomOptionOwner         = "owner"
+	roomOptionMailbox       = "mailbox"
+	roomOptionNoSend        = "nosend"
+	roomOptionNoSender      = "nosender"
+	roomOptionNoRecipient   = "norecipient"
+	roomOptionNoSubject     = "nosubject"
+	roomOptionNoHTML        = "nohtml"
+	roomOptionNoThreads     = "nothreads"
+	roomOptionNoFiles       = "nofiles"
+	roomOptionPassword      = "password"
+	roomOptionSpamcheckSMTP = "spamcheck:smtp"
+	roomOptionSpamcheckMX   = "spamcheck:mx"
+	roomOptionSpamlist      = "spamlist"
 )
 
 type roomSettings map[string]string
@@ -90,16 +88,9 @@ func (s roomSettings) SpamcheckMX() bool {
 	return utils.Bool(s.Get(roomOptionSpamcheckMX))
 }
 
-func (s roomSettings) SpamlistEmails() []string {
-	return utils.StringSlice(s.Get(roomOptionSpamlistEmails))
-}
-
-func (s roomSettings) SpamlistHosts() []string {
-	return utils.StringSlice(s.Get(roomOptionSpamlistHosts))
-}
-
-func (s roomSettings) SpamlistLocalparts() []string {
-	return utils.StringSlice(s.Get(roomOptionSpamlistLocalparts))
+func (s roomSettings) Spamlist() []string {
+	s.migrateSpamlist()
+	return utils.StringSlice(s.Get(roomOptionSpamlist))
 }
 
 // ContentOptions converts room display settings to content options
@@ -129,4 +120,49 @@ func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
 
 func (b *Bot) setRoomSettings(roomID id.RoomID, cfg roomSettings) error {
 	return utils.UnwrapError(b.lp.SetRoomAccountData(roomID, acRoomSettingsKey, cfg))
+}
+
+func (s roomSettings) migrateSpamlist() {
+	uniq := map[string]struct{}{}
+	emails := utils.StringSlice(s.Get("spamlist:emails"))
+	localparts := utils.StringSlice(s.Get("spamlist:localparts"))
+	hosts := utils.StringSlice(s.Get("spamlist:hosts"))
+	list := utils.StringSlice(s.Get(roomOptionSpamlist))
+	delete(s, "spamlist:emails")
+	delete(s, "spamlist:localparts")
+	delete(s, "spamlist:hosts")
+
+	for _, email := range emails {
+		if email == "" {
+			continue
+		}
+		uniq[email] = struct{}{}
+	}
+
+	for _, localpart := range localparts {
+		if localpart == "" {
+			continue
+		}
+		uniq[localpart+"@*"] = struct{}{}
+	}
+
+	for _, host := range hosts {
+		if host == "" {
+			continue
+		}
+		uniq["*@"+host] = struct{}{}
+	}
+
+	for _, item := range list {
+		if item == "" {
+			continue
+		}
+		uniq[item] = struct{}{}
+	}
+
+	spamlist := make([]string, 0, len(uniq))
+	for item := range uniq {
+		spamlist = append(spamlist, item)
+	}
+	s.Set(roomOptionSpamlist, strings.Join(spamlist, ","))
 }
