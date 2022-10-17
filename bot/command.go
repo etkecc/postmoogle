@@ -157,28 +157,10 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowOwner,
 		},
 		{
-			key: roomOptionSpamlistEmails,
+			key: roomOptionSpamlist,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (comma-separated list), eg: `spammer@example.com,sspam@example.org`",
-				roomOptionSpamlistEmails,
-			),
-			sanitizer: utils.SanitizeStringSlice,
-			allowed:   b.allowOwner,
-		},
-		{
-			key: roomOptionSpamlistHosts,
-			description: fmt.Sprintf(
-				"Get or set `%s` of the room (comma-separated list), eg: `spammer.com,scammer.com,morespam.com`",
-				roomOptionSpamlistHosts,
-			),
-			sanitizer: utils.SanitizeStringSlice,
-			allowed:   b.allowOwner,
-		},
-		{
-			key: roomOptionSpamlistLocalparts,
-			description: fmt.Sprintf(
-				"Get or set `%s` of the room (comma-separated list), eg: `notspam,noreply,no-reply`",
-				roomOptionSpamlistLocalparts,
+				"Get or set `%s` of the room (comma-separated list), eg: `spammer@example.com,*@spammer.org,spam@*`",
+				roomOptionSpamlist,
 			),
 			sanitizer: utils.SanitizeStringSlice,
 			allowed:   b.allowOwner,

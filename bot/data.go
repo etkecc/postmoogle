@@ -41,6 +41,7 @@ func (b *Bot) syncRooms() error {
 		if serr != nil {
 			continue
 		}
+		b.migrateRoomSettings(roomID)
 		mailbox := cfg.Mailbox()
 		if mailbox != "" {
 			b.rooms.Store(mailbox, roomID)

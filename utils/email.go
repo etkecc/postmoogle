@@ -23,9 +23,7 @@ type MTA interface {
 type IncomingFilteringOptions interface {
 	SpamcheckSMTP() bool
 	SpamcheckMX() bool
-	SpamlistEmails() []string
-	SpamlistHosts() []string
-	SpamlistLocalparts() []string
+	Spamlist() []string
 }
 
 // Email object
