@@ -89,40 +89,10 @@ func (s roomSettings) SpamcheckMX() bool {
 }
 
 func (s roomSettings) Spamlist() []string {
-	s.migrateSpamlist()
 	return utils.StringSlice(s.Get(roomOptionSpamlist))
 }
 
-// ContentOptions converts room display settings to content options
-func (s roomSettings) ContentOptions() *utils.ContentOptions {
-	return &utils.ContentOptions{
-		HTML:      !s.NoHTML(),
-		Sender:    !s.NoSender(),
-		Recipient: !s.NoRecipient(),
-		Subject:   !s.NoSubject(),
-		Threads:   !s.NoThreads(),
-
-		FromKey:      eventFromKey,
-		SubjectKey:   eventSubjectKey,
-		MessageIDKey: eventMessageIDkey,
-		InReplyToKey: eventInReplyToKey,
-	}
-}
-
-func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
-	config, err := b.lp.GetRoomAccountData(roomID, acRoomSettingsKey)
-	if config == nil {
-		config = map[string]string{}
-	}
-
-	return config, utils.UnwrapError(err)
-}
-
-func (b *Bot) setRoomSettings(roomID id.RoomID, cfg roomSettings) error {
-	return utils.UnwrapError(b.lp.SetRoomAccountData(roomID, acRoomSettingsKey, cfg))
-}
-
-func (s roomSettings) migrateSpamlist() {
+func (s roomSettings) migrateSpamlistSettings() {
 	uniq := map[string]struct{}{}
 	emails := utils.StringSlice(s.Get("spamlist:emails"))
 	localparts := utils.StringSlice(s.Get("spamlist:localparts"))
@@ -165,4 +135,50 @@ func (s roomSettings) migrateSpamlist() {
 		spamlist = append(spamlist, item)
 	}
 	s.Set(roomOptionSpamlist, strings.Join(spamlist, ","))
+}
+
+// ContentOptions converts room display settings to content options
+func (s roomSettings) ContentOptions() *utils.ContentOptions {
+	return &utils.ContentOptions{
+		HTML:      !s.NoHTML(),
+		Sender:    !s.NoSender(),
+		Recipient: !s.NoRecipient(),
+		Subject:   !s.NoSubject(),
+		Threads:   !s.NoThreads(),
+
+		FromKey:      eventFromKey,
+		SubjectKey:   eventSubjectKey,
+		MessageIDKey: eventMessageIDkey,
+		InReplyToKey: eventInReplyToKey,
+	}
+}
+
+func (b *Bot) getRoomSettings(roomID id.RoomID) (roomSettings, error) {
+	config, err := b.lp.GetRoomAccountData(roomID, acRoomSettingsKey)
+	if config == nil {
+		config = map[string]string{}
+	}
+
+	return config, utils.UnwrapError(err)
+}
+
+func (b *Bot) setRoomSettings(roomID id.RoomID, cfg roomSettings) error {
+	return utils.UnwrapError(b.lp.SetRoomAccountData(roomID, acRoomSettingsKey, cfg))
+}
+
+func (b *Bot) migrateRoomSettings(roomID id.RoomID) {
+	cfg, err := b.getRoomSettings(roomID)
+	if err != nil {
+		b.log.Error("cannot retrieve room settings: %v", err)
+		return
+	}
+
+	if cfg["spamlist:emails"] == "" && cfg["spamlist:localparts"] == "" && cfg["spamlist:hosts"] == "" {
+		return
+	}
+	cfg.migrateSpamlistSettings()
+	err = b.setRoomSettings(roomID, cfg)
+	if err != nil {
+		b.log.Error("cannot migrate room settings: %v", err)
+	}
 }
