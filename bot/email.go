@@ -200,7 +200,9 @@ func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.Fi
 	for _, file := range files {
 		req := file.Convert()
 		err := b.lp.SendFile(roomID, req, file.MsgType, utils.RelatesTo(!noThreads, parentID))
-		b.Error(ctx, roomID, "cannot upload file %s: %v", req.FileName, err)
+		if err != nil {
+			b.Error(ctx, roomID, "cannot upload file %s: %v", req.FileName, err)
+		}
 	}
 }
 
