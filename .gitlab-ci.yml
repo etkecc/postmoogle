@@ -4,13 +4,13 @@ stages:
 
 lint:
   stage: test
-  image: registry.gitlab.com/etke.cc/base
+  image: registry.gitlab.com/etke.cc/base/build
   script:
     - make lint
 
 unit:
   stage: test
-  image: registry.gitlab.com/etke.cc/base
+  image: registry.gitlab.com/etke.cc/base/build
   script:
     - make test
 
