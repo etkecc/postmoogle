@@ -83,7 +83,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 
 	evt := eventFromContext(ctx)
 	if name == roomOptionMailbox {
-		existingID, ok := b.GetMapping(value)
+		existingID, ok := b.getMapping(value)
 		if ok && existingID != "" && existingID != evt.RoomID {
 			b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken, kupo", value, b.domain))
 			return
