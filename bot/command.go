@@ -337,11 +337,6 @@ func (b *Bot) runSend(ctx context.Context) {
 		return
 	}
 
-	if !utils.AddressValid(to) {
-		b.Error(ctx, evt.RoomID, "email address is not valid")
-		return
-	}
-
 	cfg, err := b.getRoomSettings(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve room settings: %v", err)
@@ -354,16 +349,29 @@ func (b *Bot) runSend(ctx context.Context) {
 		return
 	}
 
-	from := mailbox + "@" + b.domain
-	ID := fmt.Sprintf("<%s@%s>", evt.ID, b.domain)
-	data := utils.
-		NewEmail(ID, "", subject, from, to, body, "", nil).
-		Compose(b.getBotSettings().DKIMPrivateKey())
-	err = b.mta.Send(from, to, data)
-	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
-		return
+	tos := strings.Split(to, ",")
+	// validate first
+	for _, to := range tos {
+		if !utils.AddressValid(to) {
+			b.Error(ctx, evt.RoomID, "email address is not valid")
+			return
+		}
 	}
 
-	b.SendNotice(ctx, evt.RoomID, "Email has been sent")
+	from := mailbox + "@" + b.domain
+	ID := fmt.Sprintf("<%s@%s>", evt.ID, b.domain)
+	for _, to := range tos {
+		data := utils.
+			NewEmail(ID, "", subject, from, to, body, "", nil).
+			Compose(b.getBotSettings().DKIMPrivateKey())
+		err = b.mta.Send(from, to, data)
+		if err != nil {
+			b.Error(ctx, evt.RoomID, "cannot send email to %s: %v", to, err)
+		} else {
+			b.SendNotice(ctx, evt.RoomID, "Email has been sent to "+to)
+		}
+	}
+	if len(tos) > 1 {
+		b.SendNotice(ctx, evt.RoomID, "All emails were sent.")
+	}
 }
