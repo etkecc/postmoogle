@@ -19,7 +19,7 @@ docker:
   only: ['main', 'tags']
   services:
     - docker:dind
-  image: jdrouet/docker-with-buildx:stable
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/jdrouet/docker-with-buildx:stable
   before_script:
     - apk --no-cache add make
   script:
