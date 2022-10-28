@@ -97,6 +97,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	}
 
 	if name == roomOptionPassword {
+		value = b.parseCommand(evt.Content.AsMessage().Body, false)[1] // get original value, without forced lower case
 		value, err = argon2pw.GenerateSaltedHash(value)
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "failed to hash password: %v", err)

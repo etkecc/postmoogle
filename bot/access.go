@@ -77,7 +77,7 @@ func (b *Bot) AllowAuth(email, password string) bool {
 		return false
 	}
 
-	roomID, ok := b.GetMapping(utils.Mailbox(email))
+	roomID, ok := b.getMapping(utils.Mailbox(email))
 	if !ok {
 		return false
 	}
