@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
 	"gitlab.com/etke.cc/go/logger"
 )
@@ -58,19 +57,6 @@ func NewServer(cfg *Config) *Server {
 	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
 		s.Debug = os.Stdout
 	}
-	// LOGIN auth method, ref: https://github.com/emersion/go-smtp/issues/41#issuecomment-493601465
-	s.EnableAuth(sasl.Login, func(conn *smtp.Conn) sasl.Server {
-		return sasl.NewLoginServer(func(username, password string) error {
-			state := conn.State()
-			session, err := receiver.Login(&state, username, password)
-			if err != nil {
-				return err
-			}
-
-			conn.SetSession(session)
-			return nil
-		})
-	})
 
 	server := &Server{
 		msa:     s,
