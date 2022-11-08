@@ -45,7 +45,7 @@ env vars
 * **POSTMOOGLE_HOMESERVER** - homeserver url, eg: `https://matrix.example.com`
 * **POSTMOOGLE_LOGIN** - user login/localpart, eg: `moogle`
 * **POSTMOOGLE_PASSWORD** - user password
-* **POSTMOOGLE_DOMAIN** - SMTP domain to listen for new emails
+* **POSTMOOGLE_DOMAINS** - space separated list of SMTP domains to listen for new emails. The first domain acts as actual domain, all other as aliases
 
 <details>
 <summary>other optional config parameters</summary>

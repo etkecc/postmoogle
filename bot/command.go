@@ -262,7 +262,7 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	msg.WriteString(" SOME_INBOX` command.\n")
 
 	msg.WriteString("You will then be able to send emails to `SOME_INBOX@")
-	msg.WriteString(b.domain)
+	msg.WriteString(b.domains[0])
 	msg.WriteString("` and have them appear in this room.")
 
 	b.SendNotice(ctx, roomID, msg.String())
@@ -301,7 +301,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 				msg.WriteString(value)
 				if cmd.key == roomOptionMailbox {
 					msg.WriteString("@")
-					msg.WriteString(b.domain)
+					msg.WriteString(b.domains[0])
 				}
 				msg.WriteString("`)")
 			}
@@ -358,8 +358,8 @@ func (b *Bot) runSend(ctx context.Context) {
 		}
 	}
 
-	from := mailbox + "@" + b.domain
-	ID := fmt.Sprintf("<%s@%s>", evt.ID, b.domain)
+	from := mailbox + "@" + b.domains[0]
+	ID := fmt.Sprintf("<%s@%s>", evt.ID, b.domains[0])
 	for _, to := range tos {
 		data := utils.
 			NewEmail(ID, "", subject, from, to, body, "", nil).

@@ -8,8 +8,8 @@ type Config struct {
 	Login string
 	// Password for login/password auth only
 	Password string
-	// Domain for SMTP
-	Domain string
+	// Domains for SMTP
+	Domains []string
 	// Port for SMTP
 	Port string
 	// RoomID of the admin room

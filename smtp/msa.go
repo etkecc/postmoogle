@@ -13,10 +13,10 @@ import (
 
 // msa is mail submission agent, implements smtp.Backend
 type msa struct {
-	log    *logger.Logger
-	domain string
-	bot    Bot
-	mta    utils.MTA
+	log     *logger.Logger
+	domains []string
+	bot     Bot
+	mta     utils.MTA
 }
 
 func (m *msa) newSession(from string, incoming bool) *msasession {
@@ -27,7 +27,7 @@ func (m *msa) newSession(from string, incoming bool) *msasession {
 		incoming: incoming,
 		log:      m.log,
 		bot:      m.bot,
-		domain:   m.domain,
+		domains:  m.domains,
 	}
 }
 

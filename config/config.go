@@ -15,7 +15,7 @@ func New() *Config {
 		Login:        env.String("login", defaultConfig.Login),
 		Password:     env.String("password", defaultConfig.Password),
 		Prefix:       env.String("prefix", defaultConfig.Prefix),
-		Domain:       env.String("domain", defaultConfig.Domain),
+		Domains:      migrateDomains("domain", "domains"),
 		Port:         env.String("port", defaultConfig.Port),
 		NoEncryption: env.Bool("noencryption"),
 		DataSecret:   env.String("data.secret", defaultConfig.DataSecret),
@@ -39,4 +39,14 @@ func New() *Config {
 	}
 
 	return cfg
+}
+
+func migrateDomains(oldKey, newKey string) []string {
+	domains := []string{}
+	old := env.String(oldKey, "")
+	if old != "" {
+		domains = append(domains, old)
+	}
+
+	return append(domains, env.Slice(newKey)...)
 }

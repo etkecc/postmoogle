@@ -55,7 +55,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		msg.WriteString("* `")
 		msg.WriteString(mailbox)
 		msg.WriteString("@")
-		msg.WriteString(b.domain)
+		msg.WriteString(b.domains[0])
 		msg.WriteString("` by ")
 		msg.WriteString(cfg.Owner())
 		msg.WriteString("\n")
@@ -202,5 +202,5 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s@%s`.", mailbox, b.domain))
+	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s@%s`.", mailbox, b.domains[0]))
 }

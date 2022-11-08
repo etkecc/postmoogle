@@ -87,7 +87,7 @@ func initBot(cfg *config.Config) {
 		log.Fatal("cannot initialize matrix bot: %v", err)
 	}
 
-	mxb, err = bot.New(lp, mxlog, cfg.Prefix, cfg.Domain, cfg.Admins)
+	mxb, err = bot.New(lp, mxlog, cfg.Prefix, cfg.Domains, cfg.Admins)
 	if err != nil {
 		// nolint // Fatal = panic, not os.Exit()
 		log.Fatal("cannot start matrix bot: %v", err)
@@ -97,7 +97,7 @@ func initBot(cfg *config.Config) {
 
 func initSMTP(cfg *config.Config) {
 	smtpserv = smtp.NewServer(&smtp.Config{
-		Domain:      cfg.Domain,
+		Domains:     cfg.Domains,
 		Port:        cfg.Port,
 		TLSCert:     cfg.TLS.Cert,
 		TLSKey:      cfg.TLS.Key,

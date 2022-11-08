@@ -19,7 +19,7 @@ import (
 // Bot represents matrix bot
 type Bot struct {
 	prefix                  string
-	domain                  string
+	domains                 []string
 	allowedUsers            []*regexp.Regexp
 	allowedAdmins           []*regexp.Regexp
 	commands                commandList
@@ -36,16 +36,16 @@ func New(
 	lp *linkpearl.Linkpearl,
 	log *logger.Logger,
 	prefix string,
-	domain string,
+	domains []string,
 	admins []string,
 ) (*Bot, error) {
 	b := &Bot{
-		prefix: prefix,
-		domain: domain,
-		rooms:  sync.Map{},
-		log:    log,
-		lp:     lp,
-		mu:     map[id.RoomID]*sync.Mutex{},
+		prefix:  prefix,
+		domains: domains,
+		rooms:   sync.Map{},
+		log:     log,
+		lp:      lp,
+		mu:      map[id.RoomID]*sync.Mutex{},
 	}
 	users, err := b.initBotUsers()
 	if err != nil {

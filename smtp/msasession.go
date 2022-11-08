@@ -19,10 +19,10 @@ import (
 // - receiving emails from remote servers, in which case: `incoming = true`
 // - sending emails from local users, in which case: `incoming = false`
 type msasession struct {
-	log    *logger.Logger
-	bot    Bot
-	mta    utils.MTA
-	domain string
+	log     *logger.Logger
+	bot     Bot
+	mta     utils.MTA
+	domains []string
 
 	ctx      context.Context
 	incoming bool
@@ -46,8 +46,16 @@ func (s *msasession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
 	s.to = to
 
+	//nolint:nestif // TODO
 	if s.incoming {
-		if utils.Hostname(to) != s.domain {
+		var domainok bool
+		for _, domain := range s.domains {
+			if utils.Hostname(to) == domain {
+				domainok = true
+				break
+			}
+		}
+		if !domainok {
 			s.log.Debug("wrong domain of %s", to)
 			return smtp.ErrAuthRequired
 		}

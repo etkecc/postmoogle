@@ -11,8 +11,8 @@ import (
 )
 
 type Config struct {
-	Domain string
-	Port   string
+	Domains []string
+	Port    string
 
 	TLSCert     string
 	TLSKey      string
@@ -39,15 +39,15 @@ func NewServer(cfg *Config) *Server {
 	log := logger.New("smtp/msa.", cfg.LogLevel)
 	sender := NewMTA(cfg.LogLevel)
 	receiver := &msa{
-		log:    log,
-		mta:    sender,
-		bot:    cfg.Bot,
-		domain: cfg.Domain,
+		log:     log,
+		mta:     sender,
+		bot:     cfg.Bot,
+		domains: cfg.Domains,
 	}
 	receiver.bot.SetMTA(sender)
 
 	s := smtp.NewServer(receiver)
-	s.Domain = cfg.Domain
+	s.Domain = cfg.Domains[0]
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = cfg.MaxSize * 1024 * 1024
