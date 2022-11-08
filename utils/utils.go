@@ -14,6 +14,22 @@ func Mailbox(email string) string {
 	return email[:index]
 }
 
+// EmailsList returns human-readable list of mailbox's emails for all available domains
+func EmailsList(mailbox string, domains []string) string {
+	var msg strings.Builder
+	count := len(domains) - 1
+	for i, domain := range domains {
+		msg.WriteString(mailbox)
+		msg.WriteString("@")
+		msg.WriteString(domain)
+		if i < count {
+			msg.WriteString(", ")
+		}
+	}
+
+	return msg.String()
+}
+
 // Hostname returns hostname part from email address
 func Hostname(email string) string {
 	return email[strings.LastIndex(email, "@")+1:]

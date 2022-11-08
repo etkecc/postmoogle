@@ -53,9 +53,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 	for _, mailbox := range slice {
 		cfg := mailboxes[mailbox]
 		msg.WriteString("* `")
-		msg.WriteString(mailbox)
-		msg.WriteString("@")
-		msg.WriteString(b.domains[0])
+		msg.WriteString(utils.EmailsList(mailbox, b.domains))
 		msg.WriteString("` by ")
 		msg.WriteString(cfg.Owner())
 		msg.WriteString("\n")
@@ -160,7 +158,7 @@ func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 
 	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf(
 		"DKIM signature is: `%s`.\n"+
-			"You need to add it to your DNS records (if not already):\n"+
+			"You need to add it to DNS records of all domains added to postmoogle (if not already):\n"+
 			"Add new DNS record with type = `TXT`, key (subdomain/from): `postmoogle._domainkey` and value (to):\n ```\n%s\n```\n"+
 			"Without that record other email servers may reject your emails as spam, kupo.\n"+
 			"To reset the signature, send `%s dkim reset`",
@@ -175,6 +173,9 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 		msg.WriteString("Currently: `")
 		if cfg.CatchAll() != "" {
 			msg.WriteString(cfg.CatchAll())
+			msg.WriteString(" (")
+			msg.WriteString(utils.EmailsList(cfg.CatchAll(), b.domains))
+			msg.WriteString(")")
 		} else {
 			msg.WriteString("not set")
 		}
@@ -202,5 +203,5 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s@%s`.", mailbox, b.domains[0]))
+	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, b.domains)))
 }
