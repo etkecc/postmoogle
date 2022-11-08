@@ -73,7 +73,14 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 
 // AllowAuth check if SMTP login (email) and password are valid
 func (b *Bot) AllowAuth(email, password string) bool {
-	if !strings.HasSuffix(email, "@"+b.domain) {
+	var suffix bool
+	for _, domain := range b.domains {
+		if strings.HasSuffix(email, "@"+domain) {
+			suffix = true
+			break
+		}
+	}
+	if !suffix {
 		return false
 	}
 

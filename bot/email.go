@@ -112,7 +112,7 @@ func (b *Bot) Send2Matrix(ctx context.Context, email *utils.Email, incoming bool
 	}
 
 	if !incoming {
-		email.MessageID = fmt.Sprintf("<%s@%s>", eventID, b.domain)
+		email.MessageID = fmt.Sprintf("<%s@%s>", eventID, b.domains[0])
 		return b.mta.Send(email.From, email.To, email.Compose(b.getBotSettings().DKIMPrivateKey()))
 	}
 	return nil
@@ -167,7 +167,7 @@ func (b *Bot) Send2Email(ctx context.Context, to, subject, body string) error {
 	if mailbox == "" {
 		return fmt.Errorf("mailbox not configured, kupo")
 	}
-	from := mailbox + "@" + b.domain
+	from := mailbox + "@" + b.domains[0]
 	pTo, pInReplyTo, pSubject := b.getParentEmail(evt)
 	inReplyTo = pInReplyTo
 	if pTo != "" && to == "" {
@@ -189,7 +189,7 @@ func (b *Bot) Send2Email(ctx context.Context, to, subject, body string) error {
 		}
 	}
 
-	ID := evt.ID.String()[1:] + "@" + b.domain
+	ID := evt.ID.String()[1:] + "@" + b.domains[0]
 	data := utils.
 		NewEmail(ID, inReplyTo, subject, from, to, body, "", nil).
 		Compose(b.getBotSettings().DKIMPrivateKey())

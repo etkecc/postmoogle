@@ -2,7 +2,7 @@ package config
 
 var defaultConfig = &Config{
 	LogLevel:  "INFO",
-	Domain:    "localhost",
+	Domains:   []string{"localhost"},
 	Port:      "25",
 	Prefix:    "!pm",
 	MaxSize:   1024,
