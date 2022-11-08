@@ -261,8 +261,8 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	msg.WriteString(roomOptionMailbox)
 	msg.WriteString(" SOME_INBOX` command.\n")
 
-	msg.WriteString("You will then be able to send emails to `SOME_INBOX@")
-	msg.WriteString(b.domains[0])
+	msg.WriteString("You will then be able to send emails to ")
+	msg.WriteString(utils.EmailsList("SOME_INBOX", b.domains))
 	msg.WriteString("` and have them appear in this room.")
 
 	b.SendNotice(ctx, roomID, msg.String())
@@ -300,8 +300,9 @@ func (b *Bot) sendHelp(ctx context.Context) {
 				msg.WriteString("(currently `")
 				msg.WriteString(value)
 				if cmd.key == roomOptionMailbox {
-					msg.WriteString("@")
-					msg.WriteString(b.domains[0])
+					msg.WriteString(" (")
+					msg.WriteString(utils.EmailsList(value, b.domains))
+					msg.WriteString(")")
 				}
 				msg.WriteString("`)")
 			}

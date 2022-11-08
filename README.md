@@ -19,6 +19,7 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] Receive attachments
 - [x] Catch-all mailbox
 - [x] Map email threads to matrix threads
+- [x] Multi-domain aliases
 
 #### deep dive
 
@@ -45,15 +46,15 @@ env vars
 * **POSTMOOGLE_HOMESERVER** - homeserver url, eg: `https://matrix.example.com`
 * **POSTMOOGLE_LOGIN** - user login/localpart, eg: `moogle`
 * **POSTMOOGLE_PASSWORD** - user password
-* **POSTMOOGLE_DOMAINS** - space separated list of SMTP domains to listen for new emails. The first domain acts as actual domain, all other as aliases
+* **POSTMOOGLE_DOMAINS** - space separated list of SMTP domains to listen for new emails. The first domain acts as the main (actual) domain, all other as aliases
 
 <details>
 <summary>other optional config parameters</summary>
 
 * **POSTMOOGLE_PORT** - SMTP port to listen for new emails
 * **POSTMOOGLE_TLS_PORT** - secure SMTP port to listen for new emails. Requires valid cert and key as well
-* **POSTMOOGLE_TLS_CERT** - path to your SSL certificate (chain)
-* **POSTMOOGLE_TLS_KEY** - path to your SSL certificate's private key
+* **POSTMOOGLE_TLS_CERT** - path to the SSL certificate (chain) of your main domain
+* **POSTMOOGLE_TLS_KEY** - path to the SSL certificate's private key of your main domain
 * **POSTMOOGLE_TLS_REQUIRED** - require TLS connection, **even** on the non-TLS port (`POSTMOOGLE_PORT`). TLS connections are always required on the TLS port (`POSTMOOGLE_TLS_PORT`) regardless of this setting.
 * **POSTMOOGLE_DATA_SECRET** - secure key (password) to encrypt account data, must be 16, 24, or 32 bytes long
 * **POSTMOOGLE_NOENCRYPTION** - disable matrix encryption (libolm) support

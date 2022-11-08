@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/raja/argon2pw"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 func (b *Bot) runStop(ctx context.Context) {
@@ -58,7 +60,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	}
 
 	if name == roomOptionMailbox {
-		value = value + "@" + b.domains[0]
+		value = utils.EmailsList(value, b.domains)
 	}
 
 	msg := fmt.Sprintf("`%s` of this room is `%s`\n"+
@@ -85,7 +87,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	if name == roomOptionMailbox {
 		existingID, ok := b.getMapping(value)
 		if ok && existingID != "" && existingID != evt.RoomID {
-			b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s@%s` already taken, kupo", value, b.domains[0]))
+			b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, b.domains)))
 			return
 		}
 	}
