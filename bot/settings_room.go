@@ -146,6 +146,7 @@ func (s roomSettings) ContentOptions() *utils.ContentOptions {
 		Subject:   !s.NoSubject(),
 		Threads:   !s.NoThreads(),
 
+		ToKey:        eventToKey,
 		FromKey:      eventFromKey,
 		SubjectKey:   eventSubjectKey,
 		MessageIDKey: eventMessageIDkey,

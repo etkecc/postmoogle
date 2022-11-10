@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"maunium.net/go/mautrix/event"
+	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
@@ -359,20 +360,49 @@ func (b *Bot) runSend(ctx context.Context) {
 		}
 	}
 
+	b.lock(evt.RoomID)
+	defer b.unlock(evt.RoomID)
+
 	from := mailbox + "@" + b.domains[0]
 	ID := fmt.Sprintf("<%s@%s>", evt.ID, b.domains[0])
 	for _, to := range tos {
-		data := utils.
-			NewEmail(ID, "", subject, from, to, body, "", nil).
-			Compose(b.getBotSettings().DKIMPrivateKey())
+		email := utils.NewEmail(ID, "", subject, from, to, body, "", nil)
+		data := email.Compose(b.getBotSettings().DKIMPrivateKey())
 		err = b.sendmail(from, to, data)
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "cannot send email to %s: %v", to, err)
 		} else {
-			b.SendNotice(ctx, evt.RoomID, "Email has been sent to "+to)
+			b.forgeSentMetadata(ctx, email, &cfg)
 		}
 	}
 	if len(tos) > 1 {
 		b.SendNotice(ctx, evt.RoomID, "All emails were sent.")
 	}
+}
+
+// forgeSentMetadata used to save metadata from !pm sent event to a separate notice message
+// because that metadata is needed to determine email thread relations
+func (b *Bot) forgeSentMetadata(ctx context.Context, email *utils.Email, cfg *roomSettings) {
+	evt := eventFromContext(ctx)
+	threadID := utils.EventParent(evt.ID, evt.Content.AsMessage())
+	content := email.Content(threadID, cfg.ContentOptions())
+	notice := format.RenderMarkdown("Email has been sent to "+email.To, true, true)
+	notice.MsgType = event.MsgNotice
+	msgContent, ok := content.Parsed.(event.MessageEventContent)
+	if !ok {
+		b.Error(ctx, evt.RoomID, "cannot parse message")
+		return
+	}
+	msgContent.Body = notice.Body
+	msgContent.FormattedBody = notice.FormattedBody
+	content.Parsed = msgContent
+	msgID, err := b.lp.Send(evt.RoomID, &content)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot parse message")
+		return
+	}
+	if threadID != "" {
+		b.setThreadID(evt.RoomID, fmt.Sprintf("<%s@%s>", msgID, b.domains[0]), threadID)
+	}
+	b.setLastEventID(evt.RoomID, threadID, msgID)
 }

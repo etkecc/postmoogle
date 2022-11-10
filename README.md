@@ -35,7 +35,7 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] SMTP client
 - [x] SMTP server (you can use Postmoogle as general purpose SMTP server to send emails from your scripts or apps)
 - [x] Send a message to matrix room with special format to send a new email, even to multiple email addresses at once
-- [ ] Reply to matrix thread sends reply into email thread
+- [x] Reply to matrix thread sends reply into email thread
 
 ## Configuration
 

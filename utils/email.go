@@ -48,6 +48,7 @@ type ContentOptions struct {
 	InReplyToKey string
 	SubjectKey   string
 	FromKey      string
+	ToKey        string
 }
 
 // AddressValid checks if email address is valid
@@ -122,6 +123,7 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 			options.InReplyToKey: e.InReplyTo,
 			options.SubjectKey:   e.Subject,
 			options.FromKey:      e.From,
+			options.ToKey:        e.To,
 		},
 		Parsed: parsed,
 	}

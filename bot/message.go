@@ -20,6 +20,9 @@ func (b *Bot) handle(ctx context.Context) {
 	message := strings.TrimSpace(content.Body)
 	cmd := b.parseCommand(message, true)
 	if cmd == nil {
+		if content.RelatesTo != nil {
+			b.SendEmailReply(ctx)
+		}
 		return
 	}
 
