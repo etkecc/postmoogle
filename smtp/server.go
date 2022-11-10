@@ -1,128 +1,86 @@
 package smtp
 
 import (
-	"crypto/tls"
-	"net"
-	"os"
-	"time"
+	"context"
+	"errors"
+	"io"
+	"strings"
 
 	"github.com/emersion/go-smtp"
+	"github.com/getsentry/sentry-go"
 	"gitlab.com/etke.cc/go/logger"
+	"gitlab.com/etke.cc/go/trysmtp"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
-type Config struct {
-	Domains []string
-	Port    string
-
-	TLSCert     string
-	TLSKey      string
-	TLSPort     string
-	TLSRequired bool
-
-	LogLevel string
-	MaxSize  int
-	Bot      Bot
+type mailServer struct {
+	bot     matrixbot
+	log     *logger.Logger
+	domains []string
 }
 
-type Server struct {
-	log  *logger.Logger
-	msa  *smtp.Server
-	errs chan error
+// Login used for outgoing mail submissions only (when you use postmoogle as smtp server in your scripts)
+func (m *mailServer) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
+	if !utils.AddressValid(username) {
+		return nil, errors.New("please, provide an email address")
+	}
 
-	port    string
-	tlsPort string
-	tlsCfg  *tls.Config
+	if !m.bot.AllowAuth(username, password) {
+		return nil, errors.New("email or password is invalid")
+	}
+
+	return &outgoingSession{
+		ctx:      sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
+		sendmail: m.SendEmail,
+		privkey:  m.bot.GetDKIMprivkey(),
+		from:     username,
+		log:      m.log,
+		domains:  m.domains,
+	}, nil
 }
 
-// NewServer creates new SMTP server
-func NewServer(cfg *Config) *Server {
-	log := logger.New("smtp/msa.", cfg.LogLevel)
-	sender := NewMTA(cfg.LogLevel)
-	receiver := &msa{
-		log:     log,
-		mta:     sender,
-		bot:     cfg.Bot,
-		domains: cfg.Domains,
-	}
-	receiver.bot.SetMTA(sender)
-
-	s := smtp.NewServer(receiver)
-	s.Domain = cfg.Domains[0]
-	s.ReadTimeout = 10 * time.Second
-	s.WriteTimeout = 10 * time.Second
-	s.MaxMessageBytes = cfg.MaxSize * 1024 * 1024
-	s.AllowInsecureAuth = !cfg.TLSRequired
-	s.EnableREQUIRETLS = cfg.TLSRequired
-	s.EnableSMTPUTF8 = true
-	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
-		s.Debug = os.Stdout
-	}
-
-	server := &Server{
-		msa:     s,
-		log:     log,
-		port:    cfg.Port,
-		tlsPort: cfg.TLSPort,
-	}
-	server.loadTLSConfig(cfg.TLSCert, cfg.TLSKey)
-	return server
+// AnonymousLogin used for incoming mail submissions only
+func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
+	return &incomingSession{
+		ctx:          sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
+		getRoomID:    m.bot.GetMapping,
+		getFilters:   m.bot.GetIFOptions,
+		receiveEmail: m.ReceiveEmail,
+		log:          m.log,
+		domains:      m.domains,
+	}, nil
 }
 
-// Start SMTP server
-func (s *Server) Start() error {
-	s.errs = make(chan error, 1)
-	go s.listen(s.port, nil)
-	if s.tlsCfg != nil {
-		go s.listen(s.tlsPort, s.tlsCfg)
-	}
-
-	return <-s.errs
-}
-
-// Stop SMTP server
-func (s *Server) Stop() {
-	err := s.msa.Close()
+// SendEmail to external mail server
+func (m *mailServer) SendEmail(from, to, data string) error {
+	m.log.Debug("Sending email from %s to %s", from, to)
+	conn, err := trysmtp.Connect(from, to)
 	if err != nil {
-		s.log.Error("cannot stop SMTP server properly: %v", err)
+		m.log.Error("cannot connect to SMTP server of %s: %v", to, err)
+		return err
 	}
-	s.log.Info("SMTP server has been stopped")
+	defer conn.Close()
+
+	var w io.WriteCloser
+	w, err = conn.Data()
+	if err != nil {
+		m.log.Error("cannot send DATA command: %v", err)
+		return err
+	}
+	defer w.Close()
+	m.log.Debug("sending DATA:\n%s", data)
+	_, err = strings.NewReader(data).WriteTo(w)
+	if err != nil {
+		m.log.Debug("cannot write DATA: %v", err)
+		return err
+	}
+
+	m.log.Debug("email has been sent")
+	return nil
 }
 
-func (s *Server) listen(port string, tlsCfg *tls.Config) {
-	var l net.Listener
-	var err error
-	if tlsCfg != nil {
-		l, err = tls.Listen("tcp", ":"+port, tlsCfg)
-	} else {
-		l, err = net.Listen("tcp", ":"+port)
-	}
-	if err != nil {
-		s.log.Error("cannot start listener on %s: %v", port, err)
-		s.errs <- err
-		return
-	}
-
-	s.log.Info("Starting SMTP server on port %s", port)
-
-	err = s.msa.Serve(l)
-	if err != nil {
-		s.log.Error("cannot start SMTP server on %s: %v", port, err)
-		s.errs <- err
-		close(s.errs)
-	}
-}
-
-func (s *Server) loadTLSConfig(cert, key string) {
-	if cert == "" || key == "" {
-		s.log.Warn("SSL certificate is not provided")
-		return
-	}
-
-	tlsCert, err := tls.LoadX509KeyPair(cert, key)
-	if err != nil {
-		s.log.Error("cannot load SSL certificate: %v", err)
-		return
-	}
-	s.tlsCfg = &tls.Config{Certificates: []tls.Certificate{tlsCert}}
-	s.msa.TLSConfig = s.tlsCfg
+// ReceiveEmail - incoming mail into matrix room
+func (m *mailServer) ReceiveEmail(ctx context.Context, email *utils.Email) error {
+	return m.bot.IncomingEmail(ctx, email)
 }

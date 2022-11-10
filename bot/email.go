@@ -26,9 +26,14 @@ const (
 	eventFromKey      = "cc.etke.postmoogle.from"
 )
 
-// SetMTA sets mail transfer agent instance to the bot
-func (b *Bot) SetMTA(mta utils.MTA) {
-	b.mta = mta
+// SetSendmail sets mail sending func to the bot
+func (b *Bot) SetSendmail(sendmail func(string, string, string) error) {
+	b.sendmail = sendmail
+}
+
+// GetDKIMprivkey returns DKIM private key
+func (b *Bot) GetDKIMprivkey() string {
+	return b.getBotSettings().DKIMPrivateKey()
 }
 
 func (b *Bot) getMapping(mailbox string) (id.RoomID, bool) {
@@ -70,9 +75,9 @@ func (b *Bot) GetIFOptions(roomID id.RoomID) utils.IncomingFilteringOptions {
 	return cfg
 }
 
-// Send email to matrix room
-func (b *Bot) Send2Matrix(ctx context.Context, email *utils.Email, incoming bool) error {
-	roomID, ok := b.GetMapping(email.Mailbox(incoming))
+// IncomingEmail sends incoming email to matrix room
+func (b *Bot) IncomingEmail(ctx context.Context, email *utils.Email) error {
+	roomID, ok := b.GetMapping(email.Mailbox(true))
 	if !ok {
 		return errors.New("room not found")
 	}
@@ -82,10 +87,6 @@ func (b *Bot) Send2Matrix(ctx context.Context, email *utils.Email, incoming bool
 	cfg, err := b.getRoomSettings(roomID)
 	if err != nil {
 		b.Error(ctx, roomID, "cannot get settings: %v", err)
-	}
-
-	if !incoming && cfg.NoSend() {
-		return errors.New("that mailbox is receive-only")
 	}
 
 	var threadID id.EventID
@@ -111,10 +112,6 @@ func (b *Bot) Send2Matrix(ctx context.Context, email *utils.Email, incoming bool
 		b.sendFiles(ctx, roomID, email.Files, cfg.NoThreads(), threadID)
 	}
 
-	if !incoming {
-		email.MessageID = fmt.Sprintf("<%s@%s>", eventID, b.domains[0])
-		return b.mta.Send(email.From, email.To, email.Compose(b.getBotSettings().DKIMPrivateKey()))
-	}
 	return nil
 }
 
@@ -156,7 +153,7 @@ func (b *Bot) getParentEmail(evt *event.Event) (string, string, string) {
 
 // Send2Email sends message to email
 // TODO rewrite to thread replies only
-func (b *Bot) Send2Email(ctx context.Context, to, subject, body string) error {
+func (b *Bot) SendEmailReply(ctx context.Context, to, subject, body string) error {
 	var inReplyTo string
 	evt := eventFromContext(ctx)
 	cfg, err := b.getRoomSettings(evt.RoomID)
@@ -193,7 +190,7 @@ func (b *Bot) Send2Email(ctx context.Context, to, subject, body string) error {
 	data := utils.
 		NewEmail(ID, inReplyTo, subject, from, to, body, "", nil).
 		Compose(b.getBotSettings().DKIMPrivateKey())
-	return b.mta.Send(from, to, data)
+	return b.sendmail(from, to, data)
 }
 
 func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.File, noThreads bool, parentID id.EventID) {

@@ -365,7 +365,7 @@ func (b *Bot) runSend(ctx context.Context) {
 		data := utils.
 			NewEmail(ID, "", subject, from, to, body, "", nil).
 			Compose(b.getBotSettings().DKIMPrivateKey())
-		err = b.mta.Send(from, to, data)
+		err = b.sendmail(from, to, data)
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "cannot send email to %s: %v", to, err)
 		} else {

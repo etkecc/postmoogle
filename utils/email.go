@@ -14,11 +14,6 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
-// MTA is mail transfer agent
-type MTA interface {
-	Send(from, to, data string) error
-}
-
 // IncomingFilteringOptions for incoming mail
 type IncomingFilteringOptions interface {
 	SpamcheckSMTP() bool

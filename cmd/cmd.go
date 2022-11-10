@@ -20,9 +20,9 @@ import (
 )
 
 var (
-	mxb      *bot.Bot
-	smtpserv *smtp.Server
-	log      *logger.Logger
+	mxb   *bot.Bot
+	smtpm *smtp.Manager
+	log   *logger.Logger
 )
 
 func main() {
@@ -45,7 +45,7 @@ func main() {
 
 	go startBot(cfg.StatusMsg)
 
-	if err := smtpserv.Start(); err != nil {
+	if err := smtpm.Start(); err != nil {
 		//nolint:gocritic
 		log.Fatal("SMTP server crashed: %v", err)
 	}
@@ -96,7 +96,7 @@ func initBot(cfg *config.Config) {
 }
 
 func initSMTP(cfg *config.Config) {
-	smtpserv = smtp.NewServer(&smtp.Config{
+	smtpm = smtp.NewManager(&smtp.Config{
 		Domains:     cfg.Domains,
 		Port:        cfg.Port,
 		TLSCert:     cfg.TLS.Cert,
@@ -132,7 +132,7 @@ func startBot(statusMsg string) {
 
 func shutdown() {
 	log.Info("Shutting down...")
-	smtpserv.Stop()
+	smtpm.Stop()
 	mxb.Stop()
 
 	sentry.Flush(5 * time.Second)

@@ -12,8 +12,6 @@ import (
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
-
-	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 // Bot represents matrix bot
@@ -24,7 +22,7 @@ type Bot struct {
 	allowedAdmins           []*regexp.Regexp
 	commands                commandList
 	rooms                   sync.Map
-	mta                     utils.MTA
+	sendmail                func(string, string, string) error
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
 	mu                      map[id.RoomID]*sync.Mutex
