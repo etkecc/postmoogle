@@ -136,6 +136,9 @@ func (e *Email) Compose(privkey string) string {
 
 	domain := strings.SplitN(e.From, "@", 2)[1]
 
+	data.WriteString("MIME-Version: 1.0")
+	data.WriteString("\r\n")
+
 	data.WriteString("Content-Type: text/plain; charset=\"UTF-8\"")
 	data.WriteString("\r\n")
 
