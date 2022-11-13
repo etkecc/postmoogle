@@ -53,8 +53,8 @@ env vars
 
 * **POSTMOOGLE_PORT** - SMTP port to listen for new emails
 * **POSTMOOGLE_TLS_PORT** - secure SMTP port to listen for new emails. Requires valid cert and key as well
-* **POSTMOOGLE_TLS_CERT** - path to the SSL certificate (chain) of your main domain
-* **POSTMOOGLE_TLS_KEY** - path to the SSL certificate's private key of your main domain
+* **POSTMOOGLE_TLS_CERT** - space separated list of paths to the SSL certificates (chain) of your domains, note that position in the cert list must match the position of the cert's key in the key list
+* **POSTMOOGLE_TLS_KEY** - space separated list of paths to the SSL certificates' private keys of your domains, note that position on the key list must match the position of cert in the cert list
 * **POSTMOOGLE_TLS_REQUIRED** - require TLS connection, **even** on the non-TLS port (`POSTMOOGLE_PORT`). TLS connections are always required on the TLS port (`POSTMOOGLE_TLS_PORT`) regardless of this setting.
 * **POSTMOOGLE_DATA_SECRET** - secure key (password) to encrypt account data, must be 16, 24, or 32 bytes long
 * **POSTMOOGLE_NOENCRYPTION** - disable matrix encryption (libolm) support

@@ -23,8 +23,8 @@ func New() *Config {
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
 		Admins:       env.Slice("admins"),
 		TLS: TLS{
-			Cert:     env.String("tls.cert", defaultConfig.TLS.Cert),
-			Key:      env.String("tls.key", defaultConfig.TLS.Key),
+			Certs:    env.Slice("tls.cert"),
+			Keys:     env.Slice("tls.key"),
 			Required: env.Bool("tls.required"),
 			Port:     env.String("tls.port", defaultConfig.TLS.Port),
 		},

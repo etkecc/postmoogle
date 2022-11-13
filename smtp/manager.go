@@ -18,8 +18,8 @@ type Config struct {
 	Domains []string
 	Port    string
 
-	TLSCert     string
-	TLSKey      string
+	TLSCerts    []string
+	TLSKeys     []string
 	TLSPort     string
 	TLSRequired bool
 
@@ -75,7 +75,7 @@ func NewManager(cfg *Config) *Manager {
 		port:    cfg.Port,
 		tlsPort: cfg.TLSPort,
 	}
-	m.loadTLSConfig(cfg.TLSCert, cfg.TLSKey)
+	m.loadTLSConfig(cfg.TLSCerts, cfg.TLSKeys)
 	return m
 }
 
@@ -123,17 +123,24 @@ func (m *Manager) listen(port string, tlsCfg *tls.Config) {
 	}
 }
 
-func (m *Manager) loadTLSConfig(cert, key string) {
-	if cert == "" || key == "" {
-		m.log.Warn("SSL certificate is not provided")
+func (m *Manager) loadTLSConfig(certs, keys []string) {
+	if len(certs) == 0 || len(keys) == 0 {
+		m.log.Warn("SSL certificates are not provided")
 		return
 	}
 
-	tlsCert, err := tls.LoadX509KeyPair(cert, key)
-	if err != nil {
-		m.log.Error("cannot load SSL certificate: %v", err)
+	certificates := make([]tls.Certificate, 0, len(certs))
+	for i, path := range certs {
+		tlsCert, err := tls.LoadX509KeyPair(path, keys[i])
+		if err != nil {
+			m.log.Error("cannot load SSL certificate: %v", err)
+		}
+		certificates = append(certificates, tlsCert)
+	}
+	if len(certificates) == 0 {
 		return
 	}
-	m.tlsCfg = &tls.Config{Certificates: []tls.Certificate{tlsCert}}
+
+	m.tlsCfg = &tls.Config{Certificates: certificates}
 	m.smtp.TLSConfig = m.tlsCfg
 }

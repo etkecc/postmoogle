@@ -47,8 +47,8 @@ type DB struct {
 
 // TLS config
 type TLS struct {
-	Cert     string
-	Key      string
+	Certs    []string
+	Keys     []string
 	Port     string
 	Required bool
 }

@@ -99,8 +99,8 @@ func initSMTP(cfg *config.Config) {
 	smtpm = smtp.NewManager(&smtp.Config{
 		Domains:     cfg.Domains,
 		Port:        cfg.Port,
-		TLSCert:     cfg.TLS.Cert,
-		TLSKey:      cfg.TLS.Key,
+		TLSCerts:    cfg.TLS.Certs,
+		TLSKeys:     cfg.TLS.Keys,
 		TLSPort:     cfg.TLS.Port,
 		TLSRequired: cfg.TLS.Required,
 		LogLevel:    cfg.LogLevel,
