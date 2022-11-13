@@ -65,6 +65,16 @@ func EventField[T comparable](content *event.Content, field string) T {
 	return v
 }
 
+func ParseContent(evt *event.Event, eventType event.Type) {
+	if evt.Content.Parsed != nil {
+		return
+	}
+	perr := evt.Content.ParseRaw(eventType)
+	if perr != nil {
+		log.Error("cannot parse event content: %v", perr)
+	}
+}
+
 // UnwrapError tries to unwrap a error into something meaningful, like mautrix.HTTPError or mautrix.RespError
 func UnwrapError(err error) error {
 	switch err.(type) {

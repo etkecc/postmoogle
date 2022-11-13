@@ -17,6 +17,7 @@ import (
 	"gitlab.com/etke.cc/postmoogle/bot"
 	"gitlab.com/etke.cc/postmoogle/config"
 	"gitlab.com/etke.cc/postmoogle/smtp"
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 var (
@@ -30,6 +31,7 @@ func main() {
 
 	cfg := config.New()
 	log = logger.New("postmoogle.", cfg.LogLevel)
+	utils.SetLogger(log)
 
 	log.Info("#############################")
 	log.Info("Postmoogle")

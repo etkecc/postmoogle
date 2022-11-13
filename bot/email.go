@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
 
@@ -125,28 +126,57 @@ type parentEmail struct {
 	Subject    string
 }
 
-func (b *Bot) getParentEmail(evt *event.Event) parentEmail {
-	var parent parentEmail
+func (b *Bot) getParentEvent(evt *event.Event) *event.Event {
 	content := evt.Content.AsMessage()
 	parentID := utils.EventParent(evt.ID, content)
 	if parentID == evt.ID {
-		return parent
+		return evt
 	}
 	parentID = b.getLastEventID(evt.RoomID, parentID)
 	parentEvt, err := b.lp.GetClient().GetEvent(evt.RoomID, parentID)
 	if err != nil {
 		b.log.Error("cannot get parent event: %v", err)
-		return parent
-	}
-	if parentEvt.Content.Parsed == nil {
-		perr := parentEvt.Content.ParseRaw(event.EventMessage)
-		if perr != nil {
-			b.log.Error("cannot parse event content: %v", perr)
-			return parent
-		}
+		return nil
 	}
 
-	parent.MessageID = utils.MessageID(parentID, b.domains[0])
+	if !b.lp.GetStore().IsEncrypted(evt.RoomID) {
+		if parentEvt.Content.Parsed == nil {
+			perr := parentEvt.Content.ParseRaw(event.EventMessage)
+			if perr != nil {
+				b.log.Error("cannot parse event content: %v", perr)
+				return nil
+			}
+		}
+		return parentEvt
+	}
+
+	utils.ParseContent(parentEvt, event.EventEncrypted)
+	decrypted, err := b.lp.GetMachine().DecryptMegolmEvent(evt)
+	if err != nil {
+		if err != crypto.IncorrectEncryptedContentType || err != crypto.UnsupportedAlgorithm {
+			b.log.Error("cannot decrypt parent event: %v", err)
+			return nil
+		}
+	}
+	if decrypted != nil {
+		parentEvt.Content = decrypted.Content
+	}
+
+	utils.ParseContent(parentEvt, event.EventMessage)
+	return parentEvt
+}
+
+func (b *Bot) getParentEmail(evt *event.Event) parentEmail {
+	var parent parentEmail
+	parentEvt := b.getParentEvent(evt)
+	if parentEvt == nil {
+		return parent
+	}
+	if parentEvt.ID == evt.ID {
+		return parent
+	}
+
+	parent.MessageID = utils.MessageID(parentEvt.ID, b.domains[0])
 	parent.From = utils.EventField[string](&parentEvt.Content, eventFromKey)
 	parent.To = utils.EventField[string](&parentEvt.Content, eventToKey)
 	parent.InReplyTo = utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
@@ -162,7 +192,7 @@ func (b *Bot) getParentEmail(evt *event.Event) parentEmail {
 	if parent.Subject != "" {
 		parent.Subject = "Re: " + parent.Subject
 	} else {
-		parent.Subject = strings.SplitN(content.Body, "\n", 1)[0]
+		parent.Subject = strings.SplitN(evt.Content.AsMessage().Body, "\n", 1)[0]
 	}
 
 	return parent
@@ -206,7 +236,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	ID := utils.MessageID(evt.ID, b.domains[0])
 	meta.References = meta.References + " " + ID
 	b.log.Debug("send email reply ID=%s meta=%+v", ID, meta)
-	email := utils.NewEmail(ID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, "", nil)
+	email := utils.NewEmail(ID, meta.InReplyTo, meta.References, meta.Subject, fromMailbox, meta.To, body, "", nil)
 	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
 
 	err = b.sendmail(meta.From, meta.To, data)

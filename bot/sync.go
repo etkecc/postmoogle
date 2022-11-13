@@ -69,6 +69,10 @@ func (b *Bot) onEncryptedMessage(evt *event.Event) {
 	if evt.Sender == b.lp.GetClient().UserID {
 		return
 	}
+	// ignore encrypted events in noecryption mode
+	if b.lp.GetMachine() == nil {
+		return
+	}
 	ctx := newContext(evt)
 
 	decrypted, err := b.lp.GetMachine().DecryptMegolmEvent(evt)

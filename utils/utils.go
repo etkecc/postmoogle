@@ -3,7 +3,16 @@ package utils
 import (
 	"strconv"
 	"strings"
+
+	"gitlab.com/etke.cc/go/logger"
 )
+
+var log *logger.Logger
+
+// SetLogger for utils
+func SetLogger(loggerInstance *logger.Logger) {
+	log = loggerInstance
+}
 
 // Mailbox returns mailbox part from email address
 func Mailbox(email string) string {
