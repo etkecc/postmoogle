@@ -364,15 +364,15 @@ func (b *Bot) runSend(ctx context.Context) {
 	defer b.unlock(evt.RoomID)
 
 	from := mailbox + "@" + b.domains[0]
-	ID := fmt.Sprintf("<%s@%s>", evt.ID, b.domains[0])
+	ID := utils.MessageID(evt.ID, b.domains[0])
 	for _, to := range tos {
-		email := utils.NewEmail(ID, "", subject, from, to, body, "", nil)
+		email := utils.NewEmail(ID, "", " "+ID, subject, from, to, body, "", nil)
 		data := email.Compose(b.getBotSettings().DKIMPrivateKey())
 		err = b.sendmail(from, to, data)
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "cannot send email to %s: %v", to, err)
 		} else {
-			b.forgeSentMetadata(ctx, email, &cfg)
+			b.saveSentMetadata(ctx, email, &cfg)
 		}
 	}
 	if len(tos) > 1 {
@@ -380,9 +380,9 @@ func (b *Bot) runSend(ctx context.Context) {
 	}
 }
 
-// forgeSentMetadata used to save metadata from !pm sent event to a separate notice message
+// saveSentMetadata used to save metadata from !pm sent event to a separate notice message
 // because that metadata is needed to determine email thread relations
-func (b *Bot) forgeSentMetadata(ctx context.Context, email *utils.Email, cfg *roomSettings) {
+func (b *Bot) saveSentMetadata(ctx context.Context, email *utils.Email, cfg *roomSettings) {
 	evt := eventFromContext(ctx)
 	threadID := utils.EventParent(evt.ID, evt.Content.AsMessage())
 	content := email.Content(threadID, cfg.ContentOptions())
@@ -402,7 +402,7 @@ func (b *Bot) forgeSentMetadata(ctx context.Context, email *utils.Email, cfg *ro
 		return
 	}
 	if threadID != "" {
-		b.setThreadID(evt.RoomID, fmt.Sprintf("<%s@%s>", msgID, b.domains[0]), threadID)
+		b.setThreadID(evt.RoomID, utils.MessageID(msgID, b.domains[0]), threadID)
 	}
 	b.setLastEventID(evt.RoomID, threadID, msgID)
 }

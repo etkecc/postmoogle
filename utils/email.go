@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"net/mail"
 	"strings"
 	"time"
@@ -23,15 +24,16 @@ type IncomingFilteringOptions interface {
 
 // Email object
 type Email struct {
-	Date      string
-	MessageID string
-	InReplyTo string
-	From      string
-	To        string
-	Subject   string
-	Text      string
-	HTML      string
-	Files     []*File
+	Date       string
+	MessageID  string
+	InReplyTo  string
+	References string
+	From       string
+	To         string
+	Subject    string
+	Text       string
+	HTML       string
+	Files      []*File
 }
 
 // ContentOptions represents settings that specify how an email is to be converted to a Matrix message
@@ -44,11 +46,12 @@ type ContentOptions struct {
 	Threads   bool
 
 	// Keys
-	MessageIDKey string
-	InReplyToKey string
-	SubjectKey   string
-	FromKey      string
-	ToKey        string
+	MessageIDKey  string
+	InReplyToKey  string
+	ReferencesKey string
+	SubjectKey    string
+	FromKey       string
+	ToKey         string
 }
 
 // AddressValid checks if email address is valid
@@ -57,18 +60,24 @@ func AddressValid(email string) bool {
 	return err == nil
 }
 
+// MessageID generates email Message-Id from matrix event ID
+func MessageID(eventID id.EventID, domain string) string {
+	return fmt.Sprintf("<%s@%s>", eventID, domain)
+}
+
 // NewEmail constructs Email object
-func NewEmail(messageID, inReplyTo, subject, from, to, text, html string, files []*File) *Email {
+func NewEmail(messageID, inReplyTo, references, subject, from, to, text, html string, files []*File) *Email {
 	email := &Email{
-		Date:      time.Now().UTC().Format(time.RFC1123Z),
-		MessageID: messageID,
-		InReplyTo: inReplyTo,
-		From:      from,
-		To:        to,
-		Subject:   subject,
-		Text:      text,
-		HTML:      html,
-		Files:     files,
+		Date:       time.Now().UTC().Format(time.RFC1123Z),
+		MessageID:  messageID,
+		InReplyTo:  inReplyTo,
+		References: references,
+		From:       from,
+		To:         to,
+		Subject:    subject,
+		Text:       text,
+		HTML:       html,
+		Files:      files,
 	}
 
 	if html != "" {
@@ -119,11 +128,12 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 
 	content := event.Content{
 		Raw: map[string]interface{}{
-			options.MessageIDKey: e.MessageID,
-			options.InReplyToKey: e.InReplyTo,
-			options.SubjectKey:   e.Subject,
-			options.FromKey:      e.From,
-			options.ToKey:        e.To,
+			options.MessageIDKey:  e.MessageID,
+			options.InReplyToKey:  e.InReplyTo,
+			options.ReferencesKey: e.References,
+			options.SubjectKey:    e.Subject,
+			options.FromKey:       e.From,
+			options.ToKey:         e.To,
 		},
 		Parsed: parsed,
 	}
@@ -164,6 +174,12 @@ func (e *Email) Compose(privkey string) string {
 	if e.InReplyTo != "" {
 		data.WriteString("In-Reply-To: ")
 		data.WriteString(e.InReplyTo)
+		data.WriteString("\r\n")
+	}
+
+	if e.References != "" {
+		data.WriteString("References: ")
+		data.WriteString(e.References)
 		data.WriteString("\r\n")
 	}
 

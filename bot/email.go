@@ -19,11 +19,12 @@ const (
 
 // event keys
 const (
-	eventMessageIDkey = "cc.etke.postmoogle.messageID"
-	eventInReplyToKey = "cc.etke.postmoogle.inReplyTo"
-	eventSubjectKey   = "cc.etke.postmoogle.subject"
-	eventFromKey      = "cc.etke.postmoogle.from"
-	eventToKey        = "cc.etke.postmoogle.to"
+	eventMessageIDkey  = "cc.etke.postmoogle.messageID"
+	eventReferencesKey = "cc.etke.postmoogle.references"
+	eventInReplyToKey  = "cc.etke.postmoogle.inReplyTo"
+	eventSubjectKey    = "cc.etke.postmoogle.subject"
+	eventFromKey       = "cc.etke.postmoogle.from"
+	eventToKey         = "cc.etke.postmoogle.to"
 )
 
 // SetSendmail sets mail sending func to the bot
@@ -115,46 +116,60 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *utils.Email) error {
 	return nil
 }
 
-func (b *Bot) getParentEmail(evt *event.Event) (string, string, string, string) {
+type parentEmail struct {
+	MessageID  string
+	From       string
+	To         string
+	InReplyTo  string
+	References string
+	Subject    string
+}
+
+func (b *Bot) getParentEmail(evt *event.Event) parentEmail {
+	var parent parentEmail
 	content := evt.Content.AsMessage()
 	parentID := utils.EventParent(evt.ID, content)
 	if parentID == evt.ID {
-		return "", "", "", ""
+		return parent
 	}
 	parentID = b.getLastEventID(evt.RoomID, parentID)
 	parentEvt, err := b.lp.GetClient().GetEvent(evt.RoomID, parentID)
 	if err != nil {
 		b.log.Error("cannot get parent event: %v", err)
-		return "", "", "", ""
+		return parent
 	}
 	if parentEvt.Content.Parsed == nil {
 		perr := parentEvt.Content.ParseRaw(event.EventMessage)
 		if perr != nil {
 			b.log.Error("cannot parse event content: %v", perr)
-			return "", "", "", ""
+			return parent
 		}
 	}
 
-	from := utils.EventField[string](&parentEvt.Content, eventFromKey)
-	to := utils.EventField[string](&parentEvt.Content, eventToKey)
-	inReplyTo := utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
-	if inReplyTo == "" {
-		inReplyTo = parentID.String()
+	parent.MessageID = utils.MessageID(parentID, b.domains[0])
+	parent.From = utils.EventField[string](&parentEvt.Content, eventFromKey)
+	parent.To = utils.EventField[string](&parentEvt.Content, eventToKey)
+	parent.InReplyTo = utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
+	parent.References = utils.EventField[string](&parentEvt.Content, eventReferencesKey)
+	if parent.InReplyTo == "" {
+		parent.InReplyTo = parent.MessageID
+	}
+	if parent.References == "" {
+		parent.References = " " + parent.MessageID
 	}
 
-	subject := utils.EventField[string](&parentEvt.Content, eventSubjectKey)
-	if subject != "" {
-		subject = "Re: " + subject
+	parent.Subject = utils.EventField[string](&parentEvt.Content, eventSubjectKey)
+	if parent.Subject != "" {
+		parent.Subject = "Re: " + parent.Subject
 	} else {
-		subject = strings.SplitN(content.Body, "\n", 1)[0]
+		parent.Subject = strings.SplitN(content.Body, "\n", 1)[0]
 	}
 
-	return from, to, inReplyTo, subject
+	return parent
 }
 
 // SendEmailReply sends replies from matrix thread to email thread
 func (b *Bot) SendEmailReply(ctx context.Context) {
-	var inReplyTo string
 	evt := eventFromContext(ctx)
 	cfg, err := b.getRoomSettings(evt.RoomID)
 	if err != nil {
@@ -169,35 +184,37 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 
 	b.lock(evt.RoomID)
 	defer b.unlock(evt.RoomID)
+
 	fromMailbox := mailbox + "@" + b.domains[0]
-	from, to, inReplyTo, subject := b.getParentEmail(evt)
+	meta := b.getParentEmail(evt)
 	// when email was sent from matrix and reply was sent from matrix again
-	if fromMailbox != from {
-		to = from
+	if fromMailbox != meta.From {
+		meta.To = meta.From
 	}
 
-	if to == "" {
+	if meta.To == "" {
 		b.Error(ctx, evt.RoomID, "cannot find parent email and continue the thread. Please, start a new email thread")
 		return
 	}
 
 	content := evt.Content.AsMessage()
-	if subject == "" {
-		subject = strings.SplitN(content.Body, "\n", 1)[0]
+	if meta.Subject == "" {
+		meta.Subject = strings.SplitN(content.Body, "\n", 1)[0]
 	}
 	body := content.Body
 
-	ID := evt.ID.String()[1:] + "@" + b.domains[0]
-	b.log.Debug("send email reply ID=%s from=%s to=%s inReplyTo=%s subject=%s body=%s", ID, from, to, inReplyTo, subject, body)
-	data := utils.
-		NewEmail(ID, inReplyTo, subject, from, to, body, "", nil).
-		Compose(b.getBotSettings().DKIMPrivateKey())
+	ID := utils.MessageID(evt.ID, b.domains[0])
+	meta.References = meta.References + " " + ID
+	b.log.Debug("send email reply ID=%s meta=%+v", ID, meta)
+	email := utils.NewEmail(ID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, "", nil)
+	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
 
-	err = b.sendmail(from, to, data)
+	err = b.sendmail(meta.From, meta.To, data)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
 		return
 	}
+	b.saveSentMetadata(ctx, email, &cfg)
 }
 
 func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.File, noThreads bool, parentID id.EventID) {

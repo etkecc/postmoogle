@@ -80,6 +80,7 @@ func (s *incomingSession) Data(r io.Reader) error {
 	email := utils.NewEmail(
 		eml.GetHeader("Message-Id"),
 		eml.GetHeader("In-Reply-To"),
+		eml.GetHeader("References"),
 		eml.GetHeader("Subject"),
 		s.from,
 		s.to,
@@ -132,6 +133,7 @@ func (s *outgoingSession) Data(r io.Reader) error {
 	email := utils.NewEmail(
 		eml.GetHeader("Message-Id"),
 		eml.GetHeader("In-Reply-To"),
+		eml.GetHeader("References"),
 		eml.GetHeader("Subject"),
 		s.from,
 		s.to,
