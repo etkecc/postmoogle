@@ -289,16 +289,13 @@ func (b *Bot) getThreadID(roomID id.RoomID, messageID string, references string)
 
 	for _, refID := range refs {
 		key := acMessagePrefix + "." + refID
-		data := map[string]id.EventID{}
-		err := b.lp.GetClient().GetRoomAccountData(roomID, key, &data)
+		data, err := b.lp.GetRoomAccountData(roomID, key)
 		if err != nil {
-			if !strings.Contains(err.Error(), "M_NOT_FOUND") {
-				b.log.Error("cannot retrieve account data %s: %v", key, err)
-				continue
-			}
+			b.log.Error("cannot retrieve thread ID from %s: %v", key, err)
+			continue
 		}
 		if data["eventID"] != "" {
-			return data["eventID"]
+			return id.EventID(data["eventID"])
 		}
 	}
 
@@ -307,42 +304,30 @@ func (b *Bot) getThreadID(roomID id.RoomID, messageID string, references string)
 
 func (b *Bot) setThreadID(roomID id.RoomID, messageID string, eventID id.EventID) {
 	key := acMessagePrefix + "." + messageID
-	data := map[string]id.EventID{
-		"eventID": eventID,
-	}
-
-	err := b.lp.GetClient().SetRoomAccountData(roomID, key, data)
+	err := b.lp.SetRoomAccountData(roomID, key, map[string]string{"eventID": eventID.String()})
 	if err != nil {
-		if !strings.Contains(err.Error(), "M_NOT_FOUND") {
-			b.log.Error("cannot save account data %s: %v", key, err)
-		}
+		b.log.Error("cannot save thread ID to %s: %v", key, err)
 	}
 }
 
 func (b *Bot) getLastEventID(roomID id.RoomID, threadID id.EventID) id.EventID {
 	key := acLastEventPrefix + "." + threadID.String()
-	data := map[string]id.EventID{}
-	err := b.lp.GetClient().GetRoomAccountData(roomID, key, &data)
+	data, err := b.lp.GetRoomAccountData(roomID, key)
 	if err != nil {
-		if !strings.Contains(err.Error(), "M_NOT_FOUND") {
-			b.log.Error("cannot retrieve account data %s: %v", key, err)
-			return threadID
-		}
+		b.log.Error("cannot retrieve last event ID from %s: %v", key, err)
+		return threadID
+	}
+	if data["eventID"] != "" {
+		return id.EventID(data["eventID"])
 	}
 
-	return data["eventID"]
+	return threadID
 }
 
 func (b *Bot) setLastEventID(roomID id.RoomID, threadID id.EventID, eventID id.EventID) {
 	key := acLastEventPrefix + "." + threadID.String()
-	data := map[string]id.EventID{
-		"eventID": eventID,
-	}
-
-	err := b.lp.GetClient().SetRoomAccountData(roomID, key, data)
+	err := b.lp.SetRoomAccountData(roomID, key, map[string]string{"eventID": eventID.String()})
 	if err != nil {
-		if !strings.Contains(err.Error(), "M_NOT_FOUND") {
-			b.log.Error("cannot save account data %s: %v", key, err)
-		}
+		b.log.Error("cannot save thread ID to %s: %v", key, err)
 	}
 }
