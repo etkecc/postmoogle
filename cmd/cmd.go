@@ -10,6 +10,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/mileusna/crontab"
 	"gitlab.com/etke.cc/go/logger"
 	"gitlab.com/etke.cc/linkpearl"
 	lpcfg "gitlab.com/etke.cc/linkpearl/config"
@@ -22,6 +23,7 @@ import (
 
 var (
 	mxb   *bot.Bot
+	cron  *crontab.Crontab
 	smtpm *smtp.Manager
 	log   *logger.Logger
 )
@@ -42,6 +44,7 @@ func main() {
 	initSentry(cfg)
 	initBot(cfg)
 	initSMTP(cfg)
+	initCron()
 	initShutdown(quit)
 	defer recovery()
 
@@ -109,6 +112,15 @@ func initSMTP(cfg *config.Config) {
 		MaxSize:     cfg.MaxSize,
 		Bot:         mxb,
 	})
+}
+
+func initCron() {
+	cron = crontab.New()
+
+	err := cron.AddJob("* * * * *", mxb.ProcessQueue)
+	if err != nil {
+		log.Error("cannot start ProcessQueue cronjob: %v", err)
+	}
 }
 
 func initShutdown(quit chan struct{}) {

@@ -59,6 +59,25 @@ func SanitizeBoolString(str string) string {
 	return strconv.FormatBool(Bool(str))
 }
 
+// Int converts string to integer
+func Int(str string) int {
+	if str == "" {
+		return 0
+	}
+
+	i, err := strconv.Atoi(str)
+	if err != nil {
+		return 0
+	}
+
+	return i
+}
+
+// SanitizeBoolString converts string to integer and back to string
+func SanitizeIntString(str string) string {
+	return strconv.Itoa(Int(str))
+}
+
 // StringSlice converts comma-separated string to slice
 func StringSlice(str string) []string {
 	if str == "" {

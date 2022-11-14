@@ -15,6 +15,7 @@ import (
 
 // account data keys
 const (
+	acQueueKey        = "cc.etke.postmoogle.mailqueue"
 	acMessagePrefix   = "cc.etke.postmoogle.message"
 	acLastEventPrefix = "cc.etke.postmoogle.last"
 )
@@ -32,6 +33,21 @@ const (
 // SetSendmail sets mail sending func to the bot
 func (b *Bot) SetSendmail(sendmail func(string, string, string) error) {
 	b.sendmail = sendmail
+}
+
+// Sendmail tries to send email immediately, but if it gets 4xx error (greylisting),
+// the email will be added to the queue and retried several times after that
+func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) error {
+	err := b.sendmail(from, to, data)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "45") {
+			b.log.Debug("email %s (from=%s to=%s) was added to the queue: %v", eventID, from, to, err)
+			return b.enqueueEmail(eventID.String(), from, to, data)
+		}
+		return err
+	}
+
+	return nil
 }
 
 // GetDKIMprivkey returns DKIM private key
@@ -89,8 +105,8 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *utils.Email) error {
 		b.Error(ctx, roomID, "cannot get settings: %v", err)
 	}
 
-	b.lock(roomID)
-	defer b.unlock(roomID)
+	b.lock(roomID.String())
+	defer b.unlock(roomID.String())
 
 	var threadID id.EventID
 	if email.InReplyTo != "" || email.References != "" {
@@ -117,6 +133,56 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *utils.Email) error {
 	}
 
 	return nil
+}
+
+// SendEmailReply sends replies from matrix thread to email thread
+func (b *Bot) SendEmailReply(ctx context.Context) {
+	evt := eventFromContext(ctx)
+	cfg, err := b.getRoomSettings(evt.RoomID)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot retrieve room settings: %v", err)
+		return
+	}
+	mailbox := cfg.Mailbox()
+	if mailbox == "" {
+		b.Error(ctx, evt.RoomID, "mailbox is not configured, kupo")
+		return
+	}
+
+	b.lock(evt.RoomID.String())
+	defer b.unlock(evt.RoomID.String())
+
+	fromMailbox := mailbox + "@" + b.domains[0]
+	meta := b.getParentEmail(evt)
+	// when email was sent from matrix and reply was sent from matrix again
+	if fromMailbox != meta.From {
+		meta.To = meta.From
+	}
+
+	if meta.To == "" {
+		b.Error(ctx, evt.RoomID, "cannot find parent email and continue the thread. Please, start a new email thread")
+		return
+	}
+
+	meta.ThreadID = b.getThreadID(evt.RoomID, meta.InReplyTo, meta.References)
+	content := evt.Content.AsMessage()
+	if meta.Subject == "" {
+		meta.Subject = strings.SplitN(content.Body, "\n", 1)[0]
+	}
+	body := content.Body
+
+	ID := utils.MessageID(evt.ID, b.domains[0])
+	meta.References = meta.References + " " + ID
+	b.log.Debug("send email reply ID=%s meta=%+v", ID, meta)
+	email := utils.NewEmail(ID, meta.InReplyTo, meta.References, meta.Subject, fromMailbox, meta.To, body, "", nil)
+	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
+
+	err = b.Sendmail(evt.ID, meta.From, meta.To, data)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
+		return
+	}
+	b.saveSentMetadata(ctx, meta.ThreadID, email, &cfg)
 }
 
 type parentEmail struct {
@@ -194,56 +260,6 @@ func (b *Bot) getParentEmail(evt *event.Event) parentEmail {
 	}
 
 	return parent
-}
-
-// SendEmailReply sends replies from matrix thread to email thread
-func (b *Bot) SendEmailReply(ctx context.Context) {
-	evt := eventFromContext(ctx)
-	cfg, err := b.getRoomSettings(evt.RoomID)
-	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot retrieve room settings: %v", err)
-		return
-	}
-	mailbox := cfg.Mailbox()
-	if mailbox == "" {
-		b.Error(ctx, evt.RoomID, "mailbox is not configured, kupo")
-		return
-	}
-
-	b.lock(evt.RoomID)
-	defer b.unlock(evt.RoomID)
-
-	fromMailbox := mailbox + "@" + b.domains[0]
-	meta := b.getParentEmail(evt)
-	// when email was sent from matrix and reply was sent from matrix again
-	if fromMailbox != meta.From {
-		meta.To = meta.From
-	}
-
-	if meta.To == "" {
-		b.Error(ctx, evt.RoomID, "cannot find parent email and continue the thread. Please, start a new email thread")
-		return
-	}
-
-	meta.ThreadID = b.getThreadID(evt.RoomID, meta.InReplyTo, meta.References)
-	content := evt.Content.AsMessage()
-	if meta.Subject == "" {
-		meta.Subject = strings.SplitN(content.Body, "\n", 1)[0]
-	}
-	body := content.Body
-
-	ID := utils.MessageID(evt.ID, b.domains[0])
-	meta.References = meta.References + " " + ID
-	b.log.Debug("send email reply ID=%s meta=%+v", ID, meta)
-	email := utils.NewEmail(ID, meta.InReplyTo, meta.References, meta.Subject, fromMailbox, meta.To, body, "", nil)
-	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
-
-	err = b.sendmail(meta.From, meta.To, data)
-	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
-		return
-	}
-	b.saveSentMetadata(ctx, meta.ThreadID, email, &cfg)
 }
 
 // saveSentMetadata used to save metadata from !pm sent and thread reply events to a separate notice message

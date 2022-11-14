@@ -13,14 +13,16 @@ import (
 )
 
 const (
-	commandHelp      = "help"
-	commandStop      = "stop"
-	commandSend      = "send"
-	commandDKIM      = "dkim"
-	commandCatchAll  = botOptionCatchAll
-	commandUsers     = botOptionUsers
-	commandDelete    = "delete"
-	commandMailboxes = "mailboxes"
+	commandHelp       = "help"
+	commandStop       = "stop"
+	commandSend       = "send"
+	commandDKIM       = "dkim"
+	commandCatchAll   = botOptionCatchAll
+	commandUsers      = botOptionUsers
+	commandQueueItems = botOptionQueueItems
+	commandQueueTries = botOptionQueueTries
+	commandDelete     = "delete"
+	commandMailboxes  = "mailboxes"
 )
 
 type (
@@ -179,6 +181,18 @@ func (b *Bot) initCommands() commandList {
 		{
 			key:         commandCatchAll,
 			description: "Get or set catch-all mailbox",
+			allowed:     b.allowAdmin,
+		},
+		{
+			key:         commandQueueItems,
+			description: "max amount of emails to process on each queue check",
+			sanitizer:   utils.SanitizeIntString,
+			allowed:     b.allowAdmin,
+		},
+		{
+			key:         commandQueueTries,
+			description: "max amount of tries per email in queue before removal",
+			sanitizer:   utils.SanitizeIntString,
 			allowed:     b.allowAdmin,
 		},
 		{
@@ -359,8 +373,8 @@ func (b *Bot) runSend(ctx context.Context) {
 		}
 	}
 
-	b.lock(evt.RoomID)
-	defer b.unlock(evt.RoomID)
+	b.lock(evt.RoomID.String())
+	defer b.unlock(evt.RoomID.String())
 
 	from := mailbox + "@" + b.domains[0]
 	ID := utils.MessageID(evt.ID, b.domains[0])

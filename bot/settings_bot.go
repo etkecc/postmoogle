@@ -15,6 +15,8 @@ const (
 	botOptionCatchAll       = "catch-all"
 	botOptionDKIMSignature  = "dkim.pub"
 	botOptionDKIMPrivateKey = "dkim.pem"
+	botOptionQueueItems     = "queue:items"
+	botOptionQueueTries     = "queue:tries"
 )
 
 type botSettings map[string]string
@@ -56,6 +58,16 @@ func (s botSettings) DKIMSignature() string {
 // DKIMPrivateKey keep it secret
 func (s botSettings) DKIMPrivateKey() string {
 	return s.Get(botOptionDKIMPrivateKey)
+}
+
+// QueueItems option
+func (s botSettings) QueueItems() int {
+	return utils.Int(s.Get(botOptionQueueItems))
+}
+
+// QueueTries option
+func (s botSettings) QueueTries() int {
+	return utils.Int(s.Get(botOptionQueueTries))
 }
 
 func (b *Bot) initBotUsers() ([]string, error) {
