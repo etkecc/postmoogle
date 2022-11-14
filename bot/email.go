@@ -92,8 +92,8 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *utils.Email) error {
 	defer b.unlock(roomID)
 
 	var threadID id.EventID
-	if email.InReplyTo != "" && !cfg.NoThreads() {
-		threadID = b.getThreadID(roomID, email.InReplyTo)
+	if email.InReplyTo != "" || email.References != "" {
+		threadID = b.getThreadID(roomID, email.InReplyTo, email.References)
 		if threadID != "" {
 			b.setThreadID(roomID, email.MessageID, threadID)
 		}
@@ -104,11 +104,9 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *utils.Email) error {
 		return utils.UnwrapError(serr)
 	}
 
-	if threadID == "" && !cfg.NoThreads() {
-		b.setThreadID(roomID, email.MessageID, eventID)
-		threadID = eventID
-	}
+	b.setThreadID(roomID, email.MessageID, eventID)
 	b.setLastEventID(roomID, threadID, eventID)
+	threadID = eventID
 
 	if !cfg.NoFiles() {
 		b.sendFiles(ctx, roomID, email.Files, cfg.NoThreads(), threadID)
@@ -257,18 +255,28 @@ func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.Fi
 	}
 }
 
-func (b *Bot) getThreadID(roomID id.RoomID, messageID string) id.EventID {
-	key := acMessagePrefix + "." + messageID
-	data := map[string]id.EventID{}
-	err := b.lp.GetClient().GetRoomAccountData(roomID, key, &data)
-	if err != nil {
-		if !strings.Contains(err.Error(), "M_NOT_FOUND") {
-			b.log.Error("cannot retrieve account data %s: %v", key, err)
-			return ""
+func (b *Bot) getThreadID(roomID id.RoomID, messageID string, references string) id.EventID {
+	refs := []string{messageID}
+	if references != "" {
+		refs = append(refs, strings.Split(references, " ")...)
+	}
+
+	for _, refID := range refs {
+		key := acMessagePrefix + "." + refID
+		data := map[string]id.EventID{}
+		err := b.lp.GetClient().GetRoomAccountData(roomID, key, &data)
+		if err != nil {
+			if !strings.Contains(err.Error(), "M_NOT_FOUND") {
+				b.log.Error("cannot retrieve account data %s: %v", key, err)
+				continue
+			}
+		}
+		if data["eventID"] != "" {
+			return data["eventID"]
 		}
 	}
 
-	return data["eventID"]
+	return ""
 }
 
 func (b *Bot) setThreadID(roomID id.RoomID, messageID string, eventID id.EventID) {
