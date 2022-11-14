@@ -7,6 +7,7 @@ import (
 
 	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/event"
+	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
@@ -103,8 +104,11 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *utils.Email) error {
 	if serr != nil {
 		return utils.UnwrapError(serr)
 	}
+	if threadID == "" {
+		threadID = eventID
+	}
 
-	b.setThreadID(roomID, email.MessageID, eventID)
+	b.setThreadID(roomID, email.MessageID, threadID)
 	b.setLastEventID(roomID, threadID, eventID)
 	threadID = eventID
 
@@ -117,6 +121,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *utils.Email) error {
 
 type parentEmail struct {
 	MessageID  string
+	ThreadID   id.EventID
 	From       string
 	To         string
 	InReplyTo  string
@@ -124,28 +129,25 @@ type parentEmail struct {
 	Subject    string
 }
 
-func (b *Bot) getParentEvent(evt *event.Event) *event.Event {
+func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 	content := evt.Content.AsMessage()
-	parentID := utils.EventParent(evt.ID, content)
-	if parentID == evt.ID {
-		return evt
+	threadID := utils.EventParent(evt.ID, content)
+	if threadID == evt.ID {
+		return threadID, evt
 	}
-	parentID = b.getLastEventID(evt.RoomID, parentID)
-	parentEvt, err := b.lp.GetClient().GetEvent(evt.RoomID, parentID)
+	lastEventID := b.getLastEventID(evt.RoomID, threadID)
+	if lastEventID == evt.ID {
+		return threadID, evt
+	}
+	parentEvt, err := b.lp.GetClient().GetEvent(evt.RoomID, lastEventID)
 	if err != nil {
 		b.log.Error("cannot get parent event: %v", err)
-		return nil
+		return threadID, nil
 	}
 
 	if !b.lp.GetStore().IsEncrypted(evt.RoomID) {
-		if parentEvt.Content.Parsed == nil {
-			perr := parentEvt.Content.ParseRaw(event.EventMessage)
-			if perr != nil {
-				b.log.Error("cannot parse event content: %v", perr)
-				return nil
-			}
-		}
-		return parentEvt
+		utils.ParseContent(parentEvt, event.EventMessage)
+		return threadID, parentEvt
 	}
 
 	utils.ParseContent(parentEvt, event.EventEncrypted)
@@ -153,20 +155,18 @@ func (b *Bot) getParentEvent(evt *event.Event) *event.Event {
 	if err != nil {
 		if err != crypto.IncorrectEncryptedContentType || err != crypto.UnsupportedAlgorithm {
 			b.log.Error("cannot decrypt parent event: %v", err)
-			return nil
+			return threadID, nil
 		}
 	}
-	if decrypted != nil {
-		parentEvt.Content = decrypted.Content
-	}
 
-	utils.ParseContent(parentEvt, event.EventMessage)
-	return parentEvt
+	utils.ParseContent(decrypted, event.EventMessage)
+	return threadID, decrypted
 }
 
 func (b *Bot) getParentEmail(evt *event.Event) parentEmail {
 	var parent parentEmail
-	parentEvt := b.getParentEvent(evt)
+	threadID, parentEvt := b.getParentEvent(evt)
+	parent.ThreadID = threadID
 	if parentEvt == nil {
 		return parent
 	}
@@ -225,6 +225,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		return
 	}
 
+	meta.ThreadID = b.getThreadID(evt.RoomID, meta.InReplyTo, meta.References)
 	content := evt.Content.AsMessage()
 	if meta.Subject == "" {
 		meta.Subject = strings.SplitN(content.Body, "\n", 1)[0]
@@ -242,7 +243,32 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
 		return
 	}
-	b.saveSentMetadata(ctx, email, &cfg)
+	b.saveSentMetadata(ctx, meta.ThreadID, email, &cfg)
+}
+
+// saveSentMetadata used to save metadata from !pm sent and thread reply events to a separate notice message
+// because that metadata is needed to determine email thread relations
+func (b *Bot) saveSentMetadata(ctx context.Context, threadID id.EventID, email *utils.Email, cfg *roomSettings) {
+	evt := eventFromContext(ctx)
+	content := email.Content(threadID, cfg.ContentOptions())
+	notice := format.RenderMarkdown("Email has been sent to "+email.To, true, true)
+	notice.MsgType = event.MsgNotice
+	msgContent, ok := content.Parsed.(event.MessageEventContent)
+	if !ok {
+		b.Error(ctx, evt.RoomID, "cannot parse message")
+		return
+	}
+	msgContent.Body = notice.Body
+	msgContent.FormattedBody = notice.FormattedBody
+	content.Parsed = msgContent
+	msgID, err := b.lp.Send(evt.RoomID, &content)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot send notice: %v", err)
+		return
+	}
+	b.setThreadID(evt.RoomID, utils.MessageID(evt.ID, b.domains[0]), threadID)
+	b.setThreadID(evt.RoomID, utils.MessageID(msgID, b.domains[0]), threadID)
+	b.setLastEventID(evt.RoomID, threadID, msgID)
 }
 
 func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.File, noThreads bool, parentID id.EventID) {
