@@ -21,8 +21,8 @@ require (
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/go/trysmtp v1.0.0
 	gitlab.com/etke.cc/go/validator v1.0.3
-	gitlab.com/etke.cc/linkpearl v0.0.0-20221012104738-a977907db8b9
-	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b
+	gitlab.com/etke.cc/linkpearl v0.0.0-20221115132622-75502dc94cc3
+	golang.org/x/net v0.2.0
 	maunium.net/go/mautrix v0.12.2
 )
 
@@ -32,7 +32,7 @@ require (
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.1 // indirect
 	github.com/jaytaylor/html2text v0.0.0-20200412013138-3577fbdbcff7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
@@ -48,9 +48,9 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yuin/goldmark v1.5.2 // indirect
-	golang.org/x/crypto v0.0.0-20221012134737-56aed061732a // indirect
-	golang.org/x/sys v0.0.0-20221013171732-95e765b1cc43 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/crypto v0.2.0 // indirect
+	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	maunium.net/go/maulogger/v2 v2.3.2 // indirect
 )

@@ -158,6 +158,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	if fromMailbox != meta.From {
 		meta.To = meta.From
 	}
+	meta.From = fromMailbox
 
 	if meta.To == "" {
 		b.Error(ctx, evt.RoomID, "cannot find parent email and continue the thread. Please, start a new email thread")
@@ -171,10 +172,10 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	}
 	body := content.Body
 
-	ID := utils.MessageID(evt.ID, b.domains[0])
-	meta.References = meta.References + " " + ID
-	b.log.Debug("send email reply ID=%s meta=%+v", ID, meta)
-	email := utils.NewEmail(ID, meta.InReplyTo, meta.References, meta.Subject, fromMailbox, meta.To, body, "", nil)
+	meta.MessageID = utils.MessageID(evt.ID, b.domains[0])
+	meta.References = meta.References + " " + meta.MessageID
+	b.log.Debug("send email reply: %+v", meta)
+	email := utils.NewEmail(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, "", nil)
 	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
 
 	queued, err := b.Sendmail(evt.ID, meta.From, meta.To, data)
