@@ -263,6 +263,8 @@ If you want to change them - check available options in the help message (`!pm h
 
 * **!pm dkim** - Get DKIM signature
 * **!pm catch-all** - Configure catch-all mailbox
+* **!pm queue:batch** - max amount of emails to process on each queue check
+* **!pm queue:retries** - max amount of tries per email in queue before removal
 * **!pm users** - Get or set allowed users patterns
 * **!pm mailboxes** - Show the list of all mailboxes
 * **!pm delete** &lt;mailbox&gt; - Delete specific mailbox

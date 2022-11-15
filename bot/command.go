@@ -13,14 +13,16 @@ import (
 )
 
 const (
-	commandHelp      = "help"
-	commandStop      = "stop"
-	commandSend      = "send"
-	commandDKIM      = "dkim"
-	commandCatchAll  = botOptionCatchAll
-	commandUsers     = botOptionUsers
-	commandDelete    = "delete"
-	commandMailboxes = "mailboxes"
+	commandHelp         = "help"
+	commandStop         = "stop"
+	commandSend         = "send"
+	commandDKIM         = "dkim"
+	commandCatchAll     = botOptionCatchAll
+	commandUsers        = botOptionUsers
+	commandQueueBatch   = botOptionQueueBatch
+	commandQueueRetries = botOptionQueueRetries
+	commandDelete       = "delete"
+	commandMailboxes    = "mailboxes"
 )
 
 type (
@@ -179,6 +181,18 @@ func (b *Bot) initCommands() commandList {
 		{
 			key:         commandCatchAll,
 			description: "Get or set catch-all mailbox",
+			allowed:     b.allowAdmin,
+		},
+		{
+			key:         commandQueueBatch,
+			description: "max amount of emails to process on each queue check",
+			sanitizer:   utils.SanitizeIntString,
+			allowed:     b.allowAdmin,
+		},
+		{
+			key:         commandQueueRetries,
+			description: "max amount of tries per email in queue before removal",
+			sanitizer:   utils.SanitizeIntString,
 			allowed:     b.allowAdmin,
 		},
 		{
@@ -359,20 +373,25 @@ func (b *Bot) runSend(ctx context.Context) {
 		}
 	}
 
-	b.lock(evt.RoomID)
-	defer b.unlock(evt.RoomID)
+	b.lock(evt.RoomID.String())
+	defer b.unlock(evt.RoomID.String())
 
 	from := mailbox + "@" + b.domains[0]
 	ID := utils.MessageID(evt.ID, b.domains[0])
 	for _, to := range tos {
 		email := utils.NewEmail(ID, "", " "+ID, subject, from, to, body, "", nil)
 		data := email.Compose(b.getBotSettings().DKIMPrivateKey())
-		err = b.sendmail(from, to, data)
+		queued, err := b.Sendmail(evt.ID, from, to, data)
+		if queued {
+			b.log.Error("cannot send email: %v", err)
+			b.saveSentMetadata(ctx, queued, evt.ID, email, &cfg)
+			continue
+		}
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "cannot send email to %s: %v", to, err)
-		} else {
-			b.saveSentMetadata(ctx, evt.ID, email, &cfg)
+			continue
 		}
+		b.saveSentMetadata(ctx, false, evt.ID, email, &cfg)
 	}
 	if len(tos) > 1 {
 		b.SendNotice(ctx, evt.RoomID, "All emails were sent.")

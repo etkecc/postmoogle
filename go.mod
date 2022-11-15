@@ -13,6 +13,7 @@ require (
 	github.com/jhillyerd/enmime v0.10.0
 	github.com/lib/pq v1.10.7
 	github.com/mattn/go-sqlite3 v1.14.15
+	github.com/mileusna/crontab v1.2.0
 	github.com/raja/argon2pw v1.0.2-0.20210910183755-a391af63bd39
 	gitlab.com/etke.cc/go/env v1.0.0
 	gitlab.com/etke.cc/go/logger v1.1.0

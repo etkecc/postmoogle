@@ -2,25 +2,23 @@ package bot
 
 import (
 	"sync"
-
-	"maunium.net/go/mautrix/id"
 )
 
-func (b *Bot) lock(roomID id.RoomID) {
-	_, ok := b.mu[roomID]
+func (b *Bot) lock(key string) {
+	_, ok := b.mu[key]
 	if !ok {
-		b.mu[roomID] = &sync.Mutex{}
+		b.mu[key] = &sync.Mutex{}
 	}
 
-	b.mu[roomID].Lock()
+	b.mu[key].Lock()
 }
 
-func (b *Bot) unlock(roomID id.RoomID) {
-	_, ok := b.mu[roomID]
+func (b *Bot) unlock(key string) {
+	_, ok := b.mu[key]
 	if !ok {
 		return
 	}
 
-	b.mu[roomID].Unlock()
-	delete(b.mu, roomID)
+	b.mu[key].Unlock()
+	delete(b.mu, key)
 }

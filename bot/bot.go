@@ -25,7 +25,7 @@ type Bot struct {
 	sendmail                func(string, string, string) error
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
-	mu                      map[id.RoomID]*sync.Mutex
+	mu                      map[string]*sync.Mutex
 	handledMembershipEvents sync.Map
 }
 
@@ -43,7 +43,7 @@ func New(
 		rooms:   sync.Map{},
 		log:     log,
 		lp:      lp,
-		mu:      map[id.RoomID]*sync.Mutex{},
+		mu:      map[string]*sync.Mutex{},
 	}
 	users, err := b.initBotUsers()
 	if err != nil {
