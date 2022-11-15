@@ -230,7 +230,7 @@ func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 		return threadID, parentEvt
 	}
 
-	decrypted, err := b.lp.GetMachine().DecryptMegolmEvent(evt)
+	decrypted, err := b.lp.GetMachine().DecryptMegolmEvent(parentEvt)
 	if err != nil {
 		b.log.Error("cannot decrypt parent event: %v", err)
 		return threadID, nil
