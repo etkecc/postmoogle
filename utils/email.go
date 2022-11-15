@@ -135,7 +135,7 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 			options.FromKey:       e.From,
 			options.ToKey:         e.To,
 		},
-		Parsed: parsed,
+		Parsed: &parsed,
 	}
 	return &content
 }

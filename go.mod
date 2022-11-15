@@ -2,7 +2,7 @@ module gitlab.com/etke.cc/postmoogle
 
 go 1.18
 
-// replace gitlab.com/etke.cc/linkpearl => ../linkpearl
+replace gitlab.com/etke.cc/linkpearl => ../linkpearl
 
 require (
 	github.com/emersion/go-msgauth v0.6.6
@@ -21,7 +21,7 @@ require (
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/go/trysmtp v1.0.0
 	gitlab.com/etke.cc/go/validator v1.0.3
-	gitlab.com/etke.cc/linkpearl v0.0.0-20221115132622-75502dc94cc3
+	gitlab.com/etke.cc/linkpearl v0.0.0-20221115160030-7fcc97e37380
 	golang.org/x/net v0.2.0
 	maunium.net/go/mautrix v0.12.2
 )

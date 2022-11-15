@@ -86,9 +86,9 @@ func (b *Bot) SendError(ctx context.Context, roomID id.RoomID, message string) {
 
 // SendNotice sends a notice message to the matrix room
 func (b *Bot) SendNotice(ctx context.Context, roomID id.RoomID, message string) {
-	content := format.RenderMarkdown(message, true, true)
-	content.MsgType = event.MsgNotice
-	_, err := b.lp.Send(roomID, &content)
+	parsed := format.RenderMarkdown(message, true, true)
+	parsed.MsgType = event.MsgNotice
+	_, err := b.lp.Send(roomID, &event.Content{Parsed: &parsed})
 	if err != nil {
 		sentry.GetHubFromContext(ctx).CaptureException(err)
 	}

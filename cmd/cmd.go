@@ -83,9 +83,9 @@ func initBot(cfg *config.Config) {
 		NoEncryption:      cfg.NoEncryption,
 		AccountDataSecret: cfg.DataSecret,
 		LPLogger:          mxlog,
-		APILogger:         logger.New("api.", cfg.LogLevel),
-		StoreLogger:       logger.New("store.", cfg.LogLevel),
-		CryptoLogger:      logger.New("olm.", cfg.LogLevel),
+		APILogger:         logger.New("api.", "INFO"),
+		StoreLogger:       logger.New("store.", "INFO"),
+		CryptoLogger:      logger.New("olm.", "INFO"),
 	})
 	if err != nil {
 		// nolint // Fatal = panic, not os.Exit()

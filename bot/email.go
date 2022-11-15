@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
@@ -208,10 +207,13 @@ type parentEmail struct {
 func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 	content := evt.Content.AsMessage()
 	threadID := utils.EventParent(evt.ID, content)
+	b.log.Debug("looking up for the parent event of %s within thread %s", evt.ID, threadID)
 	if threadID == evt.ID {
+		b.log.Debug("event %s is the thread itself")
 		return threadID, evt
 	}
 	lastEventID := b.getLastEventID(evt.RoomID, threadID)
+	b.log.Debug("the last event of the thread %s (and parent of the %s) is %s", threadID, evt.ID, lastEventID)
 	if lastEventID == evt.ID {
 		return threadID, evt
 	}
@@ -220,24 +222,21 @@ func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 		b.log.Error("cannot get parent event: %v", err)
 		return threadID, nil
 	}
+	utils.ParseContent(parentEvt, parentEvt.Type)
+	b.log.Debug("type of the parsed content is: %T", parentEvt.Content.Parsed)
 
 	if !b.lp.GetStore().IsEncrypted(evt.RoomID) {
-		utils.ParseContent(parentEvt, event.EventMessage)
+		b.log.Debug("found the last event (plaintext) of the thread %s (and parent of the %s): %+v", threadID, evt.ID, parentEvt)
 		return threadID, parentEvt
 	}
 
-	utils.ParseContent(parentEvt, event.EventEncrypted)
 	decrypted, err := b.lp.GetMachine().DecryptMegolmEvent(evt)
 	if err != nil {
-		if errors.Is(err, crypto.IncorrectEncryptedContentType) || errors.Is(err, crypto.UnsupportedAlgorithm) {
-			utils.ParseContent(parentEvt, event.EventMessage)
-			return threadID, parentEvt
-		}
 		b.log.Error("cannot decrypt parent event: %v", err)
 		return threadID, nil
 	}
 
-	utils.ParseContent(decrypted, event.EventMessage)
+	b.log.Debug("found the last event (decrypted) of the thread %s (and parent of the %s): %+v", threadID, evt.ID, parentEvt)
 	return threadID, decrypted
 }
 
@@ -286,7 +285,7 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 	content := email.Content(threadID, cfg.ContentOptions())
 	notice := format.RenderMarkdown(text, true, true)
 	notice.MsgType = event.MsgNotice
-	msgContent, ok := content.Parsed.(event.MessageEventContent)
+	msgContent, ok := content.Parsed.(*event.MessageEventContent)
 	if !ok {
 		b.Error(ctx, evt.RoomID, "cannot parse message")
 		return
@@ -294,7 +293,7 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 	msgContent.Body = notice.Body
 	msgContent.FormattedBody = notice.FormattedBody
 	content.Parsed = msgContent
-	msgID, err := b.lp.Send(evt.RoomID, &content)
+	msgID, err := b.lp.Send(evt.RoomID, content)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot send notice: %v", err)
 		return

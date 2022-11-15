@@ -101,8 +101,6 @@ gitlab.com/etke.cc/go/trysmtp v1.0.0 h1:f/7gSmzohKniVeLSLevI+ZsySYcPUGkT9cRlOTwj
 gitlab.com/etke.cc/go/trysmtp v1.0.0/go.mod h1:KqRuIB2IPElEEbAxXmFyKtm7S5YiuEb4lxwWthccqyE=
 gitlab.com/etke.cc/go/validator v1.0.3 h1:qkMskwtA3Uiv1q7HTlNZaaZcIJTO4mp2p0KZAl53Xmo=
 gitlab.com/etke.cc/go/validator v1.0.3/go.mod h1:3vdssRG4LwgdTr9IHz9MjGSEO+3/FO9hXPGMuSeweJ8=
-gitlab.com/etke.cc/linkpearl v0.0.0-20221115132622-75502dc94cc3 h1:JPmCa251r3zrUXvSSPbAT8qmMZR4bBIHwMAG1sCBttI=
-gitlab.com/etke.cc/linkpearl v0.0.0-20221115132622-75502dc94cc3/go.mod h1:ClA7UlRUoeydy0a7AbJrGAdWYOX//twuThny198PA1k=
 golang.org/x/crypto v0.0.0-20220518034528-6f7dac969898/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/crypto v0.2.0 h1:BRXPfhNivWL5Yq0BGQ39a2sW6t44aODpfxkWjYdzewE=
 golang.org/x/crypto v0.2.0/go.mod h1:hebNnKkNXi2UzZN1eVRvBB7co0a+JxK6XbPiWVs/3J4=
