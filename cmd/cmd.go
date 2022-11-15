@@ -146,6 +146,7 @@ func startBot(statusMsg string) {
 
 func shutdown() {
 	log.Info("Shutting down...")
+	cron.Shutdown()
 	smtpm.Stop()
 	mxb.Stop()
 

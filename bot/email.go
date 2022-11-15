@@ -37,17 +37,17 @@ func (b *Bot) SetSendmail(sendmail func(string, string, string) error) {
 
 // Sendmail tries to send email immediately, but if it gets 4xx error (greylisting),
 // the email will be added to the queue and retried several times after that
-func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) error {
+func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) (bool, error) {
 	err := b.sendmail(from, to, data)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "45") {
 			b.log.Debug("email %s (from=%s to=%s) was added to the queue: %v", eventID, from, to, err)
-			return b.enqueueEmail(eventID.String(), from, to, data)
+			return true, b.enqueueEmail(eventID.String(), from, to, data)
 		}
-		return err
+		return false, err
 	}
 
-	return nil
+	return false, nil
 }
 
 // GetDKIMprivkey returns DKIM private key
@@ -177,12 +177,19 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	email := utils.NewEmail(ID, meta.InReplyTo, meta.References, meta.Subject, fromMailbox, meta.To, body, "", nil)
 	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
 
-	err = b.Sendmail(evt.ID, meta.From, meta.To, data)
+	queued, err := b.Sendmail(evt.ID, meta.From, meta.To, data)
+	if queued {
+		b.log.Error("cannot send email: %v", err)
+		b.saveSentMetadata(ctx, queued, meta.ThreadID, email, &cfg)
+		return
+	}
+
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
 		return
 	}
-	b.saveSentMetadata(ctx, meta.ThreadID, email, &cfg)
+
+	b.saveSentMetadata(ctx, queued, meta.ThreadID, email, &cfg)
 }
 
 type parentEmail struct {
@@ -264,10 +271,15 @@ func (b *Bot) getParentEmail(evt *event.Event) parentEmail {
 
 // saveSentMetadata used to save metadata from !pm sent and thread reply events to a separate notice message
 // because that metadata is needed to determine email thread relations
-func (b *Bot) saveSentMetadata(ctx context.Context, threadID id.EventID, email *utils.Email, cfg *roomSettings) {
+func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, email *utils.Email, cfg *roomSettings) {
+	text := "Email has been sent to " + email.To
+	if queued {
+		text = "Email to " + email.To + " has been queued"
+	}
+
 	evt := eventFromContext(ctx)
 	content := email.Content(threadID, cfg.ContentOptions())
-	notice := format.RenderMarkdown("Email has been sent to "+email.To, true, true)
+	notice := format.RenderMarkdown(text, true, true)
 	notice.MsgType = event.MsgNotice
 	msgContent, ok := content.Parsed.(event.MessageEventContent)
 	if !ok {

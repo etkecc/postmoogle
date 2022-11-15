@@ -381,12 +381,17 @@ func (b *Bot) runSend(ctx context.Context) {
 	for _, to := range tos {
 		email := utils.NewEmail(ID, "", " "+ID, subject, from, to, body, "", nil)
 		data := email.Compose(b.getBotSettings().DKIMPrivateKey())
-		err = b.sendmail(from, to, data)
+		queued, err := b.Sendmail(evt.ID, from, to, data)
+		if queued {
+			b.log.Error("cannot send email: %v", err)
+			b.saveSentMetadata(ctx, queued, evt.ID, email, &cfg)
+			continue
+		}
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "cannot send email to %s: %v", to, err)
-		} else {
-			b.saveSentMetadata(ctx, evt.ID, email, &cfg)
+			continue
 		}
+		b.saveSentMetadata(ctx, false, evt.ID, email, &cfg)
 	}
 	if len(tos) > 1 {
 		b.SendNotice(ctx, evt.RoomID, "All emails were sent.")

@@ -2,12 +2,11 @@ package bot
 
 import (
 	"strconv"
-	"time"
 )
 
 const (
 	defaultMaxQueueItems = 1
-	defaultMaxQueueTries = 100
+	defaultMaxQueueTries = 3
 )
 
 // ProcessQueue starts queue processing
@@ -67,6 +66,7 @@ func (b *Bot) processQueueItem(itemkey string, maxRetries int) bool {
 		b.log.Error("cannot retrieve a queue item %s: %v", itemkey, err)
 		return false
 	}
+	b.log.Debug("processing queue item %+v", item)
 	attempts, err := strconv.Atoi(item["attempts"])
 	if err != nil {
 		b.log.Error("cannot parse attempts of %s: %v", itemkey, err)
@@ -97,12 +97,11 @@ func (b *Bot) processQueueItem(itemkey string, maxRetries int) bool {
 func (b *Bot) enqueueEmail(id, from, to, data string) error {
 	itemkey := acQueueKey + "." + id
 	item := map[string]string{
-		"attemptedAt": time.Now().UTC().Format(time.RFC1123Z),
-		"attempts":    "0",
-		"data":        data,
-		"from":        from,
-		"to":          to,
-		"id":          id,
+		"attempts": "0",
+		"data":     data,
+		"from":     from,
+		"to":       to,
+		"id":       id,
 	}
 
 	b.lock(itemkey)
