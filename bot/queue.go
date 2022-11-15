@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	defaultMaxQueueItems = 1
-	defaultMaxQueueTries = 3
+	defaultQueueBatch   = 1
+	defaultQueueRetries = 3
 )
 
 // ProcessQueue starts queue processing
@@ -14,23 +14,23 @@ func (b *Bot) ProcessQueue() {
 	b.log.Debug("staring queue processing...")
 	cfg := b.getBotSettings()
 
-	maxItems := cfg.QueueItems()
-	if maxItems == 0 {
-		maxItems = defaultMaxQueueItems
+	batchSize := cfg.QueueBatch()
+	if batchSize == 0 {
+		batchSize = defaultQueueBatch
 	}
 
-	maxTries := cfg.QueueTries()
-	if maxTries == 0 {
-		maxTries = defaultMaxQueueTries
+	retries := cfg.QueueRetries()
+	if retries == 0 {
+		retries = defaultQueueRetries
 	}
 
-	b.popqueue(maxItems, maxTries)
+	b.popqueue(batchSize, retries)
 	b.log.Debug("ended queue processing")
 }
 
 // popqueue gets emails from queue and tries to send them,
 // if an email was sent successfully - it will be removed from queue
-func (b *Bot) popqueue(maxItems, maxTries int) {
+func (b *Bot) popqueue(batchSize, maxTries int) {
 	b.lock(acQueueKey)
 	defer b.unlock(acQueueKey)
 	index, err := b.lp.GetAccountData(acQueueKey)
@@ -40,7 +40,7 @@ func (b *Bot) popqueue(maxItems, maxTries int) {
 
 	i := 0
 	for id, itemkey := range index {
-		if i > maxItems {
+		if i > batchSize {
 			b.log.Debug("finished re-deliveries from queue")
 			return
 		}
