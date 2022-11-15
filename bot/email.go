@@ -165,7 +165,9 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		return
 	}
 
-	meta.ThreadID = b.getThreadID(evt.RoomID, meta.InReplyTo, meta.References)
+	if meta.ThreadID == "" {
+		meta.ThreadID = b.getThreadID(evt.RoomID, meta.InReplyTo, meta.References)
+	}
 	content := evt.Content.AsMessage()
 	if meta.Subject == "" {
 		meta.Subject = strings.SplitN(content.Body, "\n", 1)[0]
@@ -227,10 +229,12 @@ func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 	utils.ParseContent(parentEvt, event.EventEncrypted)
 	decrypted, err := b.lp.GetMachine().DecryptMegolmEvent(evt)
 	if err != nil {
-		if err != crypto.IncorrectEncryptedContentType || err != crypto.UnsupportedAlgorithm {
-			b.log.Error("cannot decrypt parent event: %v", err)
-			return threadID, nil
+		if errors.Is(err, crypto.IncorrectEncryptedContentType) || errors.Is(err, crypto.UnsupportedAlgorithm) {
+			utils.ParseContent(parentEvt, event.EventMessage)
+			return threadID, parentEvt
 		}
+		b.log.Error("cannot decrypt parent event: %v", err)
+		return threadID, nil
 	}
 
 	utils.ParseContent(decrypted, event.EventMessage)
