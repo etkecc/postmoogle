@@ -16,6 +16,7 @@ update:
 	go get ./cmd
 	go mod tidy
 	go mod verify
+	go mod vendor
 
 mock:
 	-@rm -rf mocks

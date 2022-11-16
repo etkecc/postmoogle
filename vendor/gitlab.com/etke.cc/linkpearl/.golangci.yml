@@ -1,0 +1,94 @@
+run:
+  concurrency: 4
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  build-tags: []
+  skip-dirs: []
+  skip-dirs-use-default: true
+  skip-files: []
+  modules-download-mode: readonly
+  allow-parallel-runners: false
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  path-prefix: ""
+  sort-results: true
+
+linters-settings:
+  errcheck:
+    check-blank: true
+  gci:
+    local-prefixes: gitlab.com/etke.cc/linkpearl
+  gocognit:
+    min-complexity: 10
+  nestif:
+    min-complexity: 4
+  gocritic:
+    enabled-tags:
+      - performance
+  gofumpt:
+    lang-version: "1.19"
+  goimports:
+    local-prefixes: gitlab.com/etke.cc/linkpearl
+  gosimple:
+    go: "1.19"
+    checks: [ "all" ]
+  govet:
+    check-shadowing: true
+    enable:
+      - atomicalign
+      - shadow
+  misspell:
+    locale: US
+  staticcheck:
+    go: "1.19"
+    checks: [ "all" ]
+  stylecheck:
+    go: "1.19"
+  unparam:
+    check-exported: true
+  unused:
+    go: "1.19"
+linters:
+  disable-all: false
+  enable:
+    - megacheck
+    - govet
+    - errcheck
+    - gci
+    - gocognit
+    - nestif
+    - gocritic
+    - gofumpt
+    - goimports
+    - gosimple
+    - govet
+    - misspell
+    - staticcheck
+    - stylecheck
+    - unparam
+    - unused
+  fast: false
+
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+    - linters:
+        - staticcheck
+      text: "SA9003:"
+    - linters:
+        - lll
+      source: "^//go:generate "
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
