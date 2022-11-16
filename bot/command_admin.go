@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strconv"
 	"strings"
 
 	"gitlab.com/etke.cc/go/secgen"
@@ -213,10 +214,13 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 	if len(commandSlice) < 2 {
 		banlist := b.getBanlist()
 		var msg strings.Builder
-		if len(banlist) > 0 {
+		size := len(banlist)
+		if size > 0 {
 			msg.WriteString("Currently: `")
 			msg.WriteString(cfg.Get(botOptionBanlistEnabled))
-			msg.WriteString("` (`")
+			msg.WriteString("`, total: ")
+			msg.WriteString(strconv.Itoa(size))
+			msg.WriteString(" hosts (`")
 			msg.WriteString(strings.Join(banlist.Slice(), "`, `"))
 			msg.WriteString("`)\n\n")
 		}
