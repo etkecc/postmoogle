@@ -137,6 +137,7 @@ func (m *Manager) loadTLSConfig(certs, keys []string) {
 		tlsCert, err := tls.LoadX509KeyPair(path, keys[i])
 		if err != nil {
 			m.log.Error("cannot load SSL certificate: %v", err)
+			continue
 		}
 		certificates = append(certificates, tlsCert)
 	}

@@ -22,6 +22,7 @@ type mailServer struct {
 
 // Login used for outgoing mail submissions only (when you use postmoogle as smtp server in your scripts)
 func (m *mailServer) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
+	m.log.Debug("Login state=%+v username=%+v", state, username)
 	if !utils.AddressValid(username) {
 		return nil, errors.New("please, provide an email address")
 	}
@@ -42,6 +43,7 @@ func (m *mailServer) Login(state *smtp.ConnectionState, username, password strin
 
 // AnonymousLogin used for incoming mail submissions only
 func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
+	m.log.Debug("AnonymousLogin state=%+v", state)
 	return &incomingSession{
 		ctx:          sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
 		getRoomID:    m.bot.GetMapping,
