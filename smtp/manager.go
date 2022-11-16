@@ -58,13 +58,16 @@ func NewManager(cfg *Config) *Manager {
 	cfg.Bot.SetSendmail(mailsrv.SendEmail)
 
 	s := smtp.NewServer(mailsrv)
-	s.Domain = cfg.Domains[0]
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = cfg.MaxSize * 1024 * 1024
 	s.AllowInsecureAuth = !cfg.TLSRequired
 	s.EnableREQUIRETLS = cfg.TLSRequired
 	s.EnableSMTPUTF8 = true
+	// set domain in greeting only in single-domain mode
+	if len(cfg.Domains) == 1 {
+		s.Domain = cfg.Domains[0]
+	}
 	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
 		s.Debug = os.Stdout
 	}
