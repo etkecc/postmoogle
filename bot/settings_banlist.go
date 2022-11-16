@@ -2,6 +2,7 @@ package bot
 
 import (
 	"net"
+	"sort"
 	"time"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
@@ -18,6 +19,7 @@ func (b banList) Slice() []string {
 	for item := range b {
 		slice = append(slice, item)
 	}
+	sort.Strings(slice)
 
 	return slice
 }

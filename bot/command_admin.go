@@ -217,7 +217,7 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 			msg.WriteString("Currently: `")
 			msg.WriteString(cfg.Get(botOptionBanlistEnabled))
 			msg.WriteString("` (`")
-			msg.WriteString(strings.Join(banlist.Slice(), " "))
+			msg.WriteString(strings.Join(banlist.Slice(), "`, `"))
 			msg.WriteString("`)\n\n")
 		}
 		if !cfg.BanlistEnabled() {
