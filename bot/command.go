@@ -217,6 +217,11 @@ func (b *Bot) initCommands() commandList {
 		},
 		{allowed: b.allowAdmin}, // delimiter
 		{
+			key:         botOptionGreylist,
+			description: "Set automatic greylisting duration in minutes (0 - disabled)",
+			allowed:     b.allowAdmin,
+		},
+		{
 			key:         commandBanlist,
 			description: "Enable/disable banlist and show current values",
 			allowed:     b.allowAdmin,
@@ -270,6 +275,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.runCatchAll(ctx, commandSlice)
 	case commandDelete:
 		b.runDelete(ctx, commandSlice)
+	case botOptionGreylist:
+		b.runGreylist(ctx, commandSlice)
 	case commandBanlist:
 		b.runBanlist(ctx, commandSlice)
 	case commandBanlistAdd:

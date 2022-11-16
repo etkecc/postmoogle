@@ -20,6 +20,8 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] Catch-all mailbox
 - [x] Map email threads to matrix threads
 - [x] Multi-domain support
+- [x] automatic banlist
+- [x] automatic greylisting
 
 #### deep dive
 
@@ -28,7 +30,6 @@ so you can use it to send emails from your apps and scripts as well.
 - [ ] DKIM verification
 - [ ] SPF verification
 - [ ] DMARC verification
-- [ ] Blocklists 
 
 ### Send
 
@@ -124,6 +125,7 @@ If you want to change them - check available options in the help message (`!pm h
 
 ---
 
+* **!pm greylist** - Set automatic greylisting duration in minutes (0 - disabled)
 * **!pm banlist** - Enable/disable banlist and show current values
 * **!pm banlist:add** - Ban an IP
 * **!pm banlist:remove** - Unban an IP

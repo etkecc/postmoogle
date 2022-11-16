@@ -208,6 +208,53 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, "")))
 }
 
+func (b *Bot) printGreylist(ctx context.Context, roomID id.RoomID) {
+	cfg := b.getBotSettings()
+	greylist := b.getGreylist()
+	var msg strings.Builder
+	size := len(greylist)
+	duration := cfg.Greylist()
+	msg.WriteString("Currently: `")
+	if duration == 0 {
+		msg.WriteString("disabled")
+	} else {
+		msg.WriteString(cfg.Get(botOptionGreylist))
+		msg.WriteString("min")
+	}
+	msg.WriteString("`")
+	if size > 0 {
+		msg.WriteString(", total known: ")
+		msg.WriteString(strconv.Itoa(size))
+		msg.WriteString(" hosts (`")
+		msg.WriteString(strings.Join(greylist.Slice(), "`, `"))
+		msg.WriteString("`)\n\n")
+	}
+	if duration == 0 {
+		msg.WriteString("\n\nTo enable greylist: `")
+		msg.WriteString(b.prefix)
+		msg.WriteString(" greylist MIN`")
+		msg.WriteString("where `MIN` is duration in minutes for automatic greylisting\n")
+	}
+
+	b.SendNotice(ctx, roomID, msg.String())
+}
+
+func (b *Bot) runGreylist(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	if len(commandSlice) < 2 {
+		b.printGreylist(ctx, evt.RoomID)
+		return
+	}
+	cfg := b.getBotSettings()
+	value := utils.SanitizeIntString(commandSlice[1])
+	cfg.Set(botOptionGreylist, value)
+	err := b.setBotSettings(cfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+	}
+	b.SendNotice(ctx, evt.RoomID, "greylist duration has been updated")
+}
+
 func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
 	cfg := b.getBotSettings()
@@ -303,7 +350,7 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 func (b *Bot) runBanlistReset(ctx context.Context) {
 	evt := eventFromContext(ctx)
 
-	err := b.setBanlist(banList{})
+	err := b.setBanlist(bglist{})
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot set banlist: %v", err)
 		return

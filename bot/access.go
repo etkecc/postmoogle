@@ -5,6 +5,7 @@ import (
 	"net"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/raja/argon2pw"
@@ -70,6 +71,28 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 	}
 
 	return !cfg.NoSend()
+}
+
+// IsGreylisted checks if host is in greylist
+func (b *Bot) IsGreylisted(addr net.Addr) bool {
+	if b.getBotSettings().Greylist() == 0 {
+		return false
+	}
+
+	greylist := b.getGreylist()
+	greylistedAt, ok := greylist.Get(addr)
+	if !ok {
+		b.log.Debug("greylisting %s", addr.String())
+		greylist.Add(addr)
+		err := b.setGreylist(greylist)
+		if err != nil {
+			b.log.Error("cannot update greylist with %s: %v", addr.String(), err)
+		}
+		return true
+	}
+	duration := time.Duration(b.getBotSettings().Greylist()) * time.Minute
+
+	return greylistedAt.Add(duration).After(time.Now().UTC())
 }
 
 // IsBanned checks if address is banned

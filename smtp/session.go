@@ -22,6 +22,7 @@ type incomingSession struct {
 	getRoomID    func(string) (id.RoomID, bool)
 	getFilters   func(id.RoomID) utils.IncomingFilteringOptions
 	receiveEmail func(context.Context, *utils.Email) error
+	greylisted   func(net.Addr) bool
 	ban          func(net.Addr)
 	domains      []string
 
@@ -76,6 +77,13 @@ func (s *incomingSession) Rcpt(to string) error {
 }
 
 func (s *incomingSession) Data(r io.Reader) error {
+	if s.greylisted(s.addr) {
+		return &smtp.SMTPError{
+			Code:         451,
+			EnhancedCode: smtp.EnhancedCode{4, 5, 1},
+			Message:      "You have been greylisted, try again a bit later.",
+		}
+	}
 	parser := enmime.NewParser()
 	eml, err := parser.ReadEnvelope(r)
 	if err != nil {

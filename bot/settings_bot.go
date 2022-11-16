@@ -18,6 +18,7 @@ const (
 	botOptionQueueBatch     = "queue:batch"
 	botOptionQueueRetries   = "queue:retries"
 	botOptionBanlistEnabled = "banlist:enabled"
+	botOptionGreylist       = "greylist"
 )
 
 type botSettings map[string]string
@@ -54,6 +55,11 @@ func (s botSettings) CatchAll() string {
 // BanlistEnabled option
 func (s botSettings) BanlistEnabled() bool {
 	return utils.Bool(s.Get(botOptionBanlistEnabled))
+}
+
+// Greylist option (duration in minutes)
+func (s botSettings) Greylist() int {
+	return utils.Int(s.Get(botOptionGreylist))
 }
 
 // DKIMSignature (DNS TXT record)
