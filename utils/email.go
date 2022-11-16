@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/emersion/go-msgauth/dkim"
+	"gitlab.com/etke.cc/go/secgen"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
@@ -141,19 +142,18 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 }
 
 // Compose converts the email object to a string (to be used for delivery via SMTP) and possibly DKIM-signs it
-func (e *Email) Compose(html bool, privkey string) string {
+func (e *Email) Compose(privkey string) string {
 	var data strings.Builder
 
 	domain := strings.SplitN(e.From, "@", 2)[1]
+	boundaryName := "postmoogle" + secgen.Password(32)
+	boundary := "--" + boundaryName
 
 	data.WriteString("MIME-Version: 1.0")
 	data.WriteString("\r\n")
 
-	if html {
-		data.WriteString("Content-Type: text/html; charset=\"UTF-8\"")
-	} else {
-		data.WriteString("Content-Type: text/plain; charset=\"UTF-8\"")
-	}
+	data.WriteString("Content-Type: multipart/alternative; boundary=")
+	data.WriteString(boundaryName)
 	data.WriteString("\r\n")
 
 	data.WriteString("Content-Transfer-Encoding: 8BIT")
@@ -190,14 +190,26 @@ func (e *Email) Compose(html bool, privkey string) string {
 	data.WriteString("Subject: ")
 	data.WriteString(e.Subject)
 	data.WriteString("\r\n")
-
 	data.WriteString("\r\n")
 
-	if html {
-		data.WriteString(e.HTML)
-	} else {
-		data.WriteString(e.Text)
-	}
+	data.WriteString(boundary)
+	data.WriteString("\r\n")
+	data.WriteString("Content-Type: text/html; charset=\"UTF-8\"")
+	data.WriteString("\r\n")
+	data.WriteString(e.HTML)
+	data.WriteString("\r\n")
+	data.WriteString("\r\n")
+
+	data.WriteString(boundary)
+	data.WriteString("\r\n")
+	data.WriteString("Content-Type: text/plain; charset=\"UTF-8\"")
+	data.WriteString("\r\n")
+	data.WriteString(e.Text)
+	data.WriteString("\r\n")
+	data.WriteString("\r\n")
+
+	data.WriteString(boundary)
+	data.WriteString("--")
 	data.WriteString("\r\n")
 
 	return e.sign(domain, privkey, data)

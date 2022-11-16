@@ -179,7 +179,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	meta.References = meta.References + " " + meta.MessageID
 	b.log.Debug("send email reply: %+v", meta)
 	email := utils.NewEmail(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, htmlBody, nil)
-	data := email.Compose(false, b.getBotSettings().DKIMPrivateKey())
+	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
 
 	queued, err := b.Sendmail(evt.ID, meta.From, meta.To, data)
 	if queued {
