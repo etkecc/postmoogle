@@ -78,7 +78,7 @@ func (l *Linkpearl) tryJoin(roomID id.RoomID, retry int) {
 
 	_, err := l.api.JoinRoomByID(roomID)
 	if err != nil {
-		l.log.Error("cannot join the room %s: %v", roomID, err)
+		l.log.Error("cannot join the room %q: %v", roomID, err)
 		time.Sleep(5 * time.Second)
 		l.log.Debug("trying to join again (%d/%d)", retry+1, l.maxretries)
 		l.tryJoin(roomID, retry+1)

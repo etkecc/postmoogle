@@ -20,7 +20,7 @@ func (s *Store) IsEncrypted(roomID id.RoomID) bool {
 		return false
 	}
 
-	s.log.Debug("checking if room %s is encrypted", roomID)
+	s.log.Debug("checking if room %q is encrypted", roomID)
 	return s.GetEncryptionEvent(roomID) != nil
 }
 
@@ -79,7 +79,7 @@ func (s *Store) SetEncryptionEvent(evt *event.Event) {
 
 // SetMembership saves room members
 func (s *Store) SetMembership(evt *event.Event) {
-	s.log.Debug("saving membership event for %s", evt.RoomID)
+	s.log.Debug("saving membership event for %q", evt.RoomID)
 	tx, err := s.db.Begin()
 	if err != nil {
 		s.log.Error("cannot begin transaction: %v", err)
@@ -127,7 +127,7 @@ func (s *Store) SetMembership(evt *event.Event) {
 
 // GetRoomMembers ...
 func (s *Store) GetRoomMembers(roomID id.RoomID) []id.UserID {
-	s.log.Debug("loading room members of %s", roomID)
+	s.log.Debug("loading room members of %q", roomID)
 	query := "SELECT user_id FROM room_members WHERE room_id = $1"
 	rows, err := s.db.Query(query, roomID)
 	users := make([]id.UserID, 0)
@@ -148,7 +148,7 @@ func (s *Store) GetRoomMembers(roomID id.RoomID) []id.UserID {
 
 // SaveSession to DB
 func (s *Store) SaveSession(userID id.UserID, deviceID id.DeviceID, accessToken string) {
-	s.log.Debug("saving session credentials of %s/%s", userID, deviceID)
+	s.log.Debug("saving session credentials of %q/%q", userID, deviceID)
 	tx, err := s.db.Begin()
 	if err != nil {
 		s.log.Error("cannot begin transaction: %v", err)

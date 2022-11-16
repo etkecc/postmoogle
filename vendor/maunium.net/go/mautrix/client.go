@@ -1468,6 +1468,18 @@ func (cli *Client) JoinedRooms() (resp *RespJoinedRooms, err error) {
 	return
 }
 
+// Hierarchy returns a list of rooms that are in the room's hierarchy. See https://spec.matrix.org/v1.4/client-server-api/#get_matrixclientv1roomsroomidhierarchy
+//
+// The hierarchy API is provided to walk the space tree and discover the rooms with their aesthetic details. works in a depth-first manner:
+// when it encounters another space as a child it recurses into that space before returning non-space children.
+//
+// The second function parameter specifies query parameters to limit the response. No query parameters will be added if it's nil.
+func (cli *Client) Hierarchy(roomID id.RoomID, req *ReqHierarchy) (resp *RespHierarchy, err error) {
+	urlPath := cli.BuildURLWithQuery(ClientURLPath{"v1", "rooms", roomID, "hierarchy"}, req.Query())
+	_, err = cli.MakeRequest(http.MethodGet, urlPath, nil, &resp)
+	return
+}
+
 // Messages returns a list of message and state events for a room. It uses
 // pagination query parameters to paginate history in the room.
 // See https://spec.matrix.org/v1.2/client-server-api/#get_matrixclientv3roomsroomidmessages
@@ -1759,6 +1771,9 @@ func (cli *Client) BatchSend(roomID id.RoomID, req *ReqBatchSend) (resp *RespBat
 	}
 	if req.BeeperNewMessages {
 		query["com.beeper.new_messages"] = "true"
+	}
+	if req.BeeperMarkReadBy != "" {
+		query["com.beeper.mark_read_by"] = req.BeeperMarkReadBy.String()
 	}
 	if len(req.BatchID) > 0 {
 		query["batch_id"] = req.BatchID.String()

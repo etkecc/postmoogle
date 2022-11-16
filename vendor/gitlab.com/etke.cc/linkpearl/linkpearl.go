@@ -25,6 +25,7 @@ type Linkpearl struct {
 	db    *sql.DB
 	acc   *lru.Cache[string, map[string]string]
 	acr   *Crypter
+	aclr  map[string]string
 	log   config.Logger
 	api   *mautrix.Client
 	olm   *crypto.OlmMachine
@@ -41,6 +42,9 @@ type ReqPresence struct {
 }
 
 func setDefaults(cfg *config.Config) {
+	if cfg.AccountDataLogReplace == nil {
+		cfg.AccountDataLogReplace = make(map[string]string)
+	}
 	if cfg.MaxRetries == 0 {
 		cfg.MaxRetries = DefaultMaxRetries
 	}
@@ -80,6 +84,7 @@ func New(cfg *config.Config) (*Linkpearl, error) {
 		db:         cfg.DB,
 		acc:        acc,
 		acr:        acr,
+		aclr:       cfg.AccountDataLogReplace,
 		api:        api,
 		log:        cfg.LPLogger,
 		joinPermit: cfg.JoinPermit,

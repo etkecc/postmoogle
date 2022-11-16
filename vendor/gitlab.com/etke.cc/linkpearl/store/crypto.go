@@ -42,43 +42,43 @@ func (s *Store) GetAccount() (*crypto.OlmAccount, error) {
 
 // HasSession returns whether there is an Olm session for the given sender key.
 func (s *Store) HasSession(key id.SenderKey) bool {
-	s.log.Debug("check if olm session exists for the key %s", key)
+	s.log.Debug("check if olm session exists for the key %q", key)
 	return s.s.HasSession(key)
 }
 
 // GetSessions returns all the known Olm sessions for a sender key.
 func (s *Store) GetSessions(key id.SenderKey) (crypto.OlmSessionList, error) {
-	s.log.Debug("loading olm session for the key %s", key)
+	s.log.Debug("loading olm session for the key %q", key)
 	return s.s.GetSessions(key)
 }
 
 // GetLatestSession retrieves the Olm session for a given sender key from the database that has the largest ID.
 func (s *Store) GetLatestSession(key id.SenderKey) (*crypto.OlmSession, error) {
-	s.log.Debug("loading latest session for the key %s", key)
+	s.log.Debug("loading latest session for the key %q", key)
 	return s.s.GetLatestSession(key)
 }
 
 // AddSession persists an Olm session for a sender in the database.
 func (s *Store) AddSession(key id.SenderKey, session *crypto.OlmSession) error {
-	s.log.Debug("adding new olm session for the key %s", key)
+	s.log.Debug("adding new olm session for the key %q", key)
 	return s.s.AddSession(key, session)
 }
 
 // UpdateSession replaces the Olm session for a sender in the database.
 func (s *Store) UpdateSession(key id.SenderKey, session *crypto.OlmSession) error {
-	s.log.Debug("update olm session for the key %s", key)
+	s.log.Debug("update olm session for the key %q", key)
 	return s.s.UpdateSession(key, session)
 }
 
 // PutGroupSession stores an inbound Megolm group session for a room, sender and session.
 func (s *Store) PutGroupSession(roomID id.RoomID, senderKey id.SenderKey, sessionID id.SessionID, session *crypto.InboundGroupSession) error {
-	s.log.Debug("storing inbound group session for the room %s", roomID)
+	s.log.Debug("storing inbound group session for the room %q", roomID)
 	return s.s.PutGroupSession(roomID, senderKey, sessionID, session)
 }
 
 // GetGroupSession retrieves an inbound Megolm group session for a room, sender and session.
 func (s *Store) GetGroupSession(roomID id.RoomID, senderKey id.SenderKey, sessionID id.SessionID) (*crypto.InboundGroupSession, error) {
-	s.log.Debug("loading inbound group session for the room %s", roomID)
+	s.log.Debug("loading inbound group session for the room %q", roomID)
 	return s.s.GetGroupSession(roomID, senderKey, sessionID)
 }
 
@@ -98,7 +98,7 @@ func (s *Store) GetWithheldGroupSession(roomID id.RoomID, senderKey id.SenderKey
 // GetGroupSessionsForRoom gets all the inbound Megolm sessions for a specific room. This is used for creating key
 // export files. Unlike GetGroupSession, this should not return any errors about withheld keys.
 func (s *Store) GetGroupSessionsForRoom(roomID id.RoomID) ([]*crypto.InboundGroupSession, error) {
-	s.log.Debug("loading group session for the room %s", roomID)
+	s.log.Debug("loading group session for the room %q", roomID)
 	return s.s.GetGroupSessionsForRoom(roomID)
 }
 
@@ -143,31 +143,31 @@ func (s *Store) ValidateMessageIndex(senderKey id.SenderKey, sessionID id.Sessio
 
 // GetDevices returns a map of device IDs to device identities, including the identity and signing keys, for a given user ID.
 func (s *Store) GetDevices(userID id.UserID) (map[id.DeviceID]*id.Device, error) {
-	s.log.Debug("loading devices of the %s", userID)
+	s.log.Debug("loading devices of the %q", userID)
 	return s.s.GetDevices(userID)
 }
 
 // GetDevice returns the device dentity for a given user and device ID.
 func (s *Store) GetDevice(userID id.UserID, deviceID id.DeviceID) (*id.Device, error) {
-	s.log.Debug("loading device %s for the %s", deviceID, userID)
+	s.log.Debug("loading device %q for the %q", deviceID, userID)
 	return s.s.GetDevice(userID, deviceID)
 }
 
 // FindDeviceByKey finds a specific device by its sender key.
 func (s *Store) FindDeviceByKey(userID id.UserID, identityKey id.IdentityKey) (*id.Device, error) {
-	s.log.Debug("loading device of the %s by the key %s", userID, identityKey)
+	s.log.Debug("loading device of the %q by the key %q", userID, identityKey)
 	return s.s.FindDeviceByKey(userID, identityKey)
 }
 
 // PutDevice stores a single device for a user, replacing it if it exists already.
 func (s *Store) PutDevice(userID id.UserID, device *id.Device) error {
-	s.log.Debug("storing device of the %s", userID)
+	s.log.Debug("storing device of the %q", userID)
 	return s.s.PutDevice(userID, device)
 }
 
 // PutDevices stores the device identity information for the given user ID.
 func (s *Store) PutDevices(userID id.UserID, devices map[id.DeviceID]*id.Device) error {
-	s.log.Debug("storing devices of the %s", userID)
+	s.log.Debug("storing devices of the %q", userID)
 	return s.s.PutDevices(userID, devices)
 }
 
@@ -179,13 +179,13 @@ func (s *Store) FilterTrackedUsers(users []id.UserID) ([]id.UserID, error) {
 
 // PutCrossSigningKey stores a cross-signing key of some user along with its usage.
 func (s *Store) PutCrossSigningKey(userID id.UserID, usage id.CrossSigningUsage, key id.Ed25519) error {
-	s.log.Debug("storing crosssigning key of the %s", userID)
+	s.log.Debug("storing crosssigning key of the %q", userID)
 	return s.s.PutCrossSigningKey(userID, usage, key)
 }
 
 // GetCrossSigningKeys retrieves a user's stored cross-signing keys.
 func (s *Store) GetCrossSigningKeys(userID id.UserID) (map[id.CrossSigningUsage]id.CrossSigningKey, error) {
-	s.log.Debug("loading crosssigning keys of the %s", userID)
+	s.log.Debug("loading crosssigning keys of the %q", userID)
 	return s.s.GetCrossSigningKeys(userID)
 }
 
@@ -209,6 +209,6 @@ func (s *Store) IsKeySignedBy(userID id.UserID, key id.Ed25519, signerID id.User
 
 // DropSignaturesByKey deletes the signatures made by the given user and key from the store. It returns the number of signatures deleted.
 func (s *Store) DropSignaturesByKey(userID id.UserID, key id.Ed25519) (int64, error) {
-	s.log.Debug("removing signatures by the %s/%s", userID, key)
+	s.log.Debug("removing signatures by the %q/%q", userID, key)
 	return s.s.DropSignaturesByKey(userID, key)
 }

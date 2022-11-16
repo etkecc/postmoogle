@@ -60,7 +60,7 @@ github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.12
 ## explicit; go 1.9
 github.com/mattn/go-runewidth
-# github.com/mattn/go-sqlite3 v1.14.15
+# github.com/mattn/go-sqlite3 v1.14.16
 ## explicit; go 1.16
 github.com/mattn/go-sqlite3
 # github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
@@ -101,7 +101,7 @@ github.com/tidwall/pretty
 # github.com/tidwall/sjson v1.2.5
 ## explicit; go 1.14
 github.com/tidwall/sjson
-# github.com/yuin/goldmark v1.5.2
+# github.com/yuin/goldmark v1.5.3
 ## explicit; go 1.18
 github.com/yuin/goldmark
 github.com/yuin/goldmark/ast
@@ -130,12 +130,12 @@ gitlab.com/etke.cc/go/trysmtp
 # gitlab.com/etke.cc/go/validator v1.0.3
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/validator
-# gitlab.com/etke.cc/linkpearl v0.0.0-20221115164843-97f1e49414d9
+# gitlab.com/etke.cc/linkpearl v0.0.0-20221116205701-65547c5608e6
 ## explicit; go 1.18
 gitlab.com/etke.cc/linkpearl
 gitlab.com/etke.cc/linkpearl/config
 gitlab.com/etke.cc/linkpearl/store
-# golang.org/x/crypto v0.2.0
+# golang.org/x/crypto v0.3.0
 ## explicit; go 1.17
 golang.org/x/crypto/argon2
 golang.org/x/crypto/blake2b
@@ -180,7 +180,7 @@ gopkg.in/yaml.v3
 # maunium.net/go/maulogger/v2 v2.3.2
 ## explicit; go 1.11
 maunium.net/go/maulogger/v2
-# maunium.net/go/mautrix v0.12.2
+# maunium.net/go/mautrix v0.12.3
 ## explicit; go 1.18
 maunium.net/go/mautrix
 maunium.net/go/mautrix/appservice
@@ -202,3 +202,4 @@ maunium.net/go/mautrix/util
 maunium.net/go/mautrix/util/base58
 maunium.net/go/mautrix/util/configupgrade
 maunium.net/go/mautrix/util/dbutil
+maunium.net/go/mautrix/util/jsontime

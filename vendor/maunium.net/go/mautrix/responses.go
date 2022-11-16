@@ -12,6 +12,7 @@ import (
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
 	"maunium.net/go/mautrix/util"
+	"maunium.net/go/mautrix/util/jsontime"
 )
 
 // RespWhoami is the JSON response for https://spec.matrix.org/v1.2/client-server-api/#get_matrixclientv3accountwhoami
@@ -513,4 +514,29 @@ func (vers *CapRoomVersions) IsAvailable(version string) bool {
 	}
 	_, available := vers.Available[version]
 	return available
+}
+
+// RespHierarchy is the JSON response for https://spec.matrix.org/v1.4/client-server-api/#get_matrixclientv1roomsroomidhierarchy
+type RespHierarchy struct {
+	NextBatch string            `json:"next_batch,omitempty"`
+	Rooms     []ChildRoomsChunk `json:"rooms"`
+}
+
+type ChildRoomsChunk struct {
+	AvatarURL        id.ContentURI           `json:"avatar_url,omitempty"`
+	CanonicalAlias   id.RoomAlias            `json:"canonical_alias,omitempty"`
+	ChildrenState    []StrippedStateWithTime `json:"children_state"`
+	GuestCanJoin     bool                    `json:"guest_can_join"`
+	JoinRule         event.JoinRule          `json:"join_rule,omitempty"`
+	Name             string                  `json:"name,omitempty"`
+	NumJoinedMembers int                     `json:"num_joined_members"`
+	RoomID           id.RoomID               `json:"room_id"`
+	RoomType         event.RoomType          `json:"room_type"`
+	Topic            string                  `json:"topic,omitempty"`
+	WorldReadble     bool                    `json:"world_readable"`
+}
+
+type StrippedStateWithTime struct {
+	event.StrippedState
+	Timestamp jsontime.UnixMilli `json:"origin_server_ts"`
 }

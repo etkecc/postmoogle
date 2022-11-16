@@ -10,7 +10,7 @@ import (
 
 // SaveFilterID to DB
 func (s *Store) SaveFilterID(userID id.UserID, filterID string) {
-	s.log.Debug("saving filter ID %s for %s", filterID, userID)
+	s.log.Debug("saving filter ID %q for %q", filterID, userID)
 	tx, err := s.db.Begin()
 	if err != nil {
 		s.log.Error("cannot begin transaction: %v", err)
@@ -52,12 +52,12 @@ func (s *Store) SaveFilterID(userID id.UserID, filterID string) {
 
 // LoadFilterID from DB
 func (s *Store) LoadFilterID(userID id.UserID) string {
-	s.log.Debug("loading filter ID for %s", userID)
+	s.log.Debug("loading filter ID for %q", userID)
 	query := "SELECT filter_id FROM user_filter_ids WHERE user_id = $1"
 	row := s.db.QueryRow(query, userID)
 	var filterID string
 	if err := row.Scan(&filterID); err != nil {
-		s.log.Error("cannot load filter ID: %s", err)
+		s.log.Error("cannot load filter ID: %q", err)
 		return ""
 	}
 	return filterID
@@ -65,7 +65,7 @@ func (s *Store) LoadFilterID(userID id.UserID) string {
 
 // SaveNextBatch to DB
 func (s *Store) SaveNextBatch(userID id.UserID, nextBatchToken string) {
-	s.log.Debug("saving next batch token for %s", userID)
+	s.log.Debug("saving next batch token for %q", userID)
 	tx, err := s.db.Begin()
 	if err != nil {
 		s.log.Error("cannot begin transaction: %v", err)
@@ -103,7 +103,7 @@ func (s *Store) SaveNextBatch(userID id.UserID, nextBatchToken string) {
 
 // LoadNextBatch from DB
 func (s *Store) LoadNextBatch(userID id.UserID) string {
-	s.log.Debug("loading next batch token for %s", userID)
+	s.log.Debug("loading next batch token for %q", userID)
 	query := "SELECT next_batch_token FROM user_batch_tokens WHERE user_id = $1"
 	row := s.db.QueryRow(query, userID)
 	var batchToken string
@@ -116,11 +116,11 @@ func (s *Store) LoadNextBatch(userID id.UserID) string {
 
 // SaveRoom to DB, not implemented
 func (s *Store) SaveRoom(room *mautrix.Room) {
-	s.log.Debug("saving room %s (stub, not implemented)", room.ID)
+	s.log.Debug("saving room %q (stub, not implemented)", room.ID)
 }
 
 // LoadRoom from DB, not implemented
 func (s *Store) LoadRoom(roomID id.RoomID) *mautrix.Room {
-	s.log.Debug("loading room %s (stub, not implemented)", roomID)
+	s.log.Debug("loading room %q (stub, not implemented)", roomID)
 	return mautrix.NewRoom(roomID)
 }

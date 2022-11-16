@@ -12,7 +12,7 @@ require (
 	github.com/getsentry/sentry-go v0.13.0
 	github.com/jhillyerd/enmime v0.10.0
 	github.com/lib/pq v1.10.7
-	github.com/mattn/go-sqlite3 v1.14.15
+	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/mileusna/crontab v1.2.0
 	github.com/raja/argon2pw v1.0.2-0.20210910183755-a391af63bd39
 	gitlab.com/etke.cc/go/env v1.0.0
@@ -21,9 +21,9 @@ require (
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/go/trysmtp v1.0.0
 	gitlab.com/etke.cc/go/validator v1.0.3
-	gitlab.com/etke.cc/linkpearl v0.0.0-20221115164843-97f1e49414d9
+	gitlab.com/etke.cc/linkpearl v0.0.0-20221116205701-65547c5608e6
 	golang.org/x/net v0.2.0
-	maunium.net/go/mautrix v0.12.2
+	maunium.net/go/mautrix v0.12.3
 )
 
 require (
@@ -47,8 +47,8 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	github.com/yuin/goldmark v1.5.2 // indirect
-	golang.org/x/crypto v0.2.0 // indirect
+	github.com/yuin/goldmark v1.5.3 // indirect
+	golang.org/x/crypto v0.3.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

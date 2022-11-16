@@ -58,16 +58,17 @@ type AppserviceConfig struct {
 	ASToken string `yaml:"as_token"`
 	HSToken string `yaml:"hs_token"`
 
-	EphemeralEvents bool `yaml:"ephemeral_events"`
+	EphemeralEvents   bool `yaml:"ephemeral_events"`
+	AsyncTransactions bool `yaml:"async_transactions"`
 }
 
-func (config *BaseConfig) MakeUserIDRegex() *regexp.Regexp {
-	usernamePlaceholder := util.RandomString(16)
+func (config *BaseConfig) MakeUserIDRegex(matcher string) *regexp.Regexp {
+	usernamePlaceholder := strings.ToLower(util.RandomString(16))
 	usernameTemplate := fmt.Sprintf("@%s:%s",
 		config.Bridge.FormatUsername(usernamePlaceholder),
 		config.Homeserver.Domain)
 	usernameTemplate = regexp.QuoteMeta(usernameTemplate)
-	usernameTemplate = strings.Replace(usernameTemplate, usernamePlaceholder, ".+", 1)
+	usernameTemplate = strings.Replace(usernameTemplate, usernamePlaceholder, matcher, 1)
 	usernameTemplate = fmt.Sprintf("^%s$", usernameTemplate)
 	return regexp.MustCompile(usernameTemplate)
 }
@@ -84,7 +85,7 @@ func (config *BaseConfig) GenerateRegistration() *appservice.Registration {
 		regexp.QuoteMeta(config.AppService.Bot.Username),
 		regexp.QuoteMeta(config.Homeserver.Domain)))
 	registration.Namespaces.UserIDs.Register(botRegex, true)
-	registration.Namespaces.UserIDs.Register(config.MakeUserIDRegex(), true)
+	registration.Namespaces.UserIDs.Register(config.MakeUserIDRegex(".*"), true)
 
 	return registration
 }
@@ -230,6 +231,7 @@ func doUpgrade(helper *up.Helper) {
 	helper.Copy(up.Str, "appservice", "bot", "displayname")
 	helper.Copy(up.Str, "appservice", "bot", "avatar")
 	helper.Copy(up.Bool, "appservice", "ephemeral_events")
+	helper.Copy(up.Bool, "appservice", "async_transactions")
 	helper.Copy(up.Str, "appservice", "as_token")
 	helper.Copy(up.Str, "appservice", "hs_token")
 

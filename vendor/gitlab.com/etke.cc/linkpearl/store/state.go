@@ -16,7 +16,7 @@ func (s *Store) GetEncryptionEvent(roomID id.RoomID) *event.EncryptionEventConte
 	if !s.encryption {
 		return nil
 	}
-	s.log.Debug("finding encryption event of %s", roomID)
+	s.log.Debug("finding encryption event of %q", roomID)
 	query := "SELECT encryption_event FROM rooms WHERE room_id = $1"
 	row := s.db.QueryRow(query, roomID)
 
@@ -28,7 +28,7 @@ func (s *Store) GetEncryptionEvent(roomID id.RoomID) *event.EncryptionEventConte
 	}
 	var encryptionEvent event.EncryptionEventContent
 	if err := json.Unmarshal(encryptionEventJSON, &encryptionEvent); err != nil {
-		s.log.Debug("cannot unmarshal encryption event: %s", err)
+		s.log.Debug("cannot unmarshal encryption event: %q", err)
 		return nil
 	}
 
@@ -40,12 +40,12 @@ func (s *Store) FindSharedRooms(userID id.UserID) []id.RoomID {
 	if !s.encryption {
 		return nil
 	}
-	s.log.Debug("loading shared rooms for %s", userID)
+	s.log.Debug("loading shared rooms for %q", userID)
 	query := "SELECT room_id FROM room_members WHERE user_id = $1"
 	rows, queryErr := s.db.Query(query, userID)
 	rooms := make([]id.RoomID, 0)
 	if queryErr != nil {
-		s.log.Error("cannot load room members: %s", queryErr)
+		s.log.Error("cannot load room members: %q", queryErr)
 		return rooms
 	}
 	defer rows.Close()

@@ -32,6 +32,11 @@ type Config struct {
 	// AccountDataSecret (Password) for encryption
 	AccountDataSecret string
 
+	// AccountDataLogReplace contains map of field name => value
+	// that will be used to replace mentioned account data fields with provided values
+	// when printing in logs (DEBUG, TRACE)
+	AccountDataLogReplace map[string]string
+
 	// MaxRetries for operations like auto join
 	MaxRetries int
 

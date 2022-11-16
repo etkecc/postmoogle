@@ -83,10 +83,15 @@ func initBot(cfg *config.Config) {
 		Dialect:           cfg.DB.Dialect,
 		NoEncryption:      cfg.NoEncryption,
 		AccountDataSecret: cfg.DataSecret,
-		LPLogger:          mxlog,
-		APILogger:         logger.New("api.", "INFO"),
-		StoreLogger:       logger.New("store.", "INFO"),
-		CryptoLogger:      logger.New("olm.", "INFO"),
+		AccountDataLogReplace: map[string]string{
+			"password": "<redacted>",
+			"dkim.pem": "<redacted>",
+			"dkim.pub": "<redacted>",
+		},
+		LPLogger:     mxlog,
+		APILogger:    logger.New("api.", "INFO"),
+		StoreLogger:  logger.New("store.", "INFO"),
+		CryptoLogger: logger.New("olm.", "INFO"),
 	})
 	if err != nil {
 		// nolint // Fatal = panic, not os.Exit()

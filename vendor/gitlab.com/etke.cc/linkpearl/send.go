@@ -10,10 +10,10 @@ import (
 // Send a message to the roomID and automatically try to encrypt it, if the destination room is encrypted
 func (l *Linkpearl) Send(roomID id.RoomID, content interface{}) (id.EventID, error) {
 	if !l.store.IsEncrypted(roomID) {
-		l.log.Debug("room %s is not encrypted", roomID)
+		l.log.Debug("room %q is not encrypted", roomID)
 		return l.SendPlaintext(roomID, content)
 	}
-	l.log.Debug("room %s is encrypted", roomID)
+	l.log.Debug("room %q is encrypted", roomID)
 
 	encrypted, err := l.EncryptEvent(roomID, content)
 	if err != nil {
@@ -28,7 +28,7 @@ func (l *Linkpearl) Send(roomID id.RoomID, content interface{}) (id.EventID, err
 func (l *Linkpearl) SendFile(roomID id.RoomID, req *mautrix.ReqUploadMedia, msgtype event.MessageType, relation *event.RelatesTo) error {
 	resp, err := l.GetClient().UploadMedia(*req)
 	if err != nil {
-		l.log.Error("cannot upload file %s: %v", req.FileName, err)
+		l.log.Error("cannot upload file %q: %v", req.FileName, err)
 		return err
 	}
 	_, err = l.Send(roomID, &event.Content{
@@ -40,7 +40,7 @@ func (l *Linkpearl) SendFile(roomID id.RoomID, req *mautrix.ReqUploadMedia, msgt
 		},
 	})
 	if err != nil {
-		l.log.Error("cannot send uploaded file: %s: %v", req.FileName, err)
+		l.log.Error("cannot send uploaded file: %q: %v", req.FileName, err)
 	}
 
 	return err
@@ -48,7 +48,7 @@ func (l *Linkpearl) SendFile(roomID id.RoomID, req *mautrix.ReqUploadMedia, msgt
 
 // SendPlaintext sends plaintext event only
 func (l *Linkpearl) SendPlaintext(roomID id.RoomID, content interface{}) (id.EventID, error) {
-	l.log.Debug("sending plaintext event to %s: %+v", roomID, content)
+	l.log.Debug("sending plaintext event to %q: %+v", roomID, content)
 	resp, err := l.api.SendMessageEvent(roomID, event.EventMessage, content)
 	if err != nil {
 		return "", err
@@ -58,7 +58,7 @@ func (l *Linkpearl) SendPlaintext(roomID id.RoomID, content interface{}) (id.Eve
 
 // SendEncrypted sends encrypted event only
 func (l *Linkpearl) SendEncrypted(roomID id.RoomID, content interface{}) (id.EventID, error) {
-	l.log.Debug("sending encrypted event to %s: %+v", roomID, content)
+	l.log.Debug("sending encrypted event to %q: %+v", roomID, content)
 	resp, err := l.api.SendMessageEvent(roomID, event.EventEncrypted, content)
 	if err != nil {
 		return "", err
