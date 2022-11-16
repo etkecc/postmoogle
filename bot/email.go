@@ -173,12 +173,13 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		meta.Subject = strings.SplitN(content.Body, "\n", 1)[0]
 	}
 	body := content.Body
+	htmlBody := content.FormattedBody
 
 	meta.MessageID = utils.MessageID(evt.ID, domain)
 	meta.References = meta.References + " " + meta.MessageID
 	b.log.Debug("send email reply: %+v", meta)
-	email := utils.NewEmail(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, "", nil)
-	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
+	email := utils.NewEmail(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, htmlBody, nil)
+	data := email.Compose(false, b.getBotSettings().DKIMPrivateKey())
 
 	queued, err := b.Sendmail(evt.ID, meta.From, meta.To, data)
 	if queued {

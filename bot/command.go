@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"maunium.net/go/mautrix/event"
+	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/utils"
@@ -16,6 +17,7 @@ const (
 	commandHelp          = "help"
 	commandStop          = "stop"
 	commandSend          = "send"
+	commandSendHTML      = "send:html"
 	commandDKIM          = "dkim"
 	commandCatchAll      = botOptionCatchAll
 	commandUsers         = botOptionUsers
@@ -64,6 +66,11 @@ func (b *Bot) initCommands() commandList {
 		{
 			key:         commandSend,
 			description: "Send email",
+			allowed:     b.allowSend,
+		},
+		{
+			key:         commandSendHTML,
+			description: "Send email, converting markdown to HTML",
 			allowed:     b.allowSend,
 		},
 		{allowed: b.allowOwner}, // delimiter
@@ -266,7 +273,9 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 	case commandStop:
 		b.runStop(ctx)
 	case commandSend:
-		b.runSend(ctx)
+		b.runSend(ctx, false)
+	case commandSendHTML:
+		b.runSend(ctx, true)
 	case commandDKIM:
 		b.runDKIM(ctx, commandSlice)
 	case commandUsers:
@@ -377,10 +386,14 @@ func (b *Bot) sendHelp(ctx context.Context) {
 	b.SendNotice(ctx, evt.RoomID, msg.String())
 }
 
-func (b *Bot) runSend(ctx context.Context) {
+func (b *Bot) runSend(ctx context.Context, html bool) {
 	evt := eventFromContext(ctx)
 	if !b.allowSend(evt.Sender, evt.RoomID) {
 		return
+	}
+	subcommand := "send"
+	if html {
+		subcommand = "send:html"
 	}
 	commandSlice := b.parseCommand(evt.Content.AsMessage().Body, false)
 	to, subject, body, err := utils.ParseSend(commandSlice)
@@ -388,13 +401,13 @@ func (b *Bot) runSend(ctx context.Context) {
 		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf(
 			"Usage:\n"+
 				"```\n"+
-				"%s send someone@example.com\n"+
+				"%s %s someone@example.com\n"+
 				"Subject goes here on a line of its own\n"+
 				"Email content goes here\n"+
 				"on as many lines\n"+
 				"as you want.\n"+
 				"```",
-			b.prefix))
+			b.prefix, subcommand))
 		return
 	}
 
@@ -419,6 +432,11 @@ func (b *Bot) runSend(ctx context.Context) {
 		}
 	}
 
+	var htmlBody string
+	if html {
+		htmlBody = format.RenderMarkdown(body, true, true).FormattedBody
+	}
+
 	b.lock(evt.RoomID.String())
 	defer b.unlock(evt.RoomID.String())
 
@@ -426,8 +444,8 @@ func (b *Bot) runSend(ctx context.Context) {
 	from := mailbox + "@" + domain
 	ID := utils.MessageID(evt.ID, domain)
 	for _, to := range tos {
-		email := utils.NewEmail(ID, "", " "+ID, subject, from, to, body, "", nil)
-		data := email.Compose(b.getBotSettings().DKIMPrivateKey())
+		email := utils.NewEmail(ID, "", " "+ID, subject, from, to, body, htmlBody, nil)
+		data := email.Compose(html, b.getBotSettings().DKIMPrivateKey())
 		queued, err := b.Sendmail(evt.ID, from, to, data)
 		if queued {
 			b.log.Error("cannot send email: %v", err)

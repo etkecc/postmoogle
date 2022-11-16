@@ -156,7 +156,7 @@ func (s *outgoingSession) Data(r io.Reader) error {
 		eml.HTML,
 		files)
 
-	return s.sendmail(email.From, email.To, email.Compose(s.privkey))
+	return s.sendmail(email.From, email.To, email.Compose(false, s.privkey))
 }
 func (s *outgoingSession) Reset()        {}
 func (s *outgoingSession) Logout() error { return nil }

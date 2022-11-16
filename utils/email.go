@@ -141,7 +141,7 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 }
 
 // Compose converts the email object to a string (to be used for delivery via SMTP) and possibly DKIM-signs it
-func (e *Email) Compose(privkey string) string {
+func (e *Email) Compose(html bool, privkey string) string {
 	var data strings.Builder
 
 	domain := strings.SplitN(e.From, "@", 2)[1]
@@ -149,7 +149,11 @@ func (e *Email) Compose(privkey string) string {
 	data.WriteString("MIME-Version: 1.0")
 	data.WriteString("\r\n")
 
-	data.WriteString("Content-Type: text/plain; charset=\"UTF-8\"")
+	if html {
+		data.WriteString("Content-Type: text/html; charset=\"UTF-8\"")
+	} else {
+		data.WriteString("Content-Type: text/plain; charset=\"UTF-8\"")
+	}
 	data.WriteString("\r\n")
 
 	data.WriteString("Content-Transfer-Encoding: 8BIT")
@@ -189,7 +193,11 @@ func (e *Email) Compose(privkey string) string {
 
 	data.WriteString("\r\n")
 
-	data.WriteString(e.Text)
+	if html {
+		data.WriteString(e.HTML)
+	} else {
+		data.WriteString(e.Text)
+	}
 	data.WriteString("\r\n")
 
 	return e.sign(domain, privkey, data)
