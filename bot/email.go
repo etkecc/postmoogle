@@ -147,12 +147,13 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		b.Error(ctx, evt.RoomID, "mailbox is not configured, kupo")
 		return
 	}
+	domain := utils.SanitizeDomain(cfg.Domain())
 
 	b.lock(evt.RoomID.String())
 	defer b.unlock(evt.RoomID.String())
 
-	fromMailbox := mailbox + "@" + b.domains[0]
-	meta := b.getParentEmail(evt)
+	fromMailbox := mailbox + "@" + domain
+	meta := b.getParentEmail(evt, domain)
 	// when email was sent from matrix and reply was sent from matrix again
 	if fromMailbox != meta.From {
 		meta.To = meta.From
@@ -173,7 +174,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	}
 	body := content.Body
 
-	meta.MessageID = utils.MessageID(evt.ID, b.domains[0])
+	meta.MessageID = utils.MessageID(evt.ID, domain)
 	meta.References = meta.References + " " + meta.MessageID
 	b.log.Debug("send email reply: %+v", meta)
 	email := utils.NewEmail(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, "", nil)
@@ -240,7 +241,7 @@ func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 	return threadID, decrypted
 }
 
-func (b *Bot) getParentEmail(evt *event.Event) parentEmail {
+func (b *Bot) getParentEmail(evt *event.Event, domain string) parentEmail {
 	var parent parentEmail
 	threadID, parentEvt := b.getParentEvent(evt)
 	parent.ThreadID = threadID
@@ -251,7 +252,7 @@ func (b *Bot) getParentEmail(evt *event.Event) parentEmail {
 		return parent
 	}
 
-	parent.MessageID = utils.MessageID(parentEvt.ID, b.domains[0])
+	parent.MessageID = utils.MessageID(parentEvt.ID, domain)
 	parent.From = utils.EventField[string](&parentEvt.Content, eventFromKey)
 	parent.To = utils.EventField[string](&parentEvt.Content, eventToKey)
 	parent.InReplyTo = utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
@@ -298,8 +299,9 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 		b.Error(ctx, evt.RoomID, "cannot send notice: %v", err)
 		return
 	}
-	b.setThreadID(evt.RoomID, utils.MessageID(evt.ID, b.domains[0]), threadID)
-	b.setThreadID(evt.RoomID, utils.MessageID(msgID, b.domains[0]), threadID)
+	domain := utils.SanitizeDomain(cfg.Domain())
+	b.setThreadID(evt.RoomID, utils.MessageID(evt.ID, domain), threadID)
+	b.setThreadID(evt.RoomID, utils.MessageID(msgID, domain), threadID)
 	b.setLastEventID(evt.RoomID, threadID, msgID)
 }
 

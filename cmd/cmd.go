@@ -34,6 +34,7 @@ func main() {
 	cfg := config.New()
 	log = logger.New("postmoogle.", cfg.LogLevel)
 	utils.SetLogger(log)
+	utils.SetDomains(cfg.Domains)
 
 	log.Info("#############################")
 	log.Info("Postmoogle")

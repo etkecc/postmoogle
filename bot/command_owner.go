@@ -60,7 +60,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	}
 
 	if name == roomOptionMailbox {
-		value = utils.EmailsList(value, b.domains)
+		value = utils.EmailsList(value, cfg.Domain())
 	}
 
 	msg := fmt.Sprintf("`%s` of this room is `%s`\n"+
@@ -87,7 +87,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	if name == roomOptionMailbox {
 		existingID, ok := b.getMapping(value)
 		if ok && existingID != "" && existingID != evt.RoomID {
-			b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, b.domains)))
+			b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, "")))
 			return
 		}
 	}
@@ -116,7 +116,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 			b.rooms.Delete(old)
 		}
 		b.rooms.Store(value, evt.RoomID)
-		value = fmt.Sprintf("%s@%s", value, b.domains[0])
+		value = fmt.Sprintf("%s@%s", value, utils.SanitizeDomain(cfg.Domain()))
 	}
 
 	err = b.setRoomSettings(evt.RoomID, cfg)

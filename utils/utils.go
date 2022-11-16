@@ -7,11 +7,19 @@ import (
 	"gitlab.com/etke.cc/go/logger"
 )
 
-var log *logger.Logger
+var (
+	log     *logger.Logger
+	domains []string
+)
 
 // SetLogger for utils
 func SetLogger(loggerInstance *logger.Logger) {
 	log = loggerInstance
+}
+
+// SetDomains for later use
+func SetDomains(slice []string) {
+	domains = slice
 }
 
 // Mailbox returns mailbox part from email address
@@ -24,16 +32,24 @@ func Mailbox(email string) string {
 }
 
 // EmailsList returns human-readable list of mailbox's emails for all available domains
-func EmailsList(mailbox string, domains []string) string {
+func EmailsList(mailbox string, domain string) string {
 	var msg strings.Builder
+	domain = SanitizeDomain(domain)
+	msg.WriteString(mailbox)
+	msg.WriteString("@")
+	msg.WriteString(domain)
+
 	count := len(domains) - 1
-	for i, domain := range domains {
-		msg.WriteString(mailbox)
-		msg.WriteString("@")
-		msg.WriteString(domain)
+	for i, aliasDomain := range domains {
 		if i < count {
 			msg.WriteString(", ")
 		}
+		if aliasDomain == domain {
+			continue
+		}
+		msg.WriteString(mailbox)
+		msg.WriteString("@")
+		msg.WriteString(aliasDomain)
 	}
 
 	return msg.String()
@@ -42,6 +58,22 @@ func EmailsList(mailbox string, domains []string) string {
 // Hostname returns hostname part from email address
 func Hostname(email string) string {
 	return email[strings.LastIndex(email, "@")+1:]
+}
+
+// SanitizeDomain checks that input domain is available for use
+func SanitizeDomain(domain string) string {
+	domain = strings.TrimSpace(domain)
+	if domain == "" {
+		return domains[0]
+	}
+
+	for _, allowed := range domains {
+		if domain == allowed {
+			return domain
+		}
+	}
+
+	return domains[0]
 }
 
 // Bool converts string to boolean

@@ -71,6 +71,12 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowOwner,
 		},
 		{
+			key:         roomOptionDomain,
+			description: "Get or set default domain of the room",
+			sanitizer:   utils.SanitizeDomain,
+			allowed:     b.allowOwner,
+		},
+		{
 			key:         roomOptionOwner,
 			description: "Get or set owner of the room",
 			sanitizer:   func(s string) string { return s },
@@ -276,7 +282,7 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	msg.WriteString(" SOME_INBOX` command.\n")
 
 	msg.WriteString("You will then be able to send emails to ")
-	msg.WriteString(utils.EmailsList("SOME_INBOX", b.domains))
+	msg.WriteString(utils.EmailsList("SOME_INBOX", ""))
 	msg.WriteString("` and have them appear in this room.")
 
 	b.SendNotice(ctx, roomID, msg.String())
@@ -315,7 +321,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 				msg.WriteString(value)
 				if cmd.key == roomOptionMailbox {
 					msg.WriteString(" (")
-					msg.WriteString(utils.EmailsList(value, b.domains))
+					msg.WriteString(utils.EmailsList(value, cfg.Domain()))
 					msg.WriteString(")")
 				}
 				msg.WriteString("`)")
@@ -376,8 +382,9 @@ func (b *Bot) runSend(ctx context.Context) {
 	b.lock(evt.RoomID.String())
 	defer b.unlock(evt.RoomID.String())
 
-	from := mailbox + "@" + b.domains[0]
-	ID := utils.MessageID(evt.ID, b.domains[0])
+	domain := utils.SanitizeDomain(cfg.Domain())
+	from := mailbox + "@" + domain
+	ID := utils.MessageID(evt.ID, domain)
 	for _, to := range tos {
 		email := utils.NewEmail(ID, "", " "+ID, subject, from, to, body, "", nil)
 		data := email.Compose(b.getBotSettings().DKIMPrivateKey())

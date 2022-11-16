@@ -53,7 +53,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 	for _, mailbox := range slice {
 		cfg := mailboxes[mailbox]
 		msg.WriteString("* `")
-		msg.WriteString(utils.EmailsList(mailbox, b.domains))
+		msg.WriteString(utils.EmailsList(mailbox, cfg.Domain()))
 		msg.WriteString("` by ")
 		msg.WriteString(cfg.Owner())
 		msg.WriteString("\n")
@@ -174,7 +174,7 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 		if cfg.CatchAll() != "" {
 			msg.WriteString(cfg.CatchAll())
 			msg.WriteString(" (")
-			msg.WriteString(utils.EmailsList(cfg.CatchAll(), b.domains))
+			msg.WriteString(utils.EmailsList(cfg.CatchAll(), ""))
 			msg.WriteString(")")
 		} else {
 			msg.WriteString("not set")
@@ -203,5 +203,5 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, b.domains)))
+	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, "")))
 }
