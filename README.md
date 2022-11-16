@@ -122,6 +122,13 @@ If you want to change them - check available options in the help message (`!pm h
 * **!pm mailboxes** - Show the list of all mailboxes
 * **!pm delete** &lt;mailbox&gt; - Delete specific mailbox
 
+---
+
+* **!pm banlist** - Enable/disable banlist and show current values
+* **!pm banlist:add** - Ban an IP
+* **!pm banlist:remove** - Unban an IP
+* **!pm banlist:reset** - Reset banlist
+
 </details>
 
 

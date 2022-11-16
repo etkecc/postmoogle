@@ -17,6 +17,7 @@ const (
 	botOptionDKIMPrivateKey = "dkim.pem"
 	botOptionQueueBatch     = "queue:batch"
 	botOptionQueueRetries   = "queue:retries"
+	botOptionBanlistEnabled = "banlist:enabled"
 )
 
 type botSettings map[string]string
@@ -48,6 +49,11 @@ func (s botSettings) Users() []string {
 // CatchAll option
 func (s botSettings) CatchAll() string {
 	return s.Get(botOptionCatchAll)
+}
+
+// BanlistEnabled option
+func (s botSettings) BanlistEnabled() bool {
+	return utils.Bool(s.Get(botOptionBanlistEnabled))
 }
 
 // DKIMSignature (DNS TXT record)

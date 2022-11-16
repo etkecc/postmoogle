@@ -13,16 +13,20 @@ import (
 )
 
 const (
-	commandHelp         = "help"
-	commandStop         = "stop"
-	commandSend         = "send"
-	commandDKIM         = "dkim"
-	commandCatchAll     = botOptionCatchAll
-	commandUsers        = botOptionUsers
-	commandQueueBatch   = botOptionQueueBatch
-	commandQueueRetries = botOptionQueueRetries
-	commandDelete       = "delete"
-	commandMailboxes    = "mailboxes"
+	commandHelp          = "help"
+	commandStop          = "stop"
+	commandSend          = "send"
+	commandDKIM          = "dkim"
+	commandCatchAll      = botOptionCatchAll
+	commandUsers         = botOptionUsers
+	commandQueueBatch    = botOptionQueueBatch
+	commandQueueRetries  = botOptionQueueRetries
+	commandDelete        = "delete"
+	commandBanlist       = "banlist"
+	commandBanlistAdd    = "banlist:add"
+	commandBanlistRemove = "banlist:remove"
+	commandBanlistReset  = "banlist:reset"
+	commandMailboxes     = "mailboxes"
 )
 
 type (
@@ -211,6 +215,27 @@ func (b *Bot) initCommands() commandList {
 			description: "Delete specific mailbox",
 			allowed:     b.allowAdmin,
 		},
+		{allowed: b.allowAdmin}, // delimiter
+		{
+			key:         commandBanlist,
+			description: "Enable/disable banlist and show current values",
+			allowed:     b.allowAdmin,
+		},
+		{
+			key:         commandBanlistAdd,
+			description: "Ban an IP",
+			allowed:     b.allowAdmin,
+		},
+		{
+			key:         commandBanlistRemove,
+			description: "Unban an IP",
+			allowed:     b.allowAdmin,
+		},
+		{
+			key:         commandBanlistReset,
+			description: "Reset banlist",
+			allowed:     b.allowAdmin,
+		},
 	}
 }
 
@@ -245,6 +270,14 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.runCatchAll(ctx, commandSlice)
 	case commandDelete:
 		b.runDelete(ctx, commandSlice)
+	case commandBanlist:
+		b.runBanlist(ctx, commandSlice)
+	case commandBanlistAdd:
+		b.runBanlistAdd(ctx, commandSlice)
+	case commandBanlistRemove:
+		b.runBanlistRemove(ctx, commandSlice)
+	case commandBanlistReset:
+		b.runBanlistReset(ctx)
 	case commandMailboxes:
 		b.sendMailboxes(ctx)
 	default:

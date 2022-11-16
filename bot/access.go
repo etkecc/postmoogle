@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"net"
 	"regexp"
 	"strings"
 
@@ -69,6 +70,29 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 	}
 
 	return !cfg.NoSend()
+}
+
+// IsBanned checks if address is banned
+func (b *Bot) IsBanned(addr net.Addr) bool {
+	if !b.getBotSettings().BanlistEnabled() {
+		return false
+	}
+	return b.getBanlist().Has(addr)
+}
+
+// Ban an address
+func (b *Bot) Ban(addr net.Addr) {
+	if !b.getBotSettings().BanlistEnabled() {
+		return
+	}
+
+	b.log.Debug("banning %s", addr.String())
+	banlist := b.getBanlist()
+	banlist.Add(addr)
+	err := b.setBanlist(banlist)
+	if err != nil {
+		b.log.Error("cannot update banlist with %s: %v", addr.String(), err)
+	}
 }
 
 // AllowAuth check if SMTP login (email) and password are valid

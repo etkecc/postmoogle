@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 
@@ -204,4 +205,105 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 	}
 
 	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, "")))
+}
+
+func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	cfg := b.getBotSettings()
+	if len(commandSlice) < 2 {
+		banlist := b.getBanlist()
+		var msg strings.Builder
+		if len(banlist) > 0 {
+			msg.WriteString("Currently: `")
+			msg.WriteString(cfg.Get(botOptionBanlistEnabled))
+			msg.WriteString("` (`")
+			msg.WriteString(strings.Join(banlist.Slice(), " "))
+			msg.WriteString("`)\n\n")
+		}
+		if !cfg.BanlistEnabled() {
+			msg.WriteString("To enable banlist, send `")
+			msg.WriteString(b.prefix)
+			msg.WriteString(" banlist true`\n\n")
+		}
+		msg.WriteString("To ban somebody: `")
+		msg.WriteString(b.prefix)
+		msg.WriteString(" banlist:add IP1 IP2 IP3...`")
+		msg.WriteString("where each ip is IPv4 or IPv6\n")
+
+		b.SendNotice(ctx, evt.RoomID, msg.String())
+		return
+	}
+	value := utils.SanitizeBoolString(commandSlice[1])
+	cfg.Set(botOptionBanlistEnabled, value)
+	err := b.setBotSettings(cfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+	}
+	b.SendNotice(ctx, evt.RoomID, "banlist has been updated")
+}
+
+func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	if len(commandSlice) < 2 {
+		b.runBanlist(ctx, commandSlice)
+		return
+	}
+	banlist := b.getBanlist()
+
+	ips := commandSlice[1:]
+	for _, ip := range ips {
+		addr, err := net.ResolveIPAddr("ip", ip)
+		if err != nil {
+			b.Error(ctx, evt.RoomID, "cannot add %s to banlist: %v", ip, err)
+			return
+		}
+		banlist.Add(addr)
+	}
+
+	err := b.setBanlist(banlist)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot set banlist: %v", err)
+		return
+	}
+
+	b.SendNotice(ctx, evt.RoomID, "banlist has been updated, kupo")
+}
+
+func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	if len(commandSlice) < 2 {
+		b.runBanlist(ctx, commandSlice)
+		return
+	}
+	banlist := b.getBanlist()
+
+	ips := commandSlice[1:]
+	for _, ip := range ips {
+		addr, err := net.ResolveIPAddr("ip", ip)
+		if err != nil {
+			b.Error(ctx, evt.RoomID, "cannot remove %s from banlist: %v", ip, err)
+			return
+		}
+		banlist.Remove(addr)
+	}
+
+	err := b.setBanlist(banlist)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot set banlist: %v", err)
+		return
+	}
+
+	b.SendNotice(ctx, evt.RoomID, "banlist has been updated, kupo")
+}
+
+func (b *Bot) runBanlistReset(ctx context.Context) {
+	evt := eventFromContext(ctx)
+
+	err := b.setBanlist(banList{})
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot set banlist: %v", err)
+		return
+	}
+
+	b.SendNotice(ctx, evt.RoomID, "banlist has been reset, kupo")
 }

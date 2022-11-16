@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 
 	"github.com/emersion/go-smtp"
 	"github.com/getsentry/sentry-go"
@@ -21,9 +22,11 @@ type incomingSession struct {
 	getRoomID    func(string) (id.RoomID, bool)
 	getFilters   func(id.RoomID) utils.IncomingFilteringOptions
 	receiveEmail func(context.Context, *utils.Email) error
+	ban          func(net.Addr)
 	domains      []string
 
 	ctx  context.Context
+	addr net.Addr
 	to   string
 	from string
 }
@@ -31,6 +34,7 @@ type incomingSession struct {
 func (s *incomingSession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
 	if !utils.AddressValid(from) {
+		s.ban(s.addr)
 		return errors.New("please, provide email address")
 	}
 	s.from = from
@@ -50,17 +54,20 @@ func (s *incomingSession) Rcpt(to string) error {
 	}
 	if !domainok {
 		s.log.Debug("wrong domain of %s", to)
+		s.ban(s.addr)
 		return smtp.ErrAuthRequired
 	}
 
 	roomID, ok := s.getRoomID(utils.Mailbox(to))
 	if !ok {
 		s.log.Debug("mapping for %s not found", to)
+		s.ban(s.addr)
 		return smtp.ErrAuthRequired
 	}
 
 	validations := s.getFilters(roomID)
 	if !validateEmail(s.from, s.to, s.log, validations) {
+		s.ban(s.addr)
 		return smtp.ErrAuthRequired
 	}
 

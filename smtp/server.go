@@ -23,11 +23,17 @@ type mailServer struct {
 // Login used for outgoing mail submissions only (when you use postmoogle as smtp server in your scripts)
 func (m *mailServer) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
 	m.log.Debug("Login state=%+v username=%+v", state, username)
+	if m.bot.IsBanned(state.RemoteAddr) {
+		return nil, errors.New("please, don't bother me anymore")
+	}
+
 	if !utils.AddressValid(username) {
+		m.bot.Ban(state.RemoteAddr)
 		return nil, errors.New("please, provide an email address")
 	}
 
 	if !m.bot.AllowAuth(username, password) {
+		m.bot.Ban(state.RemoteAddr)
 		return nil, errors.New("email or password is invalid")
 	}
 
@@ -44,6 +50,10 @@ func (m *mailServer) Login(state *smtp.ConnectionState, username, password strin
 // AnonymousLogin used for incoming mail submissions only
 func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
 	m.log.Debug("AnonymousLogin state=%+v", state)
+	if m.bot.IsBanned(state.RemoteAddr) {
+		return nil, errors.New("please, don't bother me anymore")
+	}
+
 	return &incomingSession{
 		ctx:          sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
 		getRoomID:    m.bot.GetMapping,
@@ -51,6 +61,7 @@ func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, 
 		receiveEmail: m.ReceiveEmail,
 		log:          m.log,
 		domains:      m.domains,
+		addr:         state.RemoteAddr,
 	}, nil
 }
 

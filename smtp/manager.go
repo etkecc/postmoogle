@@ -40,6 +40,8 @@ type Manager struct {
 
 type matrixbot interface {
 	AllowAuth(string, string) bool
+	IsBanned(net.Addr) bool
+	Ban(net.Addr)
 	GetMapping(string) (id.RoomID, bool)
 	GetIFOptions(id.RoomID) utils.IncomingFilteringOptions
 	IncomingEmail(context.Context, *utils.Email) error
