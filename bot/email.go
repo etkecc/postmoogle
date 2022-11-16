@@ -39,7 +39,7 @@ func (b *Bot) SetSendmail(sendmail func(string, string, string) error) {
 func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) (bool, error) {
 	err := b.sendmail(from, to, data)
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "45") {
+		if strings.HasPrefix(err.Error(), "4") {
 			b.log.Debug("email %s (from=%s to=%s) was added to the queue: %v", eventID, from, to, err)
 			return true, b.enqueueEmail(eventID.String(), from, to, data)
 		}

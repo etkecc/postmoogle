@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/emersion/go-msgauth/dkim"
-	"gitlab.com/etke.cc/go/secgen"
+	"github.com/jhillyerd/enmime"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
@@ -143,75 +143,33 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 
 // Compose converts the email object to a string (to be used for delivery via SMTP) and possibly DKIM-signs it
 func (e *Email) Compose(privkey string) string {
+	mail := enmime.Builder().
+		From("", e.From).
+		To("", e.To).
+		Header("Message-Id", e.MessageID).
+		Subject(e.Subject).
+		Text([]byte(e.Text)).
+		HTML([]byte(e.HTML))
+	if e.InReplyTo != "" {
+		mail = mail.Header("In-Reply-To", e.InReplyTo)
+	}
+	if e.References != "" {
+		mail = mail.Header("References", e.References)
+	}
+
+	root, err := mail.Build()
+	if err != nil {
+		log.Error("cannot compose email: %v", err)
+		return ""
+	}
 	var data strings.Builder
+	err = root.Encode(&data)
+	if err != nil {
+		log.Error("cannot encode email: %v", err)
+		return ""
+	}
 
 	domain := strings.SplitN(e.From, "@", 2)[1]
-	boundaryName := "postmoogle" + secgen.Password(32)
-	boundary := "--" + boundaryName
-
-	data.WriteString("MIME-Version: 1.0")
-	data.WriteString("\r\n")
-
-	data.WriteString("Content-Type: multipart/alternative; boundary=")
-	data.WriteString(boundaryName)
-	data.WriteString("\r\n")
-
-	data.WriteString("Content-Transfer-Encoding: 8BIT")
-	data.WriteString("\r\n")
-
-	data.WriteString("From: ")
-	data.WriteString(e.From)
-	data.WriteString("\r\n")
-
-	data.WriteString("To: ")
-	data.WriteString(e.To)
-	data.WriteString("\r\n")
-
-	data.WriteString("Message-Id: ")
-	data.WriteString(e.MessageID)
-	data.WriteString("\r\n")
-
-	data.WriteString("Date: ")
-	data.WriteString(e.Date)
-	data.WriteString("\r\n")
-
-	if e.InReplyTo != "" {
-		data.WriteString("In-Reply-To: ")
-		data.WriteString(e.InReplyTo)
-		data.WriteString("\r\n")
-	}
-
-	if e.References != "" {
-		data.WriteString("References: ")
-		data.WriteString(e.References)
-		data.WriteString("\r\n")
-	}
-
-	data.WriteString("Subject: ")
-	data.WriteString(e.Subject)
-	data.WriteString("\r\n")
-	data.WriteString("\r\n")
-
-	data.WriteString(boundary)
-	data.WriteString("\r\n")
-	data.WriteString("Content-Type: text/html; charset=\"UTF-8\"")
-	data.WriteString("\r\n")
-	data.WriteString(e.HTML)
-	data.WriteString("\r\n")
-	data.WriteString("\r\n")
-
-	data.WriteString(boundary)
-	data.WriteString("\r\n")
-	data.WriteString("Content-Type: text/plain; charset=\"UTF-8\"")
-	data.WriteString("\r\n")
-	data.WriteString(e.Text)
-	data.WriteString("\r\n")
-	data.WriteString("\r\n")
-
-	data.WriteString(boundary)
-	data.WriteString("--")
-	data.WriteString("\r\n")
-
 	return e.sign(domain, privkey, data)
 }
 

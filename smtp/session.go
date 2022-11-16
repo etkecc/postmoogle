@@ -35,8 +35,9 @@ type incomingSession struct {
 func (s *incomingSession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
 	if !utils.AddressValid(from) {
+		s.log.Debug("address %s is invalid", from)
 		s.ban(s.addr)
-		return errors.New("please, provide email address")
+		return ErrBanned
 	}
 	s.from = from
 	s.log.Debug("mail from %s, options: %+v", from, opts)
@@ -56,20 +57,20 @@ func (s *incomingSession) Rcpt(to string) error {
 	if !domainok {
 		s.log.Debug("wrong domain of %s", to)
 		s.ban(s.addr)
-		return smtp.ErrAuthRequired
+		return ErrBanned
 	}
 
 	roomID, ok := s.getRoomID(utils.Mailbox(to))
 	if !ok {
 		s.log.Debug("mapping for %s not found", to)
 		s.ban(s.addr)
-		return smtp.ErrAuthRequired
+		return ErrBanned
 	}
 
 	validations := s.getFilters(roomID)
 	if !validateEmail(s.from, s.to, s.log, validations) {
 		s.ban(s.addr)
-		return smtp.ErrAuthRequired
+		return ErrBanned
 	}
 
 	s.log.Debug("mail to %s", to)

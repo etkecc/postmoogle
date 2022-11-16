@@ -2,7 +2,6 @@ package smtp
 
 import (
 	"context"
-	"errors"
 	"io"
 	"strings"
 
@@ -14,6 +13,13 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
+// ErrBanned returned to banned hosts
+var ErrBanned = &smtp.SMTPError{
+	Code:         554,
+	EnhancedCode: smtp.EnhancedCode{5, 5, 4},
+	Message:      "please, don't bother me anymore, kupo.",
+}
+
 type mailServer struct {
 	bot     matrixbot
 	log     *logger.Logger
@@ -24,17 +30,19 @@ type mailServer struct {
 func (m *mailServer) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
 	m.log.Debug("Login state=%+v username=%+v", state, username)
 	if m.bot.IsBanned(state.RemoteAddr) {
-		return nil, errors.New("please, don't bother me anymore")
+		return nil, ErrBanned
 	}
 
 	if !utils.AddressValid(username) {
+		m.log.Debug("address %s is invalid", username)
 		m.bot.Ban(state.RemoteAddr)
-		return nil, errors.New("please, provide an email address")
+		return nil, ErrBanned
 	}
 
 	if !m.bot.AllowAuth(username, password) {
+		m.log.Debug("username=%s or password=<redacted> is invalid", username)
 		m.bot.Ban(state.RemoteAddr)
-		return nil, errors.New("email or password is invalid")
+		return nil, ErrBanned
 	}
 
 	return &outgoingSession{
@@ -51,7 +59,7 @@ func (m *mailServer) Login(state *smtp.ConnectionState, username, password strin
 func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
 	m.log.Debug("AnonymousLogin state=%+v", state)
 	if m.bot.IsBanned(state.RemoteAddr) {
-		return nil, errors.New("please, don't bother me anymore")
+		return nil, ErrBanned
 	}
 
 	return &incomingSession{
