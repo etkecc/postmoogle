@@ -290,12 +290,12 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 	evt := eventFromContext(ctx)
 	content := email.Content(threadID, cfg.ContentOptions())
 	notice := format.RenderMarkdown(text, true, true)
-	notice.MsgType = event.MsgNotice
 	msgContent, ok := content.Parsed.(*event.MessageEventContent)
 	if !ok {
 		b.Error(ctx, evt.RoomID, "cannot parse message")
 		return
 	}
+	msgContent.MsgType = event.MsgNotice
 	msgContent.Body = notice.Body
 	msgContent.FormattedBody = notice.FormattedBody
 	content.Parsed = msgContent
