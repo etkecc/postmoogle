@@ -20,7 +20,7 @@ require (
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/go/trysmtp v1.0.0
-	gitlab.com/etke.cc/go/validator v1.0.3
+	gitlab.com/etke.cc/go/validator v1.0.4
 	gitlab.com/etke.cc/linkpearl v0.0.0-20221116205701-65547c5608e6
 	golang.org/x/net v0.2.0
 	maunium.net/go/mautrix v0.12.3

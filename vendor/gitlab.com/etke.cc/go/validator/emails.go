@@ -35,34 +35,35 @@ func (v *V) Email(email string) bool {
 		}
 	}
 
-	if v.emailMX(email) {
-		return false
+	if v.enforce.MX {
+		if v.emailNoMX(email) {
+			return false
+		}
 	}
 
-	smtpCheck := !v.emailSMTP(email)
 	if v.enforce.SMTP {
-		return smtpCheck
+		if v.emailNoSMTP(email) {
+			return false
+		}
 	}
 
 	return true
 }
 
-func (v *V) emailMX(email string) bool {
+func (v *V) emailNoMX(email string) bool {
 	at := strings.LastIndex(email, "@")
 	domain := email[at+1:]
 
 	nomx := !v.MX(domain)
 	if nomx {
 		v.log.Info("email %s domain %s invalid, reason: no MX", email, domain)
-		if v.enforce.MX {
-			return true
-		}
+		return true
 	}
 
 	return false
 }
 
-func (v *V) emailSMTP(email string) bool {
+func (v *V) emailNoSMTP(email string) bool {
 	client, err := trysmtp.Connect(v.from, email)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "45") {

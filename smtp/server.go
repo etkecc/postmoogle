@@ -13,12 +13,20 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
-// ErrBanned returned to banned hosts
-var ErrBanned = &smtp.SMTPError{
-	Code:         554,
-	EnhancedCode: smtp.EnhancedCode{5, 5, 4},
-	Message:      "please, don't bother me anymore, kupo.",
-}
+var (
+	// ErrBanned returned to banned hosts
+	ErrBanned = &smtp.SMTPError{
+		Code:         554,
+		EnhancedCode: smtp.EnhancedCode{5, 5, 4},
+		Message:      "please, don't bother me anymore, kupo.",
+	}
+	// ErrNoUser returned when no such mailbox found
+	ErrNoUser = &smtp.SMTPError{
+		Code:         550,
+		EnhancedCode: smtp.EnhancedCode{5, 5, 0},
+		Message:      "no such user here, kupo.",
+	}
+)
 
 type mailServer struct {
 	bot     matrixbot

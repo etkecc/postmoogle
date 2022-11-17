@@ -56,15 +56,13 @@ func (s *incomingSession) Rcpt(to string) error {
 	}
 	if !domainok {
 		s.log.Debug("wrong domain of %s", to)
-		s.ban(s.addr)
-		return ErrBanned
+		return ErrNoUser
 	}
 
 	roomID, ok := s.getRoomID(utils.Mailbox(to))
 	if !ok {
 		s.log.Debug("mapping for %s not found", to)
-		s.ban(s.addr)
-		return ErrBanned
+		return ErrNoUser
 	}
 
 	validations := s.getFilters(roomID)
@@ -166,7 +164,7 @@ func validateEmail(from, to string, log *logger.Logger, options utils.IncomingFi
 	enforce := validator.Enforce{
 		Email: true,
 		MX:    options.SpamcheckMX(),
-		SMTP:  options.SpamcheckMX(),
+		SMTP:  options.SpamcheckSMTP(),
 	}
 	v := validator.New(options.Spamlist(), enforce, to, log)
 
