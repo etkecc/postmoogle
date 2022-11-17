@@ -104,16 +104,16 @@ func (e *Email) Mailbox(incoming bool) string {
 func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Content {
 	var text strings.Builder
 	if options.Sender {
-		text.WriteString("From: ")
 		text.WriteString(e.From)
-		text.WriteString("\n")
 	}
 	if options.Recipient {
-		text.WriteString("To: ")
+		text.WriteString(" ➡️ ")
 		text.WriteString(e.To)
-		text.WriteString("\n")
 	}
-	if options.Subject {
+	if options.Sender || options.Recipient {
+		text.WriteString("\n\n")
+	}
+	if options.Subject && threadID == "" {
 		text.WriteString("# ")
 		text.WriteString(e.Subject)
 		text.WriteString("\n\n")
