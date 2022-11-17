@@ -143,13 +143,23 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 
 // Compose converts the email object to a string (to be used for delivery via SMTP) and possibly DKIM-signs it
 func (e *Email) Compose(privkey string) string {
+	textSize := len(e.Text)
+	htmlSize := len(e.HTML)
+	if textSize == 0 && htmlSize == 0 {
+		return ""
+	}
+
 	mail := enmime.Builder().
 		From("", e.From).
 		To("", e.To).
 		Header("Message-Id", e.MessageID).
-		Subject(e.Subject).
-		Text([]byte(e.Text)).
-		HTML([]byte(e.HTML))
+		Subject(e.Subject)
+	if textSize > 0 {
+		mail = mail.Text([]byte(e.Text))
+	}
+	if htmlSize > 0 {
+		mail = mail.HTML([]byte(e.HTML))
+	}
 	if e.InReplyTo != "" {
 		mail = mail.Header("In-Reply-To", e.InReplyTo)
 	}

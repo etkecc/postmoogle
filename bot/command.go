@@ -430,6 +430,10 @@ func (b *Bot) runSend(ctx context.Context) {
 	for _, to := range tos {
 		email := utils.NewEmail(ID, "", " "+ID, subject, from, to, body, htmlBody, nil)
 		data := email.Compose(b.getBotSettings().DKIMPrivateKey())
+		if data == "" {
+			b.SendError(ctx, evt.RoomID, "email body is empty")
+			return
+		}
 		queued, err := b.Sendmail(evt.ID, from, to, data)
 		if queued {
 			b.log.Error("cannot send email: %v", err)

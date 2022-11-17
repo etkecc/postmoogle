@@ -180,6 +180,10 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	b.log.Debug("send email reply: %+v", meta)
 	email := utils.NewEmail(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, htmlBody, nil)
 	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
+	if data == "" {
+		b.SendError(ctx, evt.RoomID, "email body is empty")
+		return
+	}
 
 	queued, err := b.Sendmail(evt.ID, meta.From, meta.To, data)
 	if queued {
