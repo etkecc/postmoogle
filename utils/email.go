@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net/mail"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 )
+
+var styleRegex = regexp.MustCompile("<style((.|\n|\r)*?)<\\/style>")
 
 // IncomingFilteringOptions for incoming mail
 type IncomingFilteringOptions interface {
@@ -82,11 +85,8 @@ func NewEmail(messageID, inReplyTo, references, subject, from, to, text, html st
 	}
 
 	if html != "" {
-		var err error
-		html, err = StripHTMLTag(html, "style")
-		if err == nil {
-			email.HTML = html
-		}
+		html = styleRegex.ReplaceAllString(html, "")
+		email.HTML = html
 	}
 
 	return email
