@@ -82,13 +82,20 @@ func (b *Bot) getBanlist() bglist {
 		b.log.Error("cannot get banlist: %v", utils.UnwrapError(err))
 	}
 	if config == nil {
-		config = map[string]string{}
+		config = make(bglist, 0)
 	}
 
 	return config
 }
 
 func (b *Bot) setBanlist(cfg bglist) error {
+	b.lock("banlist")
+	if cfg == nil {
+		cfg = make(bglist, 0)
+	}
+	b.banlist = cfg
+	defer b.unlock("banlist")
+
 	return utils.UnwrapError(b.lp.SetAccountData(acBanlistKey, cfg))
 }
 
@@ -98,7 +105,7 @@ func (b *Bot) getGreylist() bglist {
 		b.log.Error("cannot get banlist: %v", utils.UnwrapError(err))
 	}
 	if config == nil {
-		config = map[string]string{}
+		config = make(bglist, 0)
 	}
 
 	return config

@@ -50,3 +50,14 @@ func (b *Bot) syncRooms() error {
 
 	return nil
 }
+
+func (b *Bot) syncBanlist() {
+	b.lock("banlist")
+	defer b.unlock("banlist")
+
+	if !b.getBotSettings().BanlistEnabled() {
+		b.banlist = make(bglist, 0)
+		return
+	}
+	b.banlist = b.getBanlist()
+}

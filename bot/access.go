@@ -97,10 +97,7 @@ func (b *Bot) IsGreylisted(addr net.Addr) bool {
 
 // IsBanned checks if address is banned
 func (b *Bot) IsBanned(addr net.Addr) bool {
-	if !b.getBotSettings().BanlistEnabled() {
-		return false
-	}
-	return b.getBanlist().Has(addr)
+	return b.banlist.Has(addr)
 }
 
 // Ban an address

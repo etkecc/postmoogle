@@ -21,6 +21,7 @@ type Bot struct {
 	allowedUsers            []*regexp.Regexp
 	allowedAdmins           []*regexp.Regexp
 	commands                commandList
+	banlist                 bglist
 	rooms                   sync.Map
 	sendmail                func(string, string, string) error
 	log                     *logger.Logger
@@ -102,6 +103,7 @@ func (b *Bot) Start(statusMsg string) error {
 	if err := b.syncRooms(); err != nil {
 		return err
 	}
+	b.syncBanlist()
 
 	b.initSync()
 	b.log.Info("Postmoogle has been started")

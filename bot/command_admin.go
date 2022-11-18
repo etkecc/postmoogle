@@ -290,6 +290,7 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
 	}
+	b.syncBanlist()
 	b.SendNotice(ctx, evt.RoomID, "banlist has been updated")
 }
 
