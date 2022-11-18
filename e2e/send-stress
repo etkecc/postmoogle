@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for i in {0..10..1}; do
+for i in {0..100..1}; do
 	echo "#${i}..."
 	ssmtp test@localhost < $1
 done

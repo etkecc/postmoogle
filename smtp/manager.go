@@ -30,6 +30,7 @@ type Config struct {
 
 type Manager struct {
 	log  *logger.Logger
+	bot  matrixbot
 	smtp *smtp.Server
 	errs chan error
 
@@ -77,6 +78,7 @@ func NewManager(cfg *Config) *Manager {
 
 	m := &Manager{
 		smtp:    s,
+		bot:     cfg.Bot,
 		log:     log,
 		port:    cfg.Port,
 		tlsPort: cfg.TLSPort,
@@ -118,10 +120,10 @@ func (m *Manager) listen(port string, tlsCfg *tls.Config) {
 		m.errs <- err
 		return
 	}
-
+	lwrapper := NewListener(l, m.bot.IsBanned, m.log)
 	m.log.Info("Starting SMTP server on port %s", port)
 
-	err = m.smtp.Serve(l)
+	err = m.smtp.Serve(lwrapper)
 	if err != nil {
 		m.log.Error("cannot start SMTP server on %s: %v", port, err)
 		m.errs <- err
