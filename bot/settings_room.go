@@ -5,6 +5,7 @@ import (
 
 	"maunium.net/go/mautrix/id"
 
+	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
@@ -143,8 +144,8 @@ func (s roomSettings) migrateSpamlistSettings() {
 }
 
 // ContentOptions converts room display settings to content options
-func (s roomSettings) ContentOptions() *utils.ContentOptions {
-	return &utils.ContentOptions{
+func (s roomSettings) ContentOptions() *email.ContentOptions {
+	return &email.ContentOptions{
 		HTML:      !s.NoHTML(),
 		Sender:    !s.NoSender(),
 		Recipient: !s.NoRecipient(),

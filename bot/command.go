@@ -10,6 +10,7 @@ import (
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
+	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
@@ -415,7 +416,7 @@ func (b *Bot) runSend(ctx context.Context) {
 	tos := strings.Split(to, ",")
 	// validate first
 	for _, to := range tos {
-		if !utils.AddressValid(to) {
+		if !email.AddressValid(to) {
 			b.Error(ctx, evt.RoomID, "email address is not valid")
 			return
 		}
@@ -426,10 +427,10 @@ func (b *Bot) runSend(ctx context.Context) {
 
 	domain := utils.SanitizeDomain(cfg.Domain())
 	from := mailbox + "@" + domain
-	ID := utils.MessageID(evt.ID, domain)
+	ID := email.MessageID(evt.ID, domain)
 	for _, to := range tos {
-		email := utils.NewEmail(ID, "", " "+ID, subject, from, to, body, htmlBody, nil)
-		data := email.Compose(b.getBotSettings().DKIMPrivateKey())
+		eml := email.New(ID, "", " "+ID, subject, from, to, body, htmlBody, nil)
+		data := eml.Compose(b.getBotSettings().DKIMPrivateKey())
 		if data == "" {
 			b.SendError(ctx, evt.RoomID, "email body is empty")
 			return
@@ -437,14 +438,14 @@ func (b *Bot) runSend(ctx context.Context) {
 		queued, err := b.Sendmail(evt.ID, from, to, data)
 		if queued {
 			b.log.Error("cannot send email: %v", err)
-			b.saveSentMetadata(ctx, queued, evt.ID, email, &cfg)
+			b.saveSentMetadata(ctx, queued, evt.ID, eml, &cfg)
 			continue
 		}
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "cannot send email to %s: %v", to, err)
 			continue
 		}
-		b.saveSentMetadata(ctx, false, evt.ID, email, &cfg)
+		b.saveSentMetadata(ctx, false, evt.ID, eml, &cfg)
 	}
 	if len(tos) > 1 {
 		b.SendNotice(ctx, evt.RoomID, "All emails were sent.")

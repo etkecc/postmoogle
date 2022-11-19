@@ -10,7 +10,7 @@ import (
 	"gitlab.com/etke.cc/go/logger"
 	"gitlab.com/etke.cc/go/trysmtp"
 
-	"gitlab.com/etke.cc/postmoogle/utils"
+	"gitlab.com/etke.cc/postmoogle/email"
 )
 
 var (
@@ -41,7 +41,7 @@ func (m *mailServer) Login(state *smtp.ConnectionState, username, password strin
 		return nil, ErrBanned
 	}
 
-	if !utils.AddressValid(username) {
+	if !email.AddressValid(username) {
 		m.log.Debug("address %s is invalid", username)
 		m.bot.Ban(state.RemoteAddr)
 		return nil, ErrBanned
@@ -114,6 +114,6 @@ func (m *mailServer) SendEmail(from, to, data string) error {
 }
 
 // ReceiveEmail - incoming mail into matrix room
-func (m *mailServer) ReceiveEmail(ctx context.Context, email *utils.Email) error {
-	return m.bot.IncomingEmail(ctx, email)
+func (m *mailServer) ReceiveEmail(ctx context.Context, eml *email.Email) error {
+	return m.bot.IncomingEmail(ctx, eml)
 }

@@ -13,6 +13,7 @@ import (
 	"gitlab.com/etke.cc/go/validator"
 	"maunium.net/go/mautrix/id"
 
+	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
@@ -20,8 +21,8 @@ import (
 type incomingSession struct {
 	log          *logger.Logger
 	getRoomID    func(string) (id.RoomID, bool)
-	getFilters   func(id.RoomID) utils.IncomingFilteringOptions
-	receiveEmail func(context.Context, *utils.Email) error
+	getFilters   func(id.RoomID) email.IncomingFilteringOptions
+	receiveEmail func(context.Context, *email.Email) error
 	greylisted   func(net.Addr) bool
 	ban          func(net.Addr)
 	domains      []string
@@ -34,7 +35,7 @@ type incomingSession struct {
 
 func (s *incomingSession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
-	if !utils.AddressValid(from) {
+	if !email.AddressValid(from) {
 		s.log.Debug("address %s is invalid", from)
 		s.ban(s.addr)
 		return ErrBanned
@@ -84,15 +85,15 @@ func (s *incomingSession) Data(r io.Reader) error {
 		}
 	}
 	parser := enmime.NewParser()
-	eml, err := parser.ReadEnvelope(r)
+	envelope, err := parser.ReadEnvelope(r)
 	if err != nil {
 		return err
 	}
 
-	email := utils.FromEnvelope(s.tos[0], eml)
+	eml := email.FromEnvelope(s.tos[0], envelope)
 	for _, to := range s.tos {
-		email.RcptTo = to
-		err := s.receiveEmail(s.ctx, email)
+		eml.RcptTo = to
+		err := s.receiveEmail(s.ctx, eml)
 		if err != nil {
 			return err
 		}
@@ -116,7 +117,7 @@ type outgoingSession struct {
 
 func (s *outgoingSession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
-	if !utils.AddressValid(from) {
+	if !email.AddressValid(from) {
 		return errors.New("please, provide email address")
 	}
 	return nil
@@ -132,14 +133,14 @@ func (s *outgoingSession) Rcpt(to string) error {
 
 func (s *outgoingSession) Data(r io.Reader) error {
 	parser := enmime.NewParser()
-	eml, err := parser.ReadEnvelope(r)
+	envelope, err := parser.ReadEnvelope(r)
 	if err != nil {
 		return err
 	}
-	email := utils.FromEnvelope(s.tos[0], eml)
+	eml := email.FromEnvelope(s.tos[0], envelope)
 	for _, to := range s.tos {
-		email.RcptTo = to
-		err := s.sendmail(email.From, to, email.Compose(s.privkey))
+		eml.RcptTo = to
+		err := s.sendmail(eml.From, to, eml.Compose(s.privkey))
 		if err != nil {
 			return err
 		}
@@ -150,7 +151,7 @@ func (s *outgoingSession) Data(r io.Reader) error {
 func (s *outgoingSession) Reset()        {}
 func (s *outgoingSession) Logout() error { return nil }
 
-func validateEmail(from, to string, log *logger.Logger, options utils.IncomingFilteringOptions) bool {
+func validateEmail(from, to string, log *logger.Logger, options email.IncomingFilteringOptions) bool {
 	enforce := validator.Enforce{
 		Email: true,
 		MX:    options.SpamcheckMX(),

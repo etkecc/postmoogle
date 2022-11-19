@@ -9,6 +9,7 @@ import (
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
+	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
@@ -85,7 +86,7 @@ func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
 }
 
 // GetIFOptions returns incoming email filtering options (room settings)
-func (b *Bot) GetIFOptions(roomID id.RoomID) utils.IncomingFilteringOptions {
+func (b *Bot) GetIFOptions(roomID id.RoomID) email.IncomingFilteringOptions {
 	cfg, err := b.getRoomSettings(roomID)
 	if err != nil {
 		b.log.Error("cannot retrieve room settings: %v", err)
@@ -96,7 +97,7 @@ func (b *Bot) GetIFOptions(roomID id.RoomID) utils.IncomingFilteringOptions {
 }
 
 // IncomingEmail sends incoming email to matrix room
-func (b *Bot) IncomingEmail(ctx context.Context, email *utils.Email) error {
+func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 	roomID, ok := b.GetMapping(email.Mailbox(true))
 	if !ok {
 		return errors.New("room not found")
@@ -177,11 +178,11 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	body := content.Body
 	htmlBody := content.FormattedBody
 
-	meta.MessageID = utils.MessageID(evt.ID, domain)
+	meta.MessageID = email.MessageID(evt.ID, domain)
 	meta.References = meta.References + " " + meta.MessageID
 	b.log.Debug("send email reply: %+v", meta)
-	email := utils.NewEmail(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, htmlBody, nil)
-	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
+	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, htmlBody, nil)
+	data := eml.Compose(b.getBotSettings().DKIMPrivateKey())
 	if data == "" {
 		b.SendError(ctx, evt.RoomID, "email body is empty")
 		return
@@ -190,7 +191,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	queued, err := b.Sendmail(evt.ID, meta.From, meta.To, data)
 	if queued {
 		b.log.Error("cannot send email: %v", err)
-		b.saveSentMetadata(ctx, queued, meta.ThreadID, email, &cfg)
+		b.saveSentMetadata(ctx, queued, meta.ThreadID, eml, &cfg)
 		return
 	}
 
@@ -199,7 +200,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		return
 	}
 
-	b.saveSentMetadata(ctx, queued, meta.ThreadID, email, &cfg)
+	b.saveSentMetadata(ctx, queued, meta.ThreadID, eml, &cfg)
 }
 
 type parentEmail struct {
@@ -259,7 +260,7 @@ func (b *Bot) getParentEmail(evt *event.Event, domain string) parentEmail {
 		return parent
 	}
 
-	parent.MessageID = utils.MessageID(parentEvt.ID, domain)
+	parent.MessageID = email.MessageID(parentEvt.ID, domain)
 	parent.From = utils.EventField[string](&parentEvt.Content, eventFromKey)
 	parent.To = utils.EventField[string](&parentEvt.Content, eventToKey)
 	parent.InReplyTo = utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
@@ -283,14 +284,14 @@ func (b *Bot) getParentEmail(evt *event.Event, domain string) parentEmail {
 
 // saveSentMetadata used to save metadata from !pm sent and thread reply events to a separate notice message
 // because that metadata is needed to determine email thread relations
-func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, email *utils.Email, cfg *roomSettings) {
-	text := "Email has been sent to " + email.To
+func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, eml *email.Email, cfg *roomSettings) {
+	text := "Email has been sent to " + eml.RcptTo
 	if queued {
-		text = "Email to " + email.To + " has been queued"
+		text = "Email to " + eml.RcptTo + " has been queued"
 	}
 
 	evt := eventFromContext(ctx)
-	content := email.Content(threadID, cfg.ContentOptions())
+	content := eml.Content(threadID, cfg.ContentOptions())
 	notice := format.RenderMarkdown(text, true, true)
 	msgContent, ok := content.Parsed.(*event.MessageEventContent)
 	if !ok {
@@ -307,8 +308,8 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 		return
 	}
 	domain := utils.SanitizeDomain(cfg.Domain())
-	b.setThreadID(evt.RoomID, utils.MessageID(evt.ID, domain), threadID)
-	b.setThreadID(evt.RoomID, utils.MessageID(msgID, domain), threadID)
+	b.setThreadID(evt.RoomID, email.MessageID(evt.ID, domain), threadID)
+	b.setThreadID(evt.RoomID, email.MessageID(msgID, domain), threadID)
 	b.setLastEventID(evt.RoomID, threadID, msgID)
 }
 
