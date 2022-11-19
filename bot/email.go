@@ -150,13 +150,11 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		b.Error(ctx, evt.RoomID, "mailbox is not configured, kupo")
 		return
 	}
-	domain := utils.SanitizeDomain(cfg.Domain())
 
 	b.lock(evt.RoomID.String())
 	defer b.unlock(evt.RoomID.String())
 
-	meta := b.getParentEmail(evt, domain)
-	meta.fixtofrom(mailbox, b.domains)
+	meta := b.getParentEmail(evt, mailbox)
 
 	if meta.To == "" {
 		b.Error(ctx, evt.RoomID, "cannot find parent email and continue the thread. Please, start a new email thread")
@@ -173,7 +171,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	body := content.Body
 	htmlBody := content.FormattedBody
 
-	meta.MessageID = email.MessageID(evt.ID, domain)
+	meta.MessageID = email.MessageID(evt.ID, meta.FromDomain)
 	meta.References = meta.References + " " + meta.MessageID
 	b.log.Debug("send email reply: %+v", meta)
 	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil)
@@ -202,6 +200,7 @@ type parentEmail struct {
 	MessageID  string
 	ThreadID   id.EventID
 	From       string
+	FromDomain string
 	To         string
 	RcptTo     string
 	CC         string
@@ -222,15 +221,33 @@ func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) {
 		newSenders[sender] = sender
 	}
 
+	// try to determine previous email of the room mailbox
+	// by matching RCPT TO, To and From fields
+	// why? Because of possible multi-domain setup and we won't leak information
+	var previousSender string
+	rcptToSender, ok := newSenders[e.RcptTo]
+	if ok {
+		previousSender = rcptToSender
+	}
+	toSender, ok := newSenders[e.To]
+	if ok {
+		previousSender = toSender
+	}
+	fromSender, ok := newSenders[e.From]
+	if ok {
+		previousSender = fromSender
+	}
+
+	// Message-Id should not leak information either
+	e.FromDomain = utils.SanitizeDomain(utils.Hostname(previousSender))
+
 	originalFrom := e.From
 	// reverse From if needed
-	newSender, ok := newSenders[e.From]
-	if !ok {
-		e.From = newSender
+	if fromSender == "" {
+		e.From = previousSender
 	}
 	// reverse To if needed
-	_, ok = newSenders[e.To]
-	if ok {
+	if toSender != "" {
 		e.To = originalFrom
 	}
 	// replace previous recipient of the email which is sender now with the original From
@@ -277,7 +294,7 @@ func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 	return threadID, decrypted
 }
 
-func (b *Bot) getParentEmail(evt *event.Event, domain string) *parentEmail {
+func (b *Bot) getParentEmail(evt *event.Event, newFromMailbox string) *parentEmail {
 	parent := &parentEmail{}
 	threadID, parentEvt := b.getParentEvent(evt)
 	parent.ThreadID = threadID
@@ -288,13 +305,14 @@ func (b *Bot) getParentEmail(evt *event.Event, domain string) *parentEmail {
 		return parent
 	}
 
-	parent.MessageID = email.MessageID(parentEvt.ID, domain)
 	parent.From = utils.EventField[string](&parentEvt.Content, eventFromKey)
 	parent.To = utils.EventField[string](&parentEvt.Content, eventToKey)
 	parent.CC = utils.EventField[string](&parentEvt.Content, eventCcKey)
 	parent.RcptTo = utils.EventField[string](&parentEvt.Content, eventRcptToKey)
 	parent.InReplyTo = utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
 	parent.References = utils.EventField[string](&parentEvt.Content, eventReferencesKey)
+	parent.fixtofrom(newFromMailbox, b.domains)
+	parent.MessageID = email.MessageID(parentEvt.ID, parent.FromDomain)
 	if parent.InReplyTo == "" {
 		parent.InReplyTo = parent.MessageID
 	}
