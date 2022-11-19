@@ -25,8 +25,10 @@ const (
 	eventReferencesKey = "cc.etke.postmoogle.references"
 	eventInReplyToKey  = "cc.etke.postmoogle.inReplyTo"
 	eventSubjectKey    = "cc.etke.postmoogle.subject"
+	eventRcptToKey     = "cc.etke.postmoogle.rcptTo"
 	eventFromKey       = "cc.etke.postmoogle.from"
 	eventToKey         = "cc.etke.postmoogle.to"
+	eventCcKey         = "cc.etke.postmoogle.cc"
 )
 
 // SetSendmail sets mail sending func to the bot

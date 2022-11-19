@@ -60,6 +60,7 @@ func (m *mailServer) Login(state *smtp.ConnectionState, username, password strin
 		from:     username,
 		log:      m.log,
 		domains:  m.domains,
+		tos:      []string{},
 	}, nil
 }
 
@@ -80,6 +81,7 @@ func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, 
 		log:          m.log,
 		domains:      m.domains,
 		addr:         state.RemoteAddr,
+		tos:          []string{},
 	}, nil
 }
 

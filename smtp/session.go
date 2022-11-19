@@ -28,7 +28,7 @@ type incomingSession struct {
 
 	ctx  context.Context
 	addr net.Addr
-	to   string
+	tos  []string
 	from string
 }
 
@@ -46,7 +46,7 @@ func (s *incomingSession) Mail(from string, opts smtp.MailOptions) error {
 
 func (s *incomingSession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
-	s.to = to
+	s.tos = append(s.tos, to)
 	var domainok bool
 	for _, domain := range s.domains {
 		if utils.Hostname(to) == domain {
@@ -66,7 +66,7 @@ func (s *incomingSession) Rcpt(to string) error {
 	}
 
 	validations := s.getFilters(roomID)
-	if !validateEmail(s.from, s.to, s.log, validations) {
+	if !validateEmail(s.from, to, s.log, validations) {
 		s.ban(s.addr)
 		return ErrBanned
 	}
@@ -89,20 +89,15 @@ func (s *incomingSession) Data(r io.Reader) error {
 		return err
 	}
 
-	files := parseAttachments(eml.Attachments, s.log)
-
-	email := utils.NewEmail(
-		eml.GetHeader("Message-Id"),
-		eml.GetHeader("In-Reply-To"),
-		eml.GetHeader("References"),
-		eml.GetHeader("Subject"),
-		s.from,
-		s.to,
-		eml.Text,
-		eml.HTML,
-		files)
-
-	return s.receiveEmail(s.ctx, email)
+	email := utils.FromEnvelope(s.tos[0], eml)
+	for _, to := range s.tos {
+		email.RcptTo = to
+		err := s.receiveEmail(s.ctx, email)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 func (s *incomingSession) Reset()        {}
 func (s *incomingSession) Logout() error { return nil }
@@ -115,7 +110,7 @@ type outgoingSession struct {
 	domains  []string
 
 	ctx  context.Context
-	to   string
+	tos  []string
 	from string
 }
 
@@ -129,7 +124,7 @@ func (s *outgoingSession) Mail(from string, opts smtp.MailOptions) error {
 
 func (s *outgoingSession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
-	s.to = to
+	s.tos = append(s.tos, to)
 
 	s.log.Debug("mail to %s", to)
 	return nil
@@ -141,21 +136,16 @@ func (s *outgoingSession) Data(r io.Reader) error {
 	if err != nil {
 		return err
 	}
+	email := utils.FromEnvelope(s.tos[0], eml)
+	for _, to := range s.tos {
+		email.RcptTo = to
+		err := s.sendmail(email.From, to, email.Compose(s.privkey))
+		if err != nil {
+			return err
+		}
+	}
 
-	files := parseAttachments(eml.Attachments, s.log)
-
-	email := utils.NewEmail(
-		eml.GetHeader("Message-Id"),
-		eml.GetHeader("In-Reply-To"),
-		eml.GetHeader("References"),
-		eml.GetHeader("Subject"),
-		s.from,
-		s.to,
-		eml.Text,
-		eml.HTML,
-		files)
-
-	return s.sendmail(email.From, email.To, email.Compose(s.privkey))
+	return nil
 }
 func (s *outgoingSession) Reset()        {}
 func (s *outgoingSession) Logout() error { return nil }
@@ -169,17 +159,4 @@ func validateEmail(from, to string, log *logger.Logger, options utils.IncomingFi
 	v := validator.New(options.Spamlist(), enforce, to, log)
 
 	return v.Email(from)
-}
-
-func parseAttachments(parts []*enmime.Part, log *logger.Logger) []*utils.File {
-	files := make([]*utils.File, 0, len(parts))
-	for _, attachment := range parts {
-		for _, err := range attachment.Errors {
-			log.Warn("attachment error: %v", err)
-		}
-		file := utils.NewFile(attachment.FileName, attachment.Content)
-		files = append(files, file)
-	}
-
-	return files
 }

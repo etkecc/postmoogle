@@ -34,6 +34,8 @@ type Email struct {
 	References string
 	From       string
 	To         string
+	RcptTo     string
+	CC         string
 	Subject    string
 	Text       string
 	HTML       string
@@ -56,12 +58,24 @@ type ContentOptions struct {
 	SubjectKey    string
 	FromKey       string
 	ToKey         string
+	CcKey         string
+	RcptToKey     string
 }
 
 // AddressValid checks if email address is valid
 func AddressValid(email string) bool {
 	_, err := mail.ParseAddress(email)
 	return err == nil
+}
+
+// EmailDate returns Date in RFC1123 with numeric timezone
+func EmailDate(original ...time.Time) string {
+	now := time.Now().UTC()
+	if len(original) > 0 && !original[0].IsZero() {
+		now = original[0]
+	}
+
+	return now.Format(time.RFC1123Z)
 }
 
 // MessageID generates email Message-Id from matrix event ID
@@ -72,12 +86,13 @@ func MessageID(eventID id.EventID, domain string) string {
 // NewEmail constructs Email object
 func NewEmail(messageID, inReplyTo, references, subject, from, to, text, html string, files []*File) *Email {
 	email := &Email{
-		Date:       time.Now().UTC().Format(time.RFC1123Z),
+		Date:       EmailDate(),
 		MessageID:  messageID,
 		InReplyTo:  inReplyTo,
 		References: references,
 		From:       from,
 		To:         to,
+		RcptTo:     to,
 		Subject:    subject,
 		Text:       text,
 		HTML:       html,
@@ -92,10 +107,46 @@ func NewEmail(messageID, inReplyTo, references, subject, from, to, text, html st
 	return email
 }
 
+func FromEnvelope(rcptto string, eml *enmime.Envelope) *Email {
+	datetime, _ := eml.Date() //nolint:errcheck // handled in EmailDate()
+	date := EmailDate(datetime)
+
+	var html string
+	if eml.HTML != "" {
+		html = styleRegex.ReplaceAllString(eml.HTML, "")
+	}
+
+	files := make([]*File, 0, len(eml.Attachments))
+	for _, attachment := range eml.Attachments {
+		for _, err := range attachment.Errors {
+			log.Warn("attachment error: %v", err)
+		}
+		file := NewFile(attachment.FileName, attachment.Content)
+		files = append(files, file)
+	}
+
+	email := &Email{
+		Date:       date,
+		MessageID:  eml.GetHeader("Message-Id"),
+		InReplyTo:  eml.GetHeader("In-Reply-To"),
+		References: eml.GetHeader("References"),
+		From:       eml.GetHeader("From"),
+		To:         eml.GetHeader("To"),
+		RcptTo:     rcptto,
+		CC:         eml.GetHeader("Cc"),
+		Subject:    eml.GetHeader("Subject"),
+		Text:       eml.Text,
+		HTML:       html,
+		Files:      files,
+	}
+
+	return email
+}
+
 // Mailbox returns postmoogle's mailbox, parsing it from FROM (if incoming=false) or TO (incoming=true)
 func (e *Email) Mailbox(incoming bool) string {
 	if incoming {
-		return Mailbox(e.To)
+		return Mailbox(e.RcptTo)
 	}
 	return Mailbox(e.From)
 }
@@ -133,8 +184,10 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 			options.InReplyToKey:  e.InReplyTo,
 			options.ReferencesKey: e.References,
 			options.SubjectKey:    e.Subject,
+			options.RcptToKey:     e.RcptTo,
 			options.FromKey:       e.From,
 			options.ToKey:         e.To,
+			options.CcKey:         e.CC,
 		},
 		Parsed: &parsed,
 	}
