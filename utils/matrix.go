@@ -50,7 +50,7 @@ func EventParent(currentID id.EventID, content *event.MessageEventContent) id.Ev
 }
 
 // EventField returns field value from raw event content
-func EventField[T comparable](content *event.Content, field string) T {
+func EventField[T any](content *event.Content, field string) T {
 	var zero T
 	raw := content.Raw[field]
 	if raw == nil {

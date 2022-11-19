@@ -183,12 +183,12 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 
 	var queued bool
 	var hasErr bool
-	tos := append(email.AddressList(meta.CC), meta.To)
-	for _, to := range tos {
+	recipients := meta.Recipients()
+	for _, to := range recipients {
 		queued, err = b.Sendmail(evt.ID, meta.From, to, data)
 		if queued {
 			b.log.Error("cannot send email: %v", err)
-			b.saveSentMetadata(ctx, queued, meta.ThreadID, eml, &cfg)
+			b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, &cfg)
 			hasErr = true
 			continue
 		}
@@ -201,7 +201,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	}
 
 	if !hasErr {
-		b.saveSentMetadata(ctx, queued, meta.ThreadID, eml, &cfg)
+		b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, &cfg)
 	}
 }
 
@@ -265,6 +265,11 @@ func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) {
 			e.CC = strings.ReplaceAll(e.CC, newSender, originalFrom)
 		}
 	}
+}
+
+// Recipients returns list of recipients (to, cc)
+func (e parentEmail) Recipients() []string {
+	return append(email.AddressList(e.CC), e.To)
 }
 
 func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
@@ -341,10 +346,11 @@ func (b *Bot) getParentEmail(evt *event.Event, newFromMailbox string) *parentEma
 
 // saveSentMetadata used to save metadata from !pm sent and thread reply events to a separate notice message
 // because that metadata is needed to determine email thread relations
-func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, eml *email.Email, cfg *roomSettings) {
-	text := "Email has been sent to " + eml.RcptTo
+func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, recipients []string, eml *email.Email, cfg *roomSettings) {
+	addrs := strings.Join(recipients, ", ")
+	text := "Email has been sent to " + addrs
 	if queued {
-		text = "Email to " + eml.RcptTo + " has been queued"
+		text = "Email to " + addrs + " has been queued"
 	}
 
 	evt := eventFromContext(ctx)

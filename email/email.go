@@ -129,6 +129,11 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 	parsed := format.RenderMarkdown(text.String(), true, true)
 	parsed.RelatesTo = utils.RelatesTo(options.Threads, threadID)
 
+	var cc string
+	if len(e.CC) > 0 {
+		cc = strings.Join(e.CC, ", ")
+	}
+
 	content := event.Content{
 		Raw: map[string]interface{}{
 			options.MessageIDKey:  e.MessageID,
@@ -138,7 +143,7 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 			options.RcptToKey:     e.RcptTo,
 			options.FromKey:       e.From,
 			options.ToKey:         e.To,
-			options.CcKey:         e.CC,
+			options.CcKey:         cc,
 		},
 		Parsed: &parsed,
 	}

@@ -438,6 +438,7 @@ func (b *Bot) runSend(ctx context.Context) {
 	from := mailbox + "@" + domain
 	ID := email.MessageID(evt.ID, domain)
 	for _, to := range tos {
+		recipients := []string{to}
 		eml := email.New(ID, "", " "+ID, subject, from, to, to, "", body, htmlBody, nil)
 		data := eml.Compose(b.getBotSettings().DKIMPrivateKey())
 		if data == "" {
@@ -447,14 +448,14 @@ func (b *Bot) runSend(ctx context.Context) {
 		queued, err := b.Sendmail(evt.ID, from, to, data)
 		if queued {
 			b.log.Error("cannot send email: %v", err)
-			b.saveSentMetadata(ctx, queued, evt.ID, eml, &cfg)
+			b.saveSentMetadata(ctx, queued, evt.ID, recipients, eml, &cfg)
 			continue
 		}
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "cannot send email to %s: %v", to, err)
 			continue
 		}
-		b.saveSentMetadata(ctx, false, evt.ID, eml, &cfg)
+		b.saveSentMetadata(ctx, false, evt.ID, recipients, eml, &cfg)
 	}
 	if len(tos) > 1 {
 		b.SendNotice(ctx, evt.RoomID, "All emails were sent.")
