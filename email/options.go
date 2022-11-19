@@ -10,6 +10,7 @@ type IncomingFilteringOptions interface {
 // ContentOptions represents settings that specify how an email is to be converted to a Matrix message
 type ContentOptions struct {
 	// On/Off
+	CC        bool
 	Sender    bool
 	Recipient bool
 	Subject   bool

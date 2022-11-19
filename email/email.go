@@ -107,7 +107,11 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 		text.WriteString(" ➡️ ")
 		text.WriteString(e.To)
 	}
-	if options.Sender || options.Recipient {
+	if options.CC && e.CC != "" {
+		text.WriteString("\ncc: ")
+		text.WriteString(e.CC)
+	}
+	if options.Sender || options.Recipient || options.CC {
 		text.WriteString("\n\n")
 	}
 	if options.Subject && threadID == "" {

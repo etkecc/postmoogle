@@ -122,6 +122,15 @@ func (b *Bot) initCommands() commandList {
 			allowed:   b.allowOwner,
 		},
 		{
+			key: roomOptionNoCC,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - hide CC; `false` - show CC)",
+				roomOptionNoCC,
+			),
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
+		},
+		{
 			key: roomOptionNoSubject,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
