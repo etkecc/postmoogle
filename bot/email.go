@@ -156,7 +156,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	defer b.unlock(evt.RoomID.String())
 
 	meta := b.getParentEmail(evt, domain)
-	meta.fixtofrom(mailbox, domain, b.domains)
+	meta.fixtofrom(mailbox, b.domains)
 
 	if meta.To == "" {
 		b.Error(ctx, evt.RoomID, "cannot find parent email and continue the thread. Please, start a new email thread")
@@ -215,19 +215,18 @@ type parentEmail struct {
 // that will be sent from postmoogle.
 // To do so, we need to reverse From and To headers, but Cc should be adjusted as well,
 // thus that hacky workaround below:
-func (e *parentEmail) fixtofrom(newSenderMailbox string, preferredDomain string, domains []string) {
-	newSenders := make(map[string]struct{}, len(domains))
-	newSenderPref := newSenderMailbox + "@" + preferredDomain
+func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) {
+	newSenders := make(map[string]string, len(domains))
 	for _, domain := range domains {
 		sender := newSenderMailbox + "@" + domain
-		newSenders[sender] = struct{}{}
+		newSenders[sender] = sender
 	}
 
 	originalFrom := e.From
 	// reverse From if needed
-	_, ok := newSenders[e.From]
+	newSender, ok := newSenders[e.From]
 	if !ok {
-		e.From = newSenderPref
+		e.From = newSender
 	}
 	// reverse To if needed
 	_, ok = newSenders[e.To]
