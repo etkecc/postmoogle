@@ -1,30 +1,19 @@
-package utils
+package email
 
 import (
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
-	"net/mail"
-	"regexp"
 	"strings"
-	"time"
 
 	"github.com/emersion/go-msgauth/dkim"
 	"github.com/jhillyerd/enmime"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
-
-var styleRegex = regexp.MustCompile("<style((.|\n|\r)*?)<\\/style>")
-
-// IncomingFilteringOptions for incoming mail
-type IncomingFilteringOptions interface {
-	SpamcheckSMTP() bool
-	SpamcheckMX() bool
-	Spamlist() []string
-}
 
 // Email object
 type Email struct {
@@ -34,50 +23,25 @@ type Email struct {
 	References string
 	From       string
 	To         string
+	RcptTo     string
+	CC         string
 	Subject    string
 	Text       string
 	HTML       string
-	Files      []*File
+	Files      []*utils.File
 }
 
-// ContentOptions represents settings that specify how an email is to be converted to a Matrix message
-type ContentOptions struct {
-	// On/Off
-	Sender    bool
-	Recipient bool
-	Subject   bool
-	HTML      bool
-	Threads   bool
-
-	// Keys
-	MessageIDKey  string
-	InReplyToKey  string
-	ReferencesKey string
-	SubjectKey    string
-	FromKey       string
-	ToKey         string
-}
-
-// AddressValid checks if email address is valid
-func AddressValid(email string) bool {
-	_, err := mail.ParseAddress(email)
-	return err == nil
-}
-
-// MessageID generates email Message-Id from matrix event ID
-func MessageID(eventID id.EventID, domain string) string {
-	return fmt.Sprintf("<%s@%s>", eventID, domain)
-}
-
-// NewEmail constructs Email object
-func NewEmail(messageID, inReplyTo, references, subject, from, to, text, html string, files []*File) *Email {
+// New constructs Email object
+func New(messageID, inReplyTo, references, subject, from, to, rcptto, cc, text, html string, files []*utils.File) *Email {
 	email := &Email{
-		Date:       time.Now().UTC().Format(time.RFC1123Z),
+		Date:       dateNow(),
 		MessageID:  messageID,
 		InReplyTo:  inReplyTo,
 		References: references,
 		From:       from,
 		To:         to,
+		CC:         cc,
+		RcptTo:     rcptto,
 		Subject:    subject,
 		Text:       text,
 		HTML:       html,
@@ -92,12 +56,46 @@ func NewEmail(messageID, inReplyTo, references, subject, from, to, text, html st
 	return email
 }
 
+// FromEnvelope constructs Email object from envelope
+func FromEnvelope(rcptto string, envelope *enmime.Envelope) *Email {
+	datetime, _ := envelope.Date() //nolint:errcheck // handled in dateNow()
+	date := dateNow(datetime)
+
+	var html string
+	if envelope.HTML != "" {
+		html = styleRegex.ReplaceAllString(envelope.HTML, "")
+	}
+
+	files := make([]*utils.File, 0, len(envelope.Attachments))
+	for _, attachment := range envelope.Attachments {
+		file := utils.NewFile(attachment.FileName, attachment.Content)
+		files = append(files, file)
+	}
+
+	email := &Email{
+		Date:       date,
+		MessageID:  envelope.GetHeader("Message-Id"),
+		InReplyTo:  envelope.GetHeader("In-Reply-To"),
+		References: envelope.GetHeader("References"),
+		From:       envelope.GetHeader("From"),
+		To:         envelope.GetHeader("To"),
+		RcptTo:     rcptto,
+		CC:         envelope.GetHeader("Cc"),
+		Subject:    envelope.GetHeader("Subject"),
+		Text:       envelope.Text,
+		HTML:       html,
+		Files:      files,
+	}
+
+	return email
+}
+
 // Mailbox returns postmoogle's mailbox, parsing it from FROM (if incoming=false) or TO (incoming=true)
 func (e *Email) Mailbox(incoming bool) string {
 	if incoming {
-		return Mailbox(e.To)
+		return utils.Mailbox(e.RcptTo)
 	}
-	return Mailbox(e.From)
+	return utils.Mailbox(e.From)
 }
 
 // Content converts the email object to a Matrix event content
@@ -110,7 +108,11 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 		text.WriteString(" ➡️ ")
 		text.WriteString(e.To)
 	}
-	if options.Sender || options.Recipient {
+	if options.CC && e.CC != "" {
+		text.WriteString("\ncc: ")
+		text.WriteString(e.CC)
+	}
+	if options.Sender || options.Recipient || options.CC {
 		text.WriteString("\n\n")
 	}
 	if options.Subject && threadID == "" {
@@ -125,7 +127,7 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 	}
 
 	parsed := format.RenderMarkdown(text.String(), true, true)
-	parsed.RelatesTo = RelatesTo(options.Threads, threadID)
+	parsed.RelatesTo = utils.RelatesTo(options.Threads, threadID)
 
 	content := event.Content{
 		Raw: map[string]interface{}{
@@ -133,8 +135,10 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 			options.InReplyToKey:  e.InReplyTo,
 			options.ReferencesKey: e.References,
 			options.SubjectKey:    e.Subject,
+			options.RcptToKey:     e.RcptTo,
 			options.FromKey:       e.From,
 			options.ToKey:         e.To,
+			options.CcKey:         e.CC,
 		},
 		Parsed: &parsed,
 	}
@@ -169,13 +173,11 @@ func (e *Email) Compose(privkey string) string {
 
 	root, err := mail.Build()
 	if err != nil {
-		log.Error("cannot compose email: %v", err)
 		return ""
 	}
 	var data strings.Builder
 	err = root.Encode(&data)
 	if err != nil {
-		log.Error("cannot encode email: %v", err)
 		return ""
 	}
 

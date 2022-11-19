@@ -9,6 +9,7 @@ import (
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
+	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
@@ -25,8 +26,10 @@ const (
 	eventReferencesKey = "cc.etke.postmoogle.references"
 	eventInReplyToKey  = "cc.etke.postmoogle.inReplyTo"
 	eventSubjectKey    = "cc.etke.postmoogle.subject"
+	eventRcptToKey     = "cc.etke.postmoogle.rcptTo"
 	eventFromKey       = "cc.etke.postmoogle.from"
 	eventToKey         = "cc.etke.postmoogle.to"
+	eventCcKey         = "cc.etke.postmoogle.cc"
 )
 
 // SetSendmail sets mail sending func to the bot
@@ -83,7 +86,7 @@ func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
 }
 
 // GetIFOptions returns incoming email filtering options (room settings)
-func (b *Bot) GetIFOptions(roomID id.RoomID) utils.IncomingFilteringOptions {
+func (b *Bot) GetIFOptions(roomID id.RoomID) email.IncomingFilteringOptions {
 	cfg, err := b.getRoomSettings(roomID)
 	if err != nil {
 		b.log.Error("cannot retrieve room settings: %v", err)
@@ -94,7 +97,7 @@ func (b *Bot) GetIFOptions(roomID id.RoomID) utils.IncomingFilteringOptions {
 }
 
 // IncomingEmail sends incoming email to matrix room
-func (b *Bot) IncomingEmail(ctx context.Context, email *utils.Email) error {
+func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 	roomID, ok := b.GetMapping(email.Mailbox(true))
 	if !ok {
 		return errors.New("room not found")
@@ -147,18 +150,11 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		b.Error(ctx, evt.RoomID, "mailbox is not configured, kupo")
 		return
 	}
-	domain := utils.SanitizeDomain(cfg.Domain())
 
 	b.lock(evt.RoomID.String())
 	defer b.unlock(evt.RoomID.String())
 
-	fromMailbox := mailbox + "@" + domain
-	meta := b.getParentEmail(evt, domain)
-	// when email was sent from matrix and reply was sent from matrix again
-	if fromMailbox != meta.From {
-		meta.To = meta.From
-	}
-	meta.From = fromMailbox
+	meta := b.getParentEmail(evt, mailbox)
 
 	if meta.To == "" {
 		b.Error(ctx, evt.RoomID, "cannot find parent email and continue the thread. Please, start a new email thread")
@@ -175,11 +171,11 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	body := content.Body
 	htmlBody := content.FormattedBody
 
-	meta.MessageID = utils.MessageID(evt.ID, domain)
+	meta.MessageID = email.MessageID(evt.ID, meta.FromDomain)
 	meta.References = meta.References + " " + meta.MessageID
 	b.log.Debug("send email reply: %+v", meta)
-	email := utils.NewEmail(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, htmlBody, nil)
-	data := email.Compose(b.getBotSettings().DKIMPrivateKey())
+	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil)
+	data := eml.Compose(b.getBotSettings().DKIMPrivateKey())
 	if data == "" {
 		b.SendError(ctx, evt.RoomID, "email body is empty")
 		return
@@ -188,7 +184,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	queued, err := b.Sendmail(evt.ID, meta.From, meta.To, data)
 	if queued {
 		b.log.Error("cannot send email: %v", err)
-		b.saveSentMetadata(ctx, queued, meta.ThreadID, email, &cfg)
+		b.saveSentMetadata(ctx, queued, meta.ThreadID, eml, &cfg)
 		return
 	}
 
@@ -197,17 +193,69 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		return
 	}
 
-	b.saveSentMetadata(ctx, queued, meta.ThreadID, email, &cfg)
+	b.saveSentMetadata(ctx, queued, meta.ThreadID, eml, &cfg)
 }
 
 type parentEmail struct {
 	MessageID  string
 	ThreadID   id.EventID
 	From       string
+	FromDomain string
 	To         string
+	RcptTo     string
+	CC         string
 	InReplyTo  string
 	References string
 	Subject    string
+}
+
+// fixtofrom attempts to "fix" or rather reverse the To, From and CC headers
+// of parent email by using parent email as metadata source for a new email
+// that will be sent from postmoogle.
+// To do so, we need to reverse From and To headers, but Cc should be adjusted as well,
+// thus that hacky workaround below:
+func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) {
+	newSenders := make(map[string]string, len(domains))
+	for _, domain := range domains {
+		sender := newSenderMailbox + "@" + domain
+		newSenders[sender] = sender
+	}
+
+	// try to determine previous email of the room mailbox
+	// by matching RCPT TO, To and From fields
+	// why? Because of possible multi-domain setup and we won't leak information
+	var previousSender string
+	rcptToSender, ok := newSenders[e.RcptTo]
+	if ok {
+		previousSender = rcptToSender
+	}
+	toSender, ok := newSenders[e.To]
+	if ok {
+		previousSender = toSender
+	}
+	fromSender, ok := newSenders[e.From]
+	if ok {
+		previousSender = fromSender
+	}
+
+	// Message-Id should not leak information either
+	e.FromDomain = utils.SanitizeDomain(utils.Hostname(previousSender))
+
+	originalFrom := e.From
+	// reverse From if needed
+	if fromSender == "" {
+		e.From = previousSender
+	}
+	// reverse To if needed
+	if toSender != "" {
+		e.To = originalFrom
+	}
+	// replace previous recipient of the email which is sender now with the original From
+	for newSender := range newSenders {
+		if strings.Contains(e.CC, newSender) {
+			e.CC = strings.ReplaceAll(e.CC, newSender, originalFrom)
+		}
+	}
 }
 
 func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
@@ -246,8 +294,8 @@ func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 	return threadID, decrypted
 }
 
-func (b *Bot) getParentEmail(evt *event.Event, domain string) parentEmail {
-	var parent parentEmail
+func (b *Bot) getParentEmail(evt *event.Event, newFromMailbox string) *parentEmail {
+	parent := &parentEmail{}
 	threadID, parentEvt := b.getParentEvent(evt)
 	parent.ThreadID = threadID
 	if parentEvt == nil {
@@ -257,11 +305,14 @@ func (b *Bot) getParentEmail(evt *event.Event, domain string) parentEmail {
 		return parent
 	}
 
-	parent.MessageID = utils.MessageID(parentEvt.ID, domain)
 	parent.From = utils.EventField[string](&parentEvt.Content, eventFromKey)
 	parent.To = utils.EventField[string](&parentEvt.Content, eventToKey)
+	parent.CC = utils.EventField[string](&parentEvt.Content, eventCcKey)
+	parent.RcptTo = utils.EventField[string](&parentEvt.Content, eventRcptToKey)
 	parent.InReplyTo = utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
 	parent.References = utils.EventField[string](&parentEvt.Content, eventReferencesKey)
+	parent.fixtofrom(newFromMailbox, b.domains)
+	parent.MessageID = email.MessageID(parentEvt.ID, parent.FromDomain)
 	if parent.InReplyTo == "" {
 		parent.InReplyTo = parent.MessageID
 	}
@@ -281,14 +332,14 @@ func (b *Bot) getParentEmail(evt *event.Event, domain string) parentEmail {
 
 // saveSentMetadata used to save metadata from !pm sent and thread reply events to a separate notice message
 // because that metadata is needed to determine email thread relations
-func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, email *utils.Email, cfg *roomSettings) {
-	text := "Email has been sent to " + email.To
+func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, eml *email.Email, cfg *roomSettings) {
+	text := "Email has been sent to " + eml.RcptTo
 	if queued {
-		text = "Email to " + email.To + " has been queued"
+		text = "Email to " + eml.RcptTo + " has been queued"
 	}
 
 	evt := eventFromContext(ctx)
-	content := email.Content(threadID, cfg.ContentOptions())
+	content := eml.Content(threadID, cfg.ContentOptions())
 	notice := format.RenderMarkdown(text, true, true)
 	msgContent, ok := content.Parsed.(*event.MessageEventContent)
 	if !ok {
@@ -305,8 +356,8 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 		return
 	}
 	domain := utils.SanitizeDomain(cfg.Domain())
-	b.setThreadID(evt.RoomID, utils.MessageID(evt.ID, domain), threadID)
-	b.setThreadID(evt.RoomID, utils.MessageID(msgID, domain), threadID)
+	b.setThreadID(evt.RoomID, email.MessageID(evt.ID, domain), threadID)
+	b.setThreadID(evt.RoomID, email.MessageID(msgID, domain), threadID)
 	b.setLastEventID(evt.RoomID, threadID, msgID)
 }
 

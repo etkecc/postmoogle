@@ -13,6 +13,7 @@ import (
 	"gitlab.com/etke.cc/go/validator"
 	"maunium.net/go/mautrix/id"
 
+	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
@@ -20,21 +21,21 @@ import (
 type incomingSession struct {
 	log          *logger.Logger
 	getRoomID    func(string) (id.RoomID, bool)
-	getFilters   func(id.RoomID) utils.IncomingFilteringOptions
-	receiveEmail func(context.Context, *utils.Email) error
+	getFilters   func(id.RoomID) email.IncomingFilteringOptions
+	receiveEmail func(context.Context, *email.Email) error
 	greylisted   func(net.Addr) bool
 	ban          func(net.Addr)
 	domains      []string
 
 	ctx  context.Context
 	addr net.Addr
-	to   string
+	tos  []string
 	from string
 }
 
 func (s *incomingSession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
-	if !utils.AddressValid(from) {
+	if !email.AddressValid(from) {
 		s.log.Debug("address %s is invalid", from)
 		s.ban(s.addr)
 		return ErrBanned
@@ -46,7 +47,7 @@ func (s *incomingSession) Mail(from string, opts smtp.MailOptions) error {
 
 func (s *incomingSession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
-	s.to = to
+	s.tos = append(s.tos, to)
 	var domainok bool
 	for _, domain := range s.domains {
 		if utils.Hostname(to) == domain {
@@ -66,7 +67,7 @@ func (s *incomingSession) Rcpt(to string) error {
 	}
 
 	validations := s.getFilters(roomID)
-	if !validateEmail(s.from, s.to, s.log, validations) {
+	if !validateEmail(s.from, to, s.log, validations) {
 		s.ban(s.addr)
 		return ErrBanned
 	}
@@ -84,25 +85,20 @@ func (s *incomingSession) Data(r io.Reader) error {
 		}
 	}
 	parser := enmime.NewParser()
-	eml, err := parser.ReadEnvelope(r)
+	envelope, err := parser.ReadEnvelope(r)
 	if err != nil {
 		return err
 	}
 
-	files := parseAttachments(eml.Attachments, s.log)
-
-	email := utils.NewEmail(
-		eml.GetHeader("Message-Id"),
-		eml.GetHeader("In-Reply-To"),
-		eml.GetHeader("References"),
-		eml.GetHeader("Subject"),
-		s.from,
-		s.to,
-		eml.Text,
-		eml.HTML,
-		files)
-
-	return s.receiveEmail(s.ctx, email)
+	eml := email.FromEnvelope(s.tos[0], envelope)
+	for _, to := range s.tos {
+		eml.RcptTo = to
+		err := s.receiveEmail(s.ctx, eml)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 func (s *incomingSession) Reset()        {}
 func (s *incomingSession) Logout() error { return nil }
@@ -115,13 +111,13 @@ type outgoingSession struct {
 	domains  []string
 
 	ctx  context.Context
-	to   string
+	tos  []string
 	from string
 }
 
 func (s *outgoingSession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
-	if !utils.AddressValid(from) {
+	if !email.AddressValid(from) {
 		return errors.New("please, provide email address")
 	}
 	return nil
@@ -129,7 +125,7 @@ func (s *outgoingSession) Mail(from string, opts smtp.MailOptions) error {
 
 func (s *outgoingSession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
-	s.to = to
+	s.tos = append(s.tos, to)
 
 	s.log.Debug("mail to %s", to)
 	return nil
@@ -137,30 +133,25 @@ func (s *outgoingSession) Rcpt(to string) error {
 
 func (s *outgoingSession) Data(r io.Reader) error {
 	parser := enmime.NewParser()
-	eml, err := parser.ReadEnvelope(r)
+	envelope, err := parser.ReadEnvelope(r)
 	if err != nil {
 		return err
 	}
+	eml := email.FromEnvelope(s.tos[0], envelope)
+	for _, to := range s.tos {
+		eml.RcptTo = to
+		err := s.sendmail(eml.From, to, eml.Compose(s.privkey))
+		if err != nil {
+			return err
+		}
+	}
 
-	files := parseAttachments(eml.Attachments, s.log)
-
-	email := utils.NewEmail(
-		eml.GetHeader("Message-Id"),
-		eml.GetHeader("In-Reply-To"),
-		eml.GetHeader("References"),
-		eml.GetHeader("Subject"),
-		s.from,
-		s.to,
-		eml.Text,
-		eml.HTML,
-		files)
-
-	return s.sendmail(email.From, email.To, email.Compose(s.privkey))
+	return nil
 }
 func (s *outgoingSession) Reset()        {}
 func (s *outgoingSession) Logout() error { return nil }
 
-func validateEmail(from, to string, log *logger.Logger, options utils.IncomingFilteringOptions) bool {
+func validateEmail(from, to string, log *logger.Logger, options email.IncomingFilteringOptions) bool {
 	enforce := validator.Enforce{
 		Email: true,
 		MX:    options.SpamcheckMX(),
@@ -169,17 +160,4 @@ func validateEmail(from, to string, log *logger.Logger, options utils.IncomingFi
 	v := validator.New(options.Spamlist(), enforce, to, log)
 
 	return v.Email(from)
-}
-
-func parseAttachments(parts []*enmime.Part, log *logger.Logger) []*utils.File {
-	files := make([]*utils.File, 0, len(parts))
-	for _, attachment := range parts {
-		for _, err := range attachment.Errors {
-			log.Warn("attachment error: %v", err)
-		}
-		file := utils.NewFile(attachment.FileName, attachment.Content)
-		files = append(files, file)
-	}
-
-	return files
 }

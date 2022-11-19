@@ -5,6 +5,7 @@ import (
 
 	"maunium.net/go/mautrix/id"
 
+	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
@@ -17,6 +18,7 @@ const (
 	roomOptionMailbox       = "mailbox"
 	roomOptionDomain        = "domain"
 	roomOptionNoSend        = "nosend"
+	roomOptionNoCC          = "nocc"
 	roomOptionNoSender      = "nosender"
 	roomOptionNoRecipient   = "norecipient"
 	roomOptionNoSubject     = "nosubject"
@@ -59,6 +61,10 @@ func (s roomSettings) Password() string {
 
 func (s roomSettings) NoSend() bool {
 	return utils.Bool(s.Get(roomOptionNoSend))
+}
+
+func (s roomSettings) NoCC() bool {
+	return utils.Bool(s.Get(roomOptionNoCC))
 }
 
 func (s roomSettings) NoSender() bool {
@@ -143,8 +149,9 @@ func (s roomSettings) migrateSpamlistSettings() {
 }
 
 // ContentOptions converts room display settings to content options
-func (s roomSettings) ContentOptions() *utils.ContentOptions {
-	return &utils.ContentOptions{
+func (s roomSettings) ContentOptions() *email.ContentOptions {
+	return &email.ContentOptions{
+		CC:        !s.NoCC(),
 		HTML:      !s.NoHTML(),
 		Sender:    !s.NoSender(),
 		Recipient: !s.NoRecipient(),
@@ -152,7 +159,9 @@ func (s roomSettings) ContentOptions() *utils.ContentOptions {
 		Threads:   !s.NoThreads(),
 
 		ToKey:         eventToKey,
+		CcKey:         eventCcKey,
 		FromKey:       eventFromKey,
+		RcptToKey:     eventRcptToKey,
 		SubjectKey:    eventSubjectKey,
 		MessageIDKey:  eventMessageIDkey,
 		InReplyToKey:  eventInReplyToKey,

@@ -11,7 +11,7 @@ import (
 	"gitlab.com/etke.cc/go/logger"
 	"maunium.net/go/mautrix/id"
 
-	"gitlab.com/etke.cc/postmoogle/utils"
+	"gitlab.com/etke.cc/postmoogle/email"
 )
 
 type Config struct {
@@ -45,8 +45,8 @@ type matrixbot interface {
 	IsBanned(net.Addr) bool
 	Ban(net.Addr)
 	GetMapping(string) (id.RoomID, bool)
-	GetIFOptions(id.RoomID) utils.IncomingFilteringOptions
-	IncomingEmail(context.Context, *utils.Email) error
+	GetIFOptions(id.RoomID) email.IncomingFilteringOptions
+	IncomingEmail(context.Context, *email.Email) error
 	SetSendmail(func(string, string, string) error)
 	GetDKIMprivkey() string
 }

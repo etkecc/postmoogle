@@ -22,7 +22,6 @@ require (
 	gitlab.com/etke.cc/go/trysmtp v1.0.0
 	gitlab.com/etke.cc/go/validator v1.0.4
 	gitlab.com/etke.cc/linkpearl v0.0.0-20221116205701-65547c5608e6
-	golang.org/x/net v0.2.0
 	maunium.net/go/mautrix v0.12.3
 )
 
@@ -49,6 +48,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yuin/goldmark v1.5.3 // indirect
 	golang.org/x/crypto v0.3.0 // indirect
+	golang.org/x/net v0.2.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
