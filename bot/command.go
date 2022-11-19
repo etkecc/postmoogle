@@ -438,7 +438,7 @@ func (b *Bot) runSend(ctx context.Context) {
 	from := mailbox + "@" + domain
 	ID := email.MessageID(evt.ID, domain)
 	for _, to := range tos {
-		eml := email.New(ID, "", " "+ID, subject, from, to, body, htmlBody, nil)
+		eml := email.New(ID, "", " "+ID, subject, from, to, to, "", body, htmlBody, nil)
 		data := eml.Compose(b.getBotSettings().DKIMPrivateKey())
 		if data == "" {
 			b.SendError(ctx, evt.RoomID, "email body is empty")

@@ -32,7 +32,7 @@ type Email struct {
 }
 
 // New constructs Email object
-func New(messageID, inReplyTo, references, subject, from, to, text, html string, files []*utils.File) *Email {
+func New(messageID, inReplyTo, references, subject, from, to, rcptto, cc, text, html string, files []*utils.File) *Email {
 	email := &Email{
 		Date:       dateNow(),
 		MessageID:  messageID,
@@ -40,7 +40,8 @@ func New(messageID, inReplyTo, references, subject, from, to, text, html string,
 		References: references,
 		From:       from,
 		To:         to,
-		RcptTo:     to,
+		CC:         cc,
+		RcptTo:     rcptto,
 		Subject:    subject,
 		Text:       text,
 		HTML:       html,

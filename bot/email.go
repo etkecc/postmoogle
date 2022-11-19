@@ -155,13 +155,8 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	b.lock(evt.RoomID.String())
 	defer b.unlock(evt.RoomID.String())
 
-	fromMailbox := mailbox + "@" + domain
 	meta := b.getParentEmail(evt, domain)
-	// when email was sent from matrix and reply was sent from matrix again
-	if fromMailbox != meta.From {
-		meta.To = meta.From
-	}
-	meta.From = fromMailbox
+	meta.fixtofrom(mailbox, domain, b.domains)
 
 	if meta.To == "" {
 		b.Error(ctx, evt.RoomID, "cannot find parent email and continue the thread. Please, start a new email thread")
@@ -181,7 +176,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	meta.MessageID = email.MessageID(evt.ID, domain)
 	meta.References = meta.References + " " + meta.MessageID
 	b.log.Debug("send email reply: %+v", meta)
-	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, body, htmlBody, nil)
+	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil)
 	data := eml.Compose(b.getBotSettings().DKIMPrivateKey())
 	if data == "" {
 		b.SendError(ctx, evt.RoomID, "email body is empty")
@@ -208,9 +203,43 @@ type parentEmail struct {
 	ThreadID   id.EventID
 	From       string
 	To         string
+	RcptTo     string
+	CC         string
 	InReplyTo  string
 	References string
 	Subject    string
+}
+
+// fixtofrom attempts to "fix" or rather reverse the To, From and CC headers
+// of parent email by using parent email as metadata source for a new email
+// that will be sent from postmoogle.
+// To do so, we need to reverse From and To headers, but Cc should be adjusted as well,
+// thus that hacky workaround below:
+func (e *parentEmail) fixtofrom(newSenderMailbox string, preferredDomain string, domains []string) {
+	newSenders := make(map[string]struct{}, len(domains))
+	newSenderPref := newSenderMailbox + "@" + preferredDomain
+	for _, domain := range domains {
+		sender := newSenderMailbox + "@" + domain
+		newSenders[sender] = struct{}{}
+	}
+
+	originalFrom := e.From
+	// reverse From if needed
+	_, ok := newSenders[e.From]
+	if !ok {
+		e.From = newSenderPref
+	}
+	// reverse To if needed
+	_, ok = newSenders[e.To]
+	if ok {
+		e.To = originalFrom
+	}
+	// replace previous recipient of the email which is sender now with the original From
+	for newSender := range newSenders {
+		if strings.Contains(e.CC, newSender) {
+			e.CC = strings.ReplaceAll(e.CC, newSender, originalFrom)
+		}
+	}
 }
 
 func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
@@ -249,8 +278,8 @@ func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 	return threadID, decrypted
 }
 
-func (b *Bot) getParentEmail(evt *event.Event, domain string) parentEmail {
-	var parent parentEmail
+func (b *Bot) getParentEmail(evt *event.Event, domain string) *parentEmail {
+	parent := &parentEmail{}
 	threadID, parentEvt := b.getParentEvent(evt)
 	parent.ThreadID = threadID
 	if parentEvt == nil {
@@ -263,6 +292,8 @@ func (b *Bot) getParentEmail(evt *event.Event, domain string) parentEmail {
 	parent.MessageID = email.MessageID(parentEvt.ID, domain)
 	parent.From = utils.EventField[string](&parentEvt.Content, eventFromKey)
 	parent.To = utils.EventField[string](&parentEvt.Content, eventToKey)
+	parent.CC = utils.EventField[string](&parentEvt.Content, eventCcKey)
+	parent.RcptTo = utils.EventField[string](&parentEvt.Content, eventRcptToKey)
 	parent.InReplyTo = utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
 	parent.References = utils.EventField[string](&parentEvt.Content, eventReferencesKey)
 	if parent.InReplyTo == "" {
