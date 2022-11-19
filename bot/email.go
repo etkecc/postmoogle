@@ -181,19 +181,28 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		return
 	}
 
-	queued, err := b.Sendmail(evt.ID, meta.From, meta.To, data)
-	if queued {
-		b.log.Error("cannot send email: %v", err)
+	var queued bool
+	var hasErr bool
+	tos := append(email.AddressList(meta.CC), meta.To)
+	for _, to := range tos {
+		queued, err = b.Sendmail(evt.ID, meta.From, to, data)
+		if queued {
+			b.log.Error("cannot send email: %v", err)
+			b.saveSentMetadata(ctx, queued, meta.ThreadID, eml, &cfg)
+			hasErr = true
+			continue
+		}
+
+		if err != nil {
+			b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
+			hasErr = true
+			continue
+		}
+	}
+
+	if !hasErr {
 		b.saveSentMetadata(ctx, queued, meta.ThreadID, eml, &cfg)
-		return
 	}
-
-	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
-		return
-	}
-
-	b.saveSentMetadata(ctx, queued, meta.ThreadID, eml, &cfg)
 }
 
 type parentEmail struct {

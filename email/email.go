@@ -24,7 +24,7 @@ type Email struct {
 	From       string
 	To         string
 	RcptTo     string
-	CC         string
+	CC         []string
 	Subject    string
 	Text       string
 	HTML       string
@@ -38,9 +38,9 @@ func New(messageID, inReplyTo, references, subject, from, to, rcptto, cc, text, 
 		MessageID:  messageID,
 		InReplyTo:  inReplyTo,
 		References: references,
-		From:       from,
-		To:         to,
-		CC:         cc,
+		From:       Address(from),
+		To:         Address(to),
+		CC:         AddressList(cc),
 		RcptTo:     rcptto,
 		Subject:    subject,
 		Text:       text,
@@ -77,10 +77,10 @@ func FromEnvelope(rcptto string, envelope *enmime.Envelope) *Email {
 		MessageID:  envelope.GetHeader("Message-Id"),
 		InReplyTo:  envelope.GetHeader("In-Reply-To"),
 		References: envelope.GetHeader("References"),
-		From:       envelope.GetHeader("From"),
-		To:         envelope.GetHeader("To"),
-		RcptTo:     rcptto,
-		CC:         envelope.GetHeader("Cc"),
+		From:       Address(envelope.GetHeader("From")),
+		To:         Address(envelope.GetHeader("To")),
+		RcptTo:     Address(rcptto),
+		CC:         AddressList(envelope.GetHeader("Cc")),
 		Subject:    envelope.GetHeader("Subject"),
 		Text:       envelope.Text,
 		HTML:       html,
@@ -108,9 +108,9 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 		text.WriteString(" ➡️ ")
 		text.WriteString(e.To)
 	}
-	if options.CC && e.CC != "" {
+	if options.CC && len(e.CC) > 0 {
 		text.WriteString("\ncc: ")
-		text.WriteString(e.CC)
+		text.WriteString(strings.Join(e.CC, ", "))
 	}
 	if options.Sender || options.Recipient || options.CC {
 		text.WriteString("\n\n")
@@ -169,6 +169,11 @@ func (e *Email) Compose(privkey string) string {
 	}
 	if e.References != "" {
 		mail = mail.Header("References", e.References)
+	}
+	if len(e.CC) > 0 {
+		for _, addr := range e.CC {
+			mail = mail.CC("", addr)
+		}
 	}
 
 	root, err := mail.Build()
