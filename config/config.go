@@ -22,6 +22,9 @@ func New() *Config {
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
 		Admins:       env.Slice("admins"),
+		Mailboxes: Mailboxes{
+			Reserved: env.Slice("mailboxes.reserved"),
+		},
 		TLS: TLS{
 			Certs:    env.Slice("tls.cert"),
 			Keys:     env.Slice("tls.key"),

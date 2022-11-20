@@ -20,6 +20,7 @@ type Bot struct {
 	domains                 []string
 	allowedUsers            []*regexp.Regexp
 	allowedAdmins           []*regexp.Regexp
+	reservedMailboxes       []string
 	commands                commandList
 	banlist                 bglist
 	rooms                   sync.Map
@@ -36,15 +37,17 @@ func New(
 	log *logger.Logger,
 	prefix string,
 	domains []string,
+	reserved []string,
 	admins []string,
 ) (*Bot, error) {
 	b := &Bot{
-		prefix:  prefix,
-		domains: domains,
-		rooms:   sync.Map{},
-		log:     log,
-		lp:      lp,
-		mu:      map[string]*sync.Mutex{},
+		reservedMailboxes: reserved,
+		domains:           domains,
+		prefix:            prefix,
+		rooms:             sync.Map{},
+		log:               log,
+		lp:                lp,
+		mu:                map[string]*sync.Mutex{},
 	}
 	users, err := b.initBotUsers()
 	if err != nil {

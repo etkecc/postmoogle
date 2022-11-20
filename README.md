@@ -64,6 +64,7 @@ env vars
 * **POSTMOOGLE_LOGLEVEL** - log level
 * **POSTMOOGLE_DB_DSN** - database connection string
 * **POSTMOOGLE_DB_DIALECT** - database dialect (postgres, sqlite3)
+* **POSTMOOGLE_MAILBOXES_RESERVED** - space separated list of reserved mailboxes (e.g.: `postmaster admin root`), nobody can create them
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
 * **POSTMOOGLE_ADMINS** - a space-separated list of admin users. See `POSTMOOGLE_USERS` for syntax examples
 

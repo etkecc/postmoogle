@@ -24,6 +24,8 @@ type Config struct {
 	MaxSize int
 	// StatusMsg of the bot
 	StatusMsg string
+	// Mailboxes config
+	Mailboxes Mailboxes
 	// Admins holds list of admin users (wildcards supported), e.g.: @*:example.com, @bot.*:example.com, @admin:*. Empty = no admins
 	Admins []string
 
@@ -56,4 +58,9 @@ type TLS struct {
 // Sentry config
 type Sentry struct {
 	DSN string
+}
+
+// Mailboxes config
+type Mailboxes struct {
+	Reserved []string
 }

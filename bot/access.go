@@ -73,6 +73,15 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 	return !cfg.NoSend()
 }
 
+func (b *Bot) isReserved(mailbox string) bool {
+	for _, reserved := range b.reservedMailboxes {
+		if mailbox == reserved {
+			return true
+		}
+	}
+	return false
+}
+
 // IsGreylisted checks if host is in greylist
 func (b *Bot) IsGreylisted(addr net.Addr) bool {
 	if b.getBotSettings().Greylist() == 0 {
