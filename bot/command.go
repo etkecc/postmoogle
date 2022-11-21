@@ -388,6 +388,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 	b.SendNotice(ctx, evt.RoomID, msg.String())
 }
 
+//nolint:gocognit // TODO
 func (b *Bot) runSend(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	if !b.allowSend(evt.Sender, evt.RoomID) {
@@ -408,7 +409,6 @@ func (b *Bot) runSend(ctx context.Context) {
 			b.prefix))
 		return
 	}
-	htmlBody := format.RenderMarkdown(body, true, true).FormattedBody
 
 	cfg, err := b.getRoomSettings(evt.RoomID)
 	if err != nil {
@@ -420,6 +420,11 @@ func (b *Bot) runSend(ctx context.Context) {
 	if mailbox == "" {
 		b.SendNotice(ctx, evt.RoomID, "mailbox is not configured, kupo")
 		return
+	}
+
+	var htmlBody string
+	if !cfg.NoHTML() {
+		htmlBody = format.RenderMarkdown(body, true, true).FormattedBody
 	}
 
 	tos := strings.Split(to, ",")

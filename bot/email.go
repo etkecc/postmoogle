@@ -140,6 +140,9 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 // SendEmailReply sends replies from matrix thread to email thread
 func (b *Bot) SendEmailReply(ctx context.Context) {
 	evt := eventFromContext(ctx)
+	if !b.allowSend(evt.Sender, evt.RoomID) {
+		return
+	}
 	cfg, err := b.getRoomSettings(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot retrieve room settings: %v", err)
@@ -169,7 +172,10 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		meta.Subject = strings.SplitN(content.Body, "\n", 1)[0]
 	}
 	body := content.Body
-	htmlBody := content.FormattedBody
+	var htmlBody string
+	if !cfg.NoHTML() {
+		htmlBody = content.FormattedBody
+	}
 
 	meta.MessageID = email.MessageID(evt.ID, meta.FromDomain)
 	meta.References = meta.References + " " + meta.MessageID
