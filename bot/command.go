@@ -68,7 +68,7 @@ func (b *Bot) initCommands() commandList {
 			description: "Send email",
 			allowed:     b.allowSend,
 		},
-		{allowed: b.allowOwner}, // delimiter
+		{allowed: b.allowOwner, description: "mailbox ownership"}, // delimiter
 		// options commands
 		{
 			key:         roomOptionMailbox,
@@ -93,7 +93,7 @@ func (b *Bot) initCommands() commandList {
 			description: "Get or set SMTP password of the room's mailbox",
 			allowed:     b.allowOwner,
 		},
-		{allowed: b.allowOwner}, // delimiter
+		{allowed: b.allowOwner, description: "mailbox options"}, // delimiter
 		{
 			key: roomOptionNoSend,
 			description: fmt.Sprintf(
@@ -166,7 +166,7 @@ func (b *Bot) initCommands() commandList {
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
-		{allowed: b.allowOwner}, // delimiter
+		{allowed: b.allowOwner, description: "mailbox antispam"}, // delimiter
 		{
 			key:         roomOptionSpamcheckMX,
 			description: "only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)",
@@ -188,7 +188,7 @@ func (b *Bot) initCommands() commandList {
 			sanitizer: utils.SanitizeStringSlice,
 			allowed:   b.allowOwner,
 		},
-		{allowed: b.allowAdmin}, // delimiter
+		{allowed: b.allowAdmin, description: "server options"}, // delimiter
 		{
 			key:         botOptionAdminRoom,
 			description: "Get or set admin room",
@@ -231,7 +231,7 @@ func (b *Bot) initCommands() commandList {
 			description: "Delete specific mailbox",
 			allowed:     b.allowAdmin,
 		},
-		{allowed: b.allowAdmin}, // delimiter
+		{allowed: b.allowAdmin, description: "server antispam"}, // delimiter
 		{
 			key:         botOptionGreylist,
 			description: "Set automatic greylisting duration in minutes (0 - disabled)",
@@ -361,7 +361,10 @@ func (b *Bot) sendHelp(ctx context.Context) {
 			continue
 		}
 		if cmd.key == "" {
-			msg.WriteString("\n---\n")
+			msg.WriteString("\n---\n\n")
+			msg.WriteString("#### ")
+			msg.WriteString(cmd.description)
+			msg.WriteString("\n")
 			continue
 		}
 		msg.WriteString("* **`")

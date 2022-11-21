@@ -3,6 +3,8 @@ package bot
 import (
 	"context"
 	"strings"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 func (b *Bot) handle(ctx context.Context) {
@@ -20,7 +22,7 @@ func (b *Bot) handle(ctx context.Context) {
 	message := strings.TrimSpace(content.Body)
 	cmd := b.parseCommand(message, true)
 	if cmd == nil {
-		if content.RelatesTo != nil {
+		if utils.EventParent("", content) != "" {
 			b.SendEmailReply(ctx)
 		}
 		return

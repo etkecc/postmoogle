@@ -32,16 +32,17 @@ func EventParent(currentID id.EventID, content *event.MessageEventContent) id.Ev
 		return currentID
 	}
 
-	if content.GetRelatesTo() == nil {
+	relation := content.OptionalGetRelatesTo()
+	if relation == nil {
 		return currentID
 	}
 
-	threadParent := content.RelatesTo.GetThreadParent()
+	threadParent := relation.GetThreadParent()
 	if threadParent != "" {
 		return threadParent
 	}
 
-	replyParent := content.RelatesTo.GetReplyTo()
+	replyParent := relation.GetReplyTo()
 	if replyParent != "" {
 		return replyParent
 	}
