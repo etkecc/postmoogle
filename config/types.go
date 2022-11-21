@@ -62,5 +62,6 @@ type Sentry struct {
 
 // Mailboxes config
 type Mailboxes struct {
-	Reserved []string
+	Reserved   []string
+	Activation string
 }

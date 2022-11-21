@@ -208,6 +208,40 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, "")))
 }
 
+func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	cfg := b.getBotSettings()
+	if len(commandSlice) < 2 {
+		var msg strings.Builder
+		msg.WriteString("Currently: `")
+		if cfg.AdminRoom() != "" {
+			msg.WriteString(cfg.AdminRoom().String())
+		} else {
+			msg.WriteString("not set")
+		}
+		msg.WriteString("`\n\n")
+		msg.WriteString("Usage: `")
+		msg.WriteString(b.prefix)
+		msg.WriteString(" adminroom ROOM_ID`")
+		msg.WriteString("where ROOM_ID is valid and existing matrix room id\n")
+
+		b.SendNotice(ctx, evt.RoomID, msg.String())
+		return
+	}
+
+	roomID := b.parseCommand(evt.Content.AsMessage().Body, false)[1] // get original value, without forced lower case
+	cfg.Set(botOptionAdminRoom, roomID)
+	err := b.setBotSettings(cfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot save bot options: %v", err)
+		return
+	}
+
+	b.adminRooms = append([]id.RoomID{id.RoomID(roomID)}, b.adminRooms...) // make it the first room in list on the fly
+
+	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Admin Room is set to: `%s`.", roomID))
+}
+
 func (b *Bot) printGreylist(ctx context.Context, roomID id.RoomID) {
 	cfg := b.getBotSettings()
 	greylist := b.getGreylist()

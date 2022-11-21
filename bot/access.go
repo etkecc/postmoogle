@@ -74,7 +74,7 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 }
 
 func (b *Bot) isReserved(mailbox string) bool {
-	for _, reserved := range b.reservedMailboxes {
+	for _, reserved := range b.mbxc.Reserved {
 		if mailbox == reserved {
 			return true
 		}

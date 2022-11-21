@@ -64,7 +64,8 @@ env vars
 * **POSTMOOGLE_LOGLEVEL** - log level
 * **POSTMOOGLE_DB_DSN** - database connection string
 * **POSTMOOGLE_DB_DIALECT** - database dialect (postgres, sqlite3)
-* **POSTMOOGLE_MAILBOXES_RESERVED** - space separated list of reserved mailboxes (e.g.: `postmaster admin root`), nobody can create them
+* **POSTMOOGLE_MAILBOXES_RESERVED** - space separated list of reserved mailboxes, [docs/mailboxes.md](docs/mailboxes.md)
+* **POSTMOOGLE_MAILBOXES_ACTIVATION** - activation flow for new mailboxes, [docs/mailboxes.md](docs/mailboxes.md)
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
 * **POSTMOOGLE_ADMINS** - a space-separated list of admin users. See `POSTMOOGLE_USERS` for syntax examples
 
@@ -117,6 +118,7 @@ If you want to change them - check available options in the help message (`!pm h
 
 ---
 
+* **!pm adminroom** - Get or set admin room
 * **!pm dkim** - Get DKIM signature
 * **!pm catch-all** - Configure catch-all mailbox
 * **!pm queue:batch** - max amount of emails to process on each queue check

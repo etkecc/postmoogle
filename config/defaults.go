@@ -7,6 +7,9 @@ var defaultConfig = &Config{
 	Prefix:    "!pm",
 	MaxSize:   1024,
 	StatusMsg: "Delivering emails",
+	Mailboxes: Mailboxes{
+		Activation: "none",
+	},
 	DB: DB{
 		DSN:     "local.db",
 		Dialect: "sqlite3",

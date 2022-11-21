@@ -190,6 +190,11 @@ func (b *Bot) initCommands() commandList {
 		},
 		{allowed: b.allowAdmin}, // delimiter
 		{
+			key:         botOptionAdminRoom,
+			description: "Get or set admin room",
+			allowed:     b.allowAdmin,
+		},
+		{
 			key:         botOptionUsers,
 			description: "Get or set allowed users",
 			allowed:     b.allowAdmin,
@@ -280,6 +285,8 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.runSend(ctx)
 	case commandDKIM:
 		b.runDKIM(ctx, commandSlice)
+	case botOptionAdminRoom:
+		b.runAdminRoom(ctx, commandSlice)
 	case commandUsers:
 		b.runUsers(ctx, commandSlice)
 	case commandCatchAll:

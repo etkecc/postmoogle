@@ -1,5 +1,7 @@
 package bot
 
+import "maunium.net/go/mautrix/id"
+
 var migrations = []string{}
 
 func (b *Bot) migrate() error {
@@ -32,19 +34,29 @@ func (b *Bot) migrate() error {
 }
 
 func (b *Bot) syncRooms() error {
+	adminRoom := b.getBotSettings().AdminRoom()
+	if adminRoom != "" {
+		b.adminRooms = append(b.adminRooms, adminRoom)
+	}
+
 	resp, err := b.lp.GetClient().JoinedRooms()
 	if err != nil {
 		return err
 	}
 	for _, roomID := range resp.JoinedRooms {
+		b.migrateRoomSettings(roomID)
 		cfg, serr := b.getRoomSettings(roomID)
 		if serr != nil {
 			continue
 		}
-		b.migrateRoomSettings(roomID)
 		mailbox := cfg.Mailbox()
-		if mailbox != "" {
+		active := cfg.Active()
+		if mailbox != "" && active {
 			b.rooms.Store(mailbox, roomID)
+		}
+
+		if cfg.Owner() != "" && b.allowAdmin(id.UserID(cfg.Owner()), "") {
+			b.adminRooms = append(b.adminRooms, roomID)
 		}
 	}
 

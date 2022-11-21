@@ -14,13 +14,20 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
+// Mailboxes config
+type MBXConfig struct {
+	Reserved   []string
+	Activation string
+}
+
 // Bot represents matrix bot
 type Bot struct {
 	prefix                  string
+	mbxc                    MBXConfig
 	domains                 []string
 	allowedUsers            []*regexp.Regexp
 	allowedAdmins           []*regexp.Regexp
-	reservedMailboxes       []string
+	adminRooms              []id.RoomID
 	commands                commandList
 	banlist                 bglist
 	rooms                   sync.Map
@@ -37,17 +44,18 @@ func New(
 	log *logger.Logger,
 	prefix string,
 	domains []string,
-	reserved []string,
 	admins []string,
+	mbxc MBXConfig,
 ) (*Bot, error) {
 	b := &Bot{
-		reservedMailboxes: reserved,
-		domains:           domains,
-		prefix:            prefix,
-		rooms:             sync.Map{},
-		log:               log,
-		lp:                lp,
-		mu:                map[string]*sync.Mutex{},
+		domains:    domains,
+		prefix:     prefix,
+		rooms:      sync.Map{},
+		adminRooms: []id.RoomID{},
+		mbxc:       mbxc,
+		log:        log,
+		lp:         lp,
+		mu:         map[string]*sync.Mutex{},
 	}
 	users, err := b.initBotUsers()
 	if err != nil {

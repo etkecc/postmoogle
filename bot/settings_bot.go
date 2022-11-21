@@ -3,6 +3,8 @@ package bot
 import (
 	"strings"
 
+	"maunium.net/go/mautrix/id"
+
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
@@ -11,6 +13,7 @@ const acBotSettingsKey = "cc.etke.postmoogle.config"
 
 // bot options keys
 const (
+	botOptionAdminRoom      = "adminroom"
 	botOptionUsers          = "users"
 	botOptionCatchAll       = "catch-all"
 	botOptionDKIMSignature  = "dkim.pub"
@@ -50,6 +53,11 @@ func (s botSettings) Users() []string {
 // CatchAll option
 func (s botSettings) CatchAll() string {
 	return s.Get(botOptionCatchAll)
+}
+
+// AdminRoom option
+func (s botSettings) AdminRoom() id.RoomID {
+	return id.RoomID(s.Get(botOptionAdminRoom))
 }
 
 // BanlistEnabled option

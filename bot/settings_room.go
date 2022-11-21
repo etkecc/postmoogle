@@ -14,6 +14,7 @@ const acRoomSettingsKey = "cc.etke.postmoogle.settings"
 
 // option keys
 const (
+	roomOptionActive        = ".active"
 	roomOptionOwner         = "owner"
 	roomOptionMailbox       = "mailbox"
 	roomOptionDomain        = "domain"
@@ -53,6 +54,10 @@ func (s roomSettings) Domain() string {
 
 func (s roomSettings) Owner() string {
 	return s.Get(roomOptionOwner)
+}
+
+func (s roomSettings) Active() bool {
+	return utils.Bool(s.Get(roomOptionActive))
 }
 
 func (s roomSettings) Password() string {
@@ -187,6 +192,9 @@ func (b *Bot) migrateRoomSettings(roomID id.RoomID) {
 	if err != nil {
 		b.log.Error("cannot retrieve room settings: %v", err)
 		return
+	}
+	if _, ok := cfg[roomOptionActive]; !ok {
+		cfg.Set(roomOptionActive, "true")
 	}
 
 	if cfg["spamlist:emails"] == "" && cfg["spamlist:localparts"] == "" && cfg["spamlist:hosts"] == "" {

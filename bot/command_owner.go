@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/raja/argon2pw"
 
@@ -84,6 +85,10 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	}
 
 	evt := eventFromContext(ctx)
+	// ignore request
+	if name == roomOptionActive {
+		return
+	}
 	if name == roomOptionMailbox {
 		existingID, ok := b.getMapping(value)
 		if (ok && existingID != "" && existingID != evt.RoomID) || b.isReserved(value) {
@@ -115,7 +120,8 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		if old != "" {
 			b.rooms.Delete(old)
 		}
-		b.rooms.Store(value, evt.RoomID)
+		active := b.ActivateMailbox(evt.Sender, evt.RoomID, value)
+		cfg.Set(roomOptionActive, strconv.FormatBool(active))
 		value = fmt.Sprintf("%s@%s", value, utils.SanitizeDomain(cfg.Domain()))
 	}
 

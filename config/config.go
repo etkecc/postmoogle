@@ -23,7 +23,8 @@ func New() *Config {
 		StatusMsg:    env.String("statusmsg", defaultConfig.StatusMsg),
 		Admins:       env.Slice("admins"),
 		Mailboxes: Mailboxes{
-			Reserved: env.Slice("mailboxes.reserved"),
+			Reserved:   env.Slice("mailboxes.reserved"),
+			Activation: env.String("mailboxes.activation", defaultConfig.Mailboxes.Activation),
 		},
 		TLS: TLS{
 			Certs:    env.Slice("tls.cert"),
