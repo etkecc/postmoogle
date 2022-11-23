@@ -1,3 +1,7 @@
+# blitiri.com.ar/go/spf v1.5.1
+## explicit; go 1.15
+blitiri.com.ar/go/spf
+blitiri.com.ar/go/spf/internal/dnstest
 # github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a
 ## explicit
 github.com/cention-sany/utf7
@@ -127,7 +131,7 @@ gitlab.com/etke.cc/go/secgen
 # gitlab.com/etke.cc/go/trysmtp v1.0.0
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/trysmtp
-# gitlab.com/etke.cc/go/validator v1.0.4
+# gitlab.com/etke.cc/go/validator v1.0.5
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/validator
 # gitlab.com/etke.cc/linkpearl v0.0.0-20221116205701-65547c5608e6

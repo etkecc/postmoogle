@@ -113,6 +113,8 @@ If you want to change them - check available options in the help message (`!pm h
 ---
 
 * **!pm spamcheck:mx** - only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)
+* **!pm spamcheck:spf** - only accept email from senders which authorized to send it (those matching SPF records) (`true` - enable, `false` - disable)
+* **!pm spamcheck:dkim** - only accept correctly authorized emails (without DKIM signature at all or with valid DKIM signature) (`true` - enable, `false` - disable)
 * **!pm spamcheck:smtp** - only accept email from servers which seem prepared to receive it (those listening on an SMTP port) (`true` - enable, `false` - disable)
 * **!pm spamlist** - Get or set `spamlist` of the room (comma-separated list), eg: `spammer@example.com,*@spammer.org,noreply@*`
 

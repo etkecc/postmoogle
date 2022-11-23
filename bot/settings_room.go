@@ -27,7 +27,9 @@ const (
 	roomOptionNoThreads     = "nothreads"
 	roomOptionNoFiles       = "nofiles"
 	roomOptionPassword      = "password"
+	roomOptionSpamcheckDKIM = "spamcheck:dkim"
 	roomOptionSpamcheckSMTP = "spamcheck:smtp"
+	roomOptionSpamcheckSPF  = "spamcheck:spf"
 	roomOptionSpamcheckMX   = "spamcheck:mx"
 	roomOptionSpamlist      = "spamlist"
 )
@@ -96,8 +98,16 @@ func (s roomSettings) NoFiles() bool {
 	return utils.Bool(s.Get(roomOptionNoFiles))
 }
 
+func (s roomSettings) SpamcheckDKIM() bool {
+	return utils.Bool(s.Get(roomOptionSpamcheckDKIM))
+}
+
 func (s roomSettings) SpamcheckSMTP() bool {
 	return utils.Bool(s.Get(roomOptionSpamcheckSMTP))
+}
+
+func (s roomSettings) SpamcheckSPF() bool {
+	return utils.Bool(s.Get(roomOptionSpamcheckSPF))
 }
 
 func (s roomSettings) SpamcheckMX() bool {

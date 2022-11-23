@@ -20,12 +20,13 @@ require (
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/go/trysmtp v1.0.0
-	gitlab.com/etke.cc/go/validator v1.0.4
+	gitlab.com/etke.cc/go/validator v1.0.5
 	gitlab.com/etke.cc/linkpearl v0.0.0-20221116205701-65547c5608e6
 	maunium.net/go/mautrix v0.12.3
 )
 
 require (
+	blitiri.com.ar/go/spf v1.5.1 // indirect
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
 	github.com/gogs/chardet v0.0.0-20191104214054-4b6791f73a28 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect

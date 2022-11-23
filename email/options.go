@@ -2,7 +2,9 @@ package email
 
 // IncomingFilteringOptions for incoming mail
 type IncomingFilteringOptions interface {
+	SpamcheckDKIM() bool
 	SpamcheckSMTP() bool
+	SpamcheckSPF() bool
 	SpamcheckMX() bool
 	Spamlist() []string
 }

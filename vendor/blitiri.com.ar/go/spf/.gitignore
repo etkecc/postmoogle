@@ -1,0 +1,10 @@
+# Ignore anything beginning with a dot: these are usually temporary or
+# unimportant.
+.*
+
+# Exceptions to the rule above: files we care about that would otherwise be
+# excluded.
+!.gitignore
+
+# go-fuzz build artifacts.
+*-fuzz.zip

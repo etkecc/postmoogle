@@ -174,6 +174,18 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowOwner,
 		},
 		{
+			key:         roomOptionSpamcheckSPF,
+			description: "only accept email from senders which authorized to send it (those matching SPF records) (`true` - enable, `false` - disable)",
+			sanitizer:   utils.SanitizeBoolString,
+			allowed:     b.allowOwner,
+		},
+		{
+			key:         roomOptionSpamcheckDKIM,
+			description: "only accept correctly authorized emails (without DKIM signature at all or with valid DKIM signature) (`true` - enable, `false` - disable)",
+			sanitizer:   utils.SanitizeBoolString,
+			allowed:     b.allowOwner,
+		},
+		{
 			key:         roomOptionSpamcheckSMTP,
 			description: "only accept email from servers which seem prepared to receive it (those listening on an SMTP port) (`true` - enable, `false` - disable)",
 			sanitizer:   utils.SanitizeBoolString,

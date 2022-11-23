@@ -1,14 +1,21 @@
 package validator
 
 import (
+	"net"
 	"net/mail"
 	"strings"
 
+	"blitiri.com.ar/go/spf"
 	"gitlab.com/etke.cc/go/trysmtp"
 )
 
 // Email checks if email is valid
-func (v *V) Email(email string) bool {
+func (v *V) Email(email string, optionalSenderIP ...net.IP) bool {
+	var senderIP net.IP
+	if len(optionalSenderIP) > 0 {
+		senderIP = optionalSenderIP[0]
+	}
+
 	// edge case: email may be optional
 	if email == "" {
 		return !v.enforce.Email
@@ -37,6 +44,12 @@ func (v *V) Email(email string) bool {
 
 	if v.enforce.MX {
 		if v.emailNoMX(email) {
+			return false
+		}
+	}
+
+	if v.enforce.SPF {
+		if v.emailNoSPF(email, senderIP) {
 			return false
 		}
 	}
@@ -77,4 +90,9 @@ func (v *V) emailNoSMTP(email string) bool {
 	defer client.Close()
 
 	return false
+}
+
+func (v *V) emailNoSPF(email string, senderIP net.IP) bool {
+	result, _ := spf.CheckHostWithSender(senderIP, "", email, spf.WithTraceFunc(v.log.Info)) //nolint:errcheck // not a error
+	return result == spf.Fail
 }

@@ -21,6 +21,8 @@ type Enforce struct {
 	Domain bool
 	// SMTP enforces SMTP check (email actually exists on mail server) and rejects non-existing emails
 	SMTP bool
+	// SPF enforces SPF record check (sender allowed to use that email and send emails) and rejects unathorized emails
+	SPF bool
 	// MX enforces MX records check on email's mail server
 	MX bool
 }

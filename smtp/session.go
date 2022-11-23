@@ -1,11 +1,13 @@
 package smtp
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"net"
 
+	"github.com/emersion/go-msgauth/dkim"
 	"github.com/emersion/go-smtp"
 	"github.com/getsentry/sentry-go"
 	"github.com/jhillyerd/enmime"
@@ -26,6 +28,7 @@ type incomingSession struct {
 	greylisted   func(net.Addr) bool
 	ban          func(net.Addr)
 	domains      []string
+	enforceDKIM  bool
 
 	ctx  context.Context
 	addr net.Addr
@@ -68,7 +71,8 @@ func (s *incomingSession) Rcpt(to string) error {
 	}
 
 	validations := s.getFilters(roomID)
-	if !validateEmail(s.from, to, s.log, validations) {
+	s.enforceDKIM = validations.SpamcheckDKIM()
+	if !validateIncoming(s.from, to, s.addr, s.log, validations) {
 		s.ban(s.addr)
 		return ErrBanned
 	}
@@ -85,8 +89,28 @@ func (s *incomingSession) Data(r io.Reader) error {
 			Message:      "You have been greylisted, try again a bit later.",
 		}
 	}
+	data, err := io.ReadAll(r)
+	if err != nil {
+		s.log.Error("cannot read DATA: %v", err)
+		return err
+	}
+	reader := bytes.NewReader(data)
+	if s.enforceDKIM {
+		results, verr := dkim.Verify(reader)
+		if verr != nil {
+			s.log.Error("cannot verify DKIM: %v", verr)
+			return verr
+		}
+		for _, result := range results {
+			if result.Err != nil {
+				s.log.Info("DKIM verification of %q failed: %v", result.Domain, result.Err)
+				return result.Err
+			}
+		}
+		reader.Seek(0, io.SeekStart) //nolint:errcheck
+	}
 	parser := enmime.NewParser()
-	envelope, err := parser.ReadEnvelope(r)
+	envelope, err := parser.ReadEnvelope(reader)
 	if err != nil {
 		return err
 	}
@@ -176,13 +200,23 @@ func (s *outgoingSession) Data(r io.Reader) error {
 func (s *outgoingSession) Reset()        {}
 func (s *outgoingSession) Logout() error { return nil }
 
-func validateEmail(from, to string, log *logger.Logger, options email.IncomingFilteringOptions) bool {
+func validateIncoming(from, to string, senderAddr net.Addr, log *logger.Logger, options email.IncomingFilteringOptions) bool {
+	var sender net.IP
+	switch netaddr := senderAddr.(type) {
+	case *net.TCPAddr:
+		sender = netaddr.IP
+	default:
+		host, _, _ := net.SplitHostPort(senderAddr.String()) // nolint:errcheck
+		sender = net.ParseIP(host)
+	}
+
 	enforce := validator.Enforce{
 		Email: true,
 		MX:    options.SpamcheckMX(),
+		SPF:   options.SpamcheckSPF(),
 		SMTP:  options.SpamcheckSMTP(),
 	}
 	v := validator.New(options.Spamlist(), enforce, to, log)
 
-	return v.Email(from)
+	return v.Email(from, sender)
 }
