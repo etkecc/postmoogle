@@ -125,7 +125,7 @@ func (b *Bot) Ban(addr net.Addr) {
 }
 
 // AllowAuth check if SMTP login (email) and password are valid
-func (b *Bot) AllowAuth(email, password string) bool {
+func (b *Bot) AllowAuth(email, password string) (id.RoomID, bool) {
 	var suffix bool
 	for _, domain := range b.domains {
 		if strings.HasSuffix(email, "@"+domain) {
@@ -134,22 +134,27 @@ func (b *Bot) AllowAuth(email, password string) bool {
 		}
 	}
 	if !suffix {
-		return false
+		return "", false
 	}
 
 	roomID, ok := b.getMapping(utils.Mailbox(email))
 	if !ok {
-		return false
+		return "", false
 	}
 	cfg, err := b.getRoomSettings(roomID)
 	if err != nil {
 		b.log.Error("failed to retrieve settings: %v", err)
-		return false
+		return "", false
+	}
+
+	if cfg.NoSend() {
+		b.log.Warn("trying to send email from %q (%q), but it's receive-only", email, roomID)
+		return "", false
 	}
 
 	allow, err := argon2pw.CompareHashWithPassword(cfg.Password(), password)
 	if err != nil {
 		b.log.Warn("Password for %s is not valid: %v", email, err)
 	}
-	return allow
+	return roomID, allow
 }

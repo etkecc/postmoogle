@@ -47,20 +47,23 @@ func (m *mailServer) Login(state *smtp.ConnectionState, username, password strin
 		return nil, ErrBanned
 	}
 
-	if !m.bot.AllowAuth(username, password) {
+	roomID, allow := m.bot.AllowAuth(username, password)
+	if !allow {
 		m.log.Debug("username=%s or password=<redacted> is invalid", username)
 		m.bot.Ban(state.RemoteAddr)
 		return nil, ErrBanned
 	}
 
 	return &outgoingSession{
-		ctx:      sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
-		sendmail: m.SendEmail,
-		privkey:  m.bot.GetDKIMprivkey(),
-		from:     username,
-		log:      m.log,
-		domains:  m.domains,
-		tos:      []string{},
+		ctx:       sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
+		sendmail:  m.SendEmail,
+		privkey:   m.bot.GetDKIMprivkey(),
+		from:      username,
+		log:       m.log,
+		domains:   m.domains,
+		getRoomID: m.bot.GetMapping,
+		fromRoom:  roomID,
+		tos:       []string{},
 	}, nil
 }
 

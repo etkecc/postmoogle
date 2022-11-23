@@ -40,7 +40,7 @@ type Manager struct {
 }
 
 type matrixbot interface {
-	AllowAuth(string, string) bool
+	AllowAuth(string, string) (id.RoomID, bool)
 	IsGreylisted(net.Addr) bool
 	IsBanned(net.Addr) bool
 	Ban(net.Addr)

@@ -48,9 +48,10 @@ func (s *incomingSession) Mail(from string, opts smtp.MailOptions) error {
 func (s *incomingSession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
 	s.tos = append(s.tos, to)
+	hostname := utils.Hostname(to)
 	var domainok bool
 	for _, domain := range s.domains {
-		if utils.Hostname(to) == domain {
+		if hostname == domain {
 			domainok = true
 			break
 		}
@@ -105,20 +106,44 @@ func (s *incomingSession) Logout() error { return nil }
 
 // outgoingSession represents an SMTP-submission session sending emails from external scripts, using postmoogle as SMTP server
 type outgoingSession struct {
-	log      *logger.Logger
-	sendmail func(string, string, string) error
-	privkey  string
-	domains  []string
+	log       *logger.Logger
+	sendmail  func(string, string, string) error
+	privkey   string
+	domains   []string
+	getRoomID func(string) (id.RoomID, bool)
 
-	ctx  context.Context
-	tos  []string
-	from string
+	ctx      context.Context
+	tos      []string
+	from     string
+	fromRoom id.RoomID
 }
 
 func (s *outgoingSession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
 	if !email.AddressValid(from) {
 		return errors.New("please, provide email address")
+	}
+	hostname := utils.Hostname(from)
+	var domainok bool
+	for _, domain := range s.domains {
+		if hostname == domain {
+			domainok = true
+			break
+		}
+	}
+	if !domainok {
+		s.log.Debug("wrong domain of %s", from)
+		return ErrNoUser
+	}
+
+	roomID, ok := s.getRoomID(utils.Mailbox(from))
+	if !ok {
+		s.log.Debug("mapping for %s not found", from)
+		return ErrNoUser
+	}
+	if s.fromRoom != roomID {
+		s.log.Warn("sender from %q tries to impersonate %q", s.fromRoom, roomID)
+		return ErrNoUser
 	}
 	return nil
 }
