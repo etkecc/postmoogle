@@ -20,16 +20,13 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] Catch-all mailbox
 - [x] Map email threads to matrix threads
 - [x] Multi-domain support
-- [x] automatic banlist
-- [x] automatic greylisting
-
-#### deep dive
-
-> features in that section considered as "nice to have", but not a priority
-
-- [ ] DKIM verification
-- [ ] SPF verification
-- [ ] DMARC verification
+- [x] SMTP verification
+- [x] DKIM verification
+- [x] SPF verification
+- [x] MX verification
+- [x] Spamlist of emails (wildcards supported)
+- [x] Spamlist of hosts (per server only)
+- [x] Greylisting (per server only)
 
 ### Send
 
