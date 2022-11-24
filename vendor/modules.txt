@@ -131,7 +131,7 @@ gitlab.com/etke.cc/go/secgen
 # gitlab.com/etke.cc/go/trysmtp v1.0.0
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/trysmtp
-# gitlab.com/etke.cc/go/validator v1.0.5
+# gitlab.com/etke.cc/go/validator v1.0.6
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/validator
 # gitlab.com/etke.cc/linkpearl v0.0.0-20221116205701-65547c5608e6
@@ -156,6 +156,7 @@ golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 # golang.org/x/net v0.2.0
 ## explicit; go 1.17
+golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/publicsuffix

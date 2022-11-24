@@ -101,8 +101,8 @@ gitlab.com/etke.cc/go/secgen v1.1.1 h1:RmKOki725HIhWJHzPtAc9X4YvBneczndchpMgoDkE
 gitlab.com/etke.cc/go/secgen v1.1.1/go.mod h1:3pJqRGeWApzx7qXjABqz2o2SMCNpKSZao/gXVdasqE8=
 gitlab.com/etke.cc/go/trysmtp v1.0.0 h1:f/7gSmzohKniVeLSLevI+ZsySYcPUGkT9cRlOTwjOr8=
 gitlab.com/etke.cc/go/trysmtp v1.0.0/go.mod h1:KqRuIB2IPElEEbAxXmFyKtm7S5YiuEb4lxwWthccqyE=
-gitlab.com/etke.cc/go/validator v1.0.5 h1:YJs50yOHY3tKp/2NVP5U6Pbtvxof/YtGRpNOVjkGf+s=
-gitlab.com/etke.cc/go/validator v1.0.5/go.mod h1:Id0SxRj0J3IPhiKlj0w1plxVLZfHlkwipn7HfRZsDts=
+gitlab.com/etke.cc/go/validator v1.0.6 h1:w0Muxf9Pqw7xvF7NaaswE6d7r9U3nB2t2l5PnFMrecQ=
+gitlab.com/etke.cc/go/validator v1.0.6/go.mod h1:Id0SxRj0J3IPhiKlj0w1plxVLZfHlkwipn7HfRZsDts=
 gitlab.com/etke.cc/linkpearl v0.0.0-20221116205701-65547c5608e6 h1:+HDT2/bx3Hug++aeDE/PaoRRcnKdYzEm6i2RlOAzPXo=
 gitlab.com/etke.cc/linkpearl v0.0.0-20221116205701-65547c5608e6/go.mod h1:Dgtu0qvymNjjky4Bu5WC8+iSohcb5xZ9CtkD3ezDqIA=
 golang.org/x/crypto v0.0.0-20220518034528-6f7dac969898/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
