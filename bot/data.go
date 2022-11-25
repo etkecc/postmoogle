@@ -1,6 +1,10 @@
 package bot
 
-import "maunium.net/go/mautrix/id"
+import (
+	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/bot/config"
+)
 
 var migrations = []string{}
 
@@ -34,7 +38,7 @@ func (b *Bot) migrate() error {
 }
 
 func (b *Bot) syncRooms() error {
-	adminRoom := b.getBotSettings().AdminRoom()
+	adminRoom := b.cfg.GetBot().AdminRoom()
 	if adminRoom != "" {
 		b.adminRooms = append(b.adminRooms, adminRoom)
 	}
@@ -45,7 +49,7 @@ func (b *Bot) syncRooms() error {
 	}
 	for _, roomID := range resp.JoinedRooms {
 		b.migrateRoomSettings(roomID)
-		cfg, serr := b.getRoomSettings(roomID)
+		cfg, serr := b.cfg.GetRoom(roomID)
 		if serr != nil {
 			continue
 		}
@@ -63,13 +67,37 @@ func (b *Bot) syncRooms() error {
 	return nil
 }
 
-func (b *Bot) syncBanlist() {
-	b.lock("banlist")
-	defer b.unlock("banlist")
-
-	if !b.getBotSettings().BanlistEnabled() {
-		b.banlist = make(bglist, 0)
+func (b *Bot) migrateRoomSettings(roomID id.RoomID) {
+	cfg, err := b.cfg.GetRoom(roomID)
+	if err != nil {
+		b.log.Error("cannot retrieve room settings: %v", err)
 		return
 	}
-	b.banlist = b.getBanlist()
+	if _, ok := cfg[config.RoomActive]; !ok {
+		cfg.Set(config.RoomActive, "true")
+	}
+
+	if cfg["spamlist:emails"] == "" && cfg["spamlist:localparts"] == "" && cfg["spamlist:hosts"] == "" {
+		return
+	}
+	cfg.MigrateSpamlistSettings()
+	err = b.cfg.SetRoom(roomID, cfg)
+	if err != nil {
+		b.log.Error("cannot migrate room settings: %v", err)
+	}
+}
+
+func (b *Bot) initBotUsers() ([]string, error) {
+	cfg := b.cfg.GetBot()
+	cfgUsers := cfg.Users()
+	if len(cfgUsers) > 0 {
+		return cfgUsers, nil
+	}
+
+	_, homeserver, err := b.lp.GetClient().UserID.Parse()
+	if err != nil {
+		return nil, err
+	}
+	cfg.Set(config.BotUsers, "@*:"+homeserver)
+	return cfg.Users(), b.cfg.SetBot(cfg)
 }

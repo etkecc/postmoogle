@@ -12,6 +12,10 @@ import (
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
+
+	"gitlab.com/etke.cc/postmoogle/bot/config"
+	"gitlab.com/etke.cc/postmoogle/bot/queue"
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 // Mailboxes config
@@ -29,19 +33,22 @@ type Bot struct {
 	allowedAdmins           []*regexp.Regexp
 	adminRooms              []id.RoomID
 	commands                commandList
-	banlist                 bglist
 	rooms                   sync.Map
 	sendmail                func(string, string, string) error
+	cfg                     *config.Manager
 	log                     *logger.Logger
 	lp                      *linkpearl.Linkpearl
-	mu                      map[string]*sync.Mutex
+	mu                      utils.Mutex
+	q                       *queue.Queue
 	handledMembershipEvents sync.Map
 }
 
 // New creates a new matrix bot
 func New(
+	q *queue.Queue,
 	lp *linkpearl.Linkpearl,
 	log *logger.Logger,
+	cfg *config.Manager,
 	prefix string,
 	domains []string,
 	admins []string,
@@ -53,9 +60,11 @@ func New(
 		rooms:      sync.Map{},
 		adminRooms: []id.RoomID{},
 		mbxc:       mbxc,
+		cfg:        cfg,
 		log:        log,
 		lp:         lp,
-		mu:         map[string]*sync.Mutex{},
+		mu:         utils.NewMutex(),
+		q:          q,
 	}
 	users, err := b.initBotUsers()
 	if err != nil {
@@ -114,7 +123,6 @@ func (b *Bot) Start(statusMsg string) error {
 	if err := b.syncRooms(); err != nil {
 		return err
 	}
-	b.syncBanlist()
 
 	b.initSync()
 	b.log.Info("Postmoogle has been started")

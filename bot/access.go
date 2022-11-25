@@ -41,7 +41,7 @@ func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
 	if !b.allowUsers(actorID) {
 		return false
 	}
-	cfg, err := b.getRoomSettings(targetRoomID)
+	cfg, err := b.cfg.GetRoom(targetRoomID)
 	if err != nil {
 		b.Error(sentry.SetHubOnContext(context.Background(), sentry.CurrentHub()), targetRoomID, "failed to retrieve settings: %v", err)
 		return false
@@ -64,7 +64,7 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 		return false
 	}
 
-	cfg, err := b.getRoomSettings(targetRoomID)
+	cfg, err := b.cfg.GetRoom(targetRoomID)
 	if err != nil {
 		b.Error(sentry.SetHubOnContext(context.Background(), sentry.CurrentHub()), targetRoomID, "failed to retrieve settings: %v", err)
 		return false
@@ -84,41 +84,37 @@ func (b *Bot) isReserved(mailbox string) bool {
 
 // IsGreylisted checks if host is in greylist
 func (b *Bot) IsGreylisted(addr net.Addr) bool {
-	if b.getBotSettings().Greylist() == 0 {
+	if b.cfg.GetBot().Greylist() == 0 {
 		return false
 	}
 
-	greylist := b.getGreylist()
+	greylist := b.cfg.GetGreylist()
 	greylistedAt, ok := greylist.Get(addr)
 	if !ok {
 		b.log.Debug("greylisting %s", addr.String())
 		greylist.Add(addr)
-		err := b.setGreylist(greylist)
+		err := b.cfg.SetGreylist(greylist)
 		if err != nil {
 			b.log.Error("cannot update greylist with %s: %v", addr.String(), err)
 		}
 		return true
 	}
-	duration := time.Duration(b.getBotSettings().Greylist()) * time.Minute
+	duration := time.Duration(b.cfg.GetBot().Greylist()) * time.Minute
 
 	return greylistedAt.Add(duration).After(time.Now().UTC())
 }
 
 // IsBanned checks if address is banned
 func (b *Bot) IsBanned(addr net.Addr) bool {
-	return b.banlist.Has(addr)
+	return b.cfg.GetBanlist().Has(addr)
 }
 
 // Ban an address
 func (b *Bot) Ban(addr net.Addr) {
-	if !b.getBotSettings().BanlistEnabled() {
-		return
-	}
-
-	b.log.Debug("banning %s", addr.String())
-	banlist := b.getBanlist()
+	b.log.Debug("attempting to ban %s", addr.String())
+	banlist := b.cfg.GetBanlist()
 	banlist.Add(addr)
-	err := b.setBanlist(banlist)
+	err := b.cfg.SetBanlist(banlist)
 	if err != nil {
 		b.log.Error("cannot update banlist with %s: %v", addr.String(), err)
 	}
@@ -141,7 +137,7 @@ func (b *Bot) AllowAuth(email, password string) (id.RoomID, bool) {
 	if !ok {
 		return "", false
 	}
-	cfg, err := b.getRoomSettings(roomID)
+	cfg, err := b.cfg.GetRoom(roomID)
 	if err != nil {
 		b.log.Error("failed to retrieve settings: %v", err)
 		return "", false

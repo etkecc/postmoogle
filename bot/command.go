@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
+	"gitlab.com/etke.cc/postmoogle/bot/config"
 	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
@@ -19,10 +19,10 @@ const (
 	commandStop          = "stop"
 	commandSend          = "send"
 	commandDKIM          = "dkim"
-	commandCatchAll      = botOptionCatchAll
-	commandUsers         = botOptionUsers
-	commandQueueBatch    = botOptionQueueBatch
-	commandQueueRetries  = botOptionQueueRetries
+	commandCatchAll      = config.BotCatchAll
+	commandUsers         = config.BotUsers
+	commandQueueBatch    = config.BotQueueBatch
+	commandQueueRetries  = config.BotQueueRetries
 	commandDelete        = "delete"
 	commandBanlist       = "banlist"
 	commandBanlistAdd    = "banlist:add"
@@ -71,143 +71,143 @@ func (b *Bot) initCommands() commandList {
 		{allowed: b.allowOwner, description: "mailbox ownership"}, // delimiter
 		// options commands
 		{
-			key:         roomOptionMailbox,
+			key:         config.RoomMailbox,
 			description: "Get or set mailbox of the room",
 			sanitizer:   utils.Mailbox,
 			allowed:     b.allowOwner,
 		},
 		{
-			key:         roomOptionDomain,
+			key:         config.RoomDomain,
 			description: "Get or set default domain of the room",
 			sanitizer:   utils.SanitizeDomain,
 			allowed:     b.allowOwner,
 		},
 		{
-			key:         roomOptionOwner,
+			key:         config.RoomOwner,
 			description: "Get or set owner of the room",
 			sanitizer:   func(s string) string { return s },
 			allowed:     b.allowOwner,
 		},
 		{
-			key:         roomOptionPassword,
+			key:         config.RoomPassword,
 			description: "Get or set SMTP password of the room's mailbox",
 			allowed:     b.allowOwner,
 		},
 		{allowed: b.allowOwner, description: "mailbox options"}, // delimiter
 		{
-			key: roomOptionNoSend,
+			key: config.RoomNoSend,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - disable email sending; `false` - enable email sending)",
-				roomOptionNoSend,
+				config.RoomNoSend,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: roomOptionNoSender,
+			key: config.RoomNoSender,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
-				roomOptionNoSender,
+				config.RoomNoSender,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: roomOptionNoRecipient,
+			key: config.RoomNoRecipient,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - hide recipient; `false` - show recipient)",
-				roomOptionNoRecipient,
+				config.RoomNoRecipient,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: roomOptionNoCC,
+			key: config.RoomNoCC,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - hide CC; `false` - show CC)",
-				roomOptionNoCC,
+				config.RoomNoCC,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: roomOptionNoSubject,
+			key: config.RoomNoSubject,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
-				roomOptionNoSubject,
+				config.RoomNoSubject,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: roomOptionNoHTML,
+			key: config.RoomNoHTML,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
-				roomOptionNoHTML,
+				config.RoomNoHTML,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: roomOptionNoThreads,
+			key: config.RoomNoThreads,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
-				roomOptionNoThreads,
+				config.RoomNoThreads,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{
-			key: roomOptionNoFiles,
+			key: config.RoomNoFiles,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - ignore email attachments; `false` - upload email attachments)",
-				roomOptionNoFiles,
+				config.RoomNoFiles,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
 		{allowed: b.allowOwner, description: "mailbox antispam"}, // delimiter
 		{
-			key:         roomOptionSpamcheckMX,
+			key:         config.RoomSpamcheckMX,
 			description: "only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)",
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},
 		{
-			key:         roomOptionSpamcheckSPF,
+			key:         config.RoomSpamcheckSPF,
 			description: "only accept email from senders which authorized to send it (those matching SPF records) (`true` - enable, `false` - disable)",
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},
 		{
-			key:         roomOptionSpamcheckDKIM,
+			key:         config.RoomSpamcheckDKIM,
 			description: "only accept correctly authorized emails (without DKIM signature at all or with valid DKIM signature) (`true` - enable, `false` - disable)",
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},
 		{
-			key:         roomOptionSpamcheckSMTP,
+			key:         config.RoomSpamcheckSMTP,
 			description: "only accept email from servers which seem prepared to receive it (those listening on an SMTP port) (`true` - enable, `false` - disable)",
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},
 		{
-			key: roomOptionSpamlist,
+			key: config.RoomSpamlist,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (comma-separated list), eg: `spammer@example.com,*@spammer.org,spam@*`",
-				roomOptionSpamlist,
+				config.RoomSpamlist,
 			),
 			sanitizer: utils.SanitizeStringSlice,
 			allowed:   b.allowOwner,
 		},
 		{allowed: b.allowAdmin, description: "server options"}, // delimiter
 		{
-			key:         botOptionAdminRoom,
+			key:         config.BotAdminRoom,
 			description: "Get or set admin room",
 			allowed:     b.allowAdmin,
 		},
 		{
-			key:         botOptionUsers,
+			key:         config.BotUsers,
 			description: "Get or set allowed users",
 			allowed:     b.allowAdmin,
 		},
@@ -245,7 +245,7 @@ func (b *Bot) initCommands() commandList {
 		},
 		{allowed: b.allowAdmin, description: "server antispam"}, // delimiter
 		{
-			key:         botOptionGreylist,
+			key:         config.BotGreylist,
 			description: "Set automatic greylisting duration in minutes (0 - disabled)",
 			allowed:     b.allowAdmin,
 		},
@@ -272,12 +272,32 @@ func (b *Bot) initCommands() commandList {
 	}
 }
 
-func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice []string) {
+func (b *Bot) handle(ctx context.Context) {
+	evt := eventFromContext(ctx)
+	err := b.lp.GetClient().MarkRead(evt.RoomID, evt.ID)
+	if err != nil {
+		b.log.Error("cannot send read receipt: %v", err)
+	}
+
+	content := evt.Content.AsMessage()
+	if content == nil {
+		b.Error(ctx, evt.RoomID, "cannot read message")
+		return
+	}
+	message := strings.TrimSpace(content.Body)
+	commandSlice := b.parseCommand(message, true)
+	if commandSlice == nil {
+		if utils.EventParent("", content) != "" {
+			b.SendEmailReply(ctx)
+		}
+		return
+	}
+
 	cmd := b.commands.get(commandSlice[0])
 	if cmd == nil {
 		return
 	}
-	_, err := b.lp.GetClient().UserTyping(evt.RoomID, true, 30*time.Second)
+	_, err = b.lp.GetClient().UserTyping(evt.RoomID, true, 30*time.Second)
 	if err != nil {
 		b.log.Error("cannot send typing notification: %v", err)
 	}
@@ -297,7 +317,7 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.runSend(ctx)
 	case commandDKIM:
 		b.runDKIM(ctx, commandSlice)
-	case botOptionAdminRoom:
+	case config.BotAdminRoom:
 		b.runAdminRoom(ctx, commandSlice)
 	case commandUsers:
 		b.runUsers(ctx, commandSlice)
@@ -305,7 +325,7 @@ func (b *Bot) handleCommand(ctx context.Context, evt *event.Event, commandSlice 
 		b.runCatchAll(ctx, commandSlice)
 	case commandDelete:
 		b.runDelete(ctx, commandSlice)
-	case botOptionGreylist:
+	case config.BotGreylist:
 		b.runGreylist(ctx, commandSlice)
 	case commandBanlist:
 		b.runBanlist(ctx, commandSlice)
@@ -348,7 +368,7 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	msg.WriteString("To get started, assign an email address to this room by sending a `")
 	msg.WriteString(b.prefix)
 	msg.WriteString(" ")
-	msg.WriteString(roomOptionMailbox)
+	msg.WriteString(config.RoomMailbox)
 	msg.WriteString(" SOME_INBOX` command.\n")
 
 	msg.WriteString("You will then be able to send emails to ")
@@ -361,7 +381,7 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 func (b *Bot) sendHelp(ctx context.Context) {
 	evt := eventFromContext(ctx)
 
-	cfg, serr := b.getRoomSettings(evt.RoomID)
+	cfg, serr := b.cfg.GetRoom(evt.RoomID)
 	if serr != nil {
 		b.log.Error("cannot retrieve settings: %v", serr)
 	}
@@ -392,7 +412,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 			case true:
 				msg.WriteString("(currently `")
 				msg.WriteString(value)
-				if cmd.key == roomOptionMailbox {
+				if cmd.key == config.RoomMailbox {
 					msg.WriteString(" (")
 					msg.WriteString(utils.EmailsList(value, cfg.Domain()))
 					msg.WriteString(")")
@@ -432,7 +452,7 @@ func (b *Bot) runSend(ctx context.Context) {
 		return
 	}
 
-	cfg, err := b.getRoomSettings(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve room settings: %v", err)
 		return
@@ -458,8 +478,8 @@ func (b *Bot) runSend(ctx context.Context) {
 		}
 	}
 
-	b.lock(evt.RoomID.String())
-	defer b.unlock(evt.RoomID.String())
+	b.mu.Lock(evt.RoomID.String())
+	defer b.mu.Unlock(evt.RoomID.String())
 
 	domain := utils.SanitizeDomain(cfg.Domain())
 	from := mailbox + "@" + domain
@@ -467,7 +487,7 @@ func (b *Bot) runSend(ctx context.Context) {
 	for _, to := range tos {
 		recipients := []string{to}
 		eml := email.New(ID, "", " "+ID, subject, from, to, to, "", body, htmlBody, nil)
-		data := eml.Compose(b.getBotSettings().DKIMPrivateKey())
+		data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 		if data == "" {
 			b.SendError(ctx, evt.RoomID, "email body is empty")
 			return
@@ -475,14 +495,14 @@ func (b *Bot) runSend(ctx context.Context) {
 		queued, err := b.Sendmail(evt.ID, from, to, data)
 		if queued {
 			b.log.Error("cannot send email: %v", err)
-			b.saveSentMetadata(ctx, queued, evt.ID, recipients, eml, &cfg)
+			b.saveSentMetadata(ctx, queued, evt.ID, recipients, eml, cfg)
 			continue
 		}
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "cannot send email to %s: %v", to, err)
 			continue
 		}
-		b.saveSentMetadata(ctx, false, evt.ID, recipients, eml, &cfg)
+		b.saveSentMetadata(ctx, false, evt.ID, recipients, eml, cfg)
 	}
 	if len(tos) > 1 {
 		b.SendNotice(ctx, evt.RoomID, "All emails were sent.")

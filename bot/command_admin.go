@@ -11,12 +11,13 @@ import (
 	"gitlab.com/etke.cc/go/secgen"
 	"maunium.net/go/mautrix/id"
 
+	"gitlab.com/etke.cc/postmoogle/bot/config"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 func (b *Bot) sendMailboxes(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	mailboxes := map[string]roomSettings{}
+	mailboxes := map[string]config.Room{}
 	slice := []string{}
 	b.rooms.Range(func(key any, value any) bool {
 		if key == nil {
@@ -34,7 +35,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		if !ok {
 			return true
 		}
-		config, err := b.getRoomSettings(roomID)
+		config, err := b.cfg.GetRoom(roomID)
 		if err != nil {
 			b.log.Error("cannot retrieve settings: %v", err)
 		}
@@ -80,7 +81,7 @@ func (b *Bot) runDelete(ctx context.Context, commandSlice []string) {
 	roomID := v.(id.RoomID)
 
 	b.rooms.Delete(mailbox)
-	err := b.setRoomSettings(roomID, roomSettings{})
+	err := b.cfg.SetRoom(roomID, config.Room{})
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
 		return
@@ -91,7 +92,7 @@ func (b *Bot) runDelete(ctx context.Context, commandSlice []string) {
 
 func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
-	cfg := b.getBotSettings()
+	cfg := b.cfg.GetBot()
 	if len(commandSlice) < 2 {
 		var msg strings.Builder
 		users := cfg.Users()
@@ -122,9 +123,9 @@ func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 		return
 	}
 
-	cfg.Set(botOptionUsers, strings.Join(patterns, " "))
+	cfg.Set(config.BotUsers, strings.Join(patterns, " "))
 
-	err = b.setBotSettings(cfg)
+	err = b.cfg.SetBot(cfg)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
 	}
@@ -134,10 +135,10 @@ func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 
 func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
-	cfg := b.getBotSettings()
+	cfg := b.cfg.GetBot()
 	if len(commandSlice) > 1 && commandSlice[1] == "reset" {
-		cfg.Set(botOptionDKIMPrivateKey, "")
-		cfg.Set(botOptionDKIMSignature, "")
+		cfg.Set(config.BotDKIMPrivateKey, "")
+		cfg.Set(config.BotDKIMSignature, "")
 	}
 
 	signature := cfg.DKIMSignature()
@@ -149,9 +150,9 @@ func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 			b.Error(ctx, evt.RoomID, "cannot generate DKIM signature: %v", derr)
 			return
 		}
-		cfg.Set(botOptionDKIMSignature, signature)
-		cfg.Set(botOptionDKIMPrivateKey, private)
-		err := b.setBotSettings(cfg)
+		cfg.Set(config.BotDKIMSignature, signature)
+		cfg.Set(config.BotDKIMPrivateKey, private)
+		err := b.cfg.SetBot(cfg)
 		if err != nil {
 			b.Error(ctx, evt.RoomID, "cannot save bot options: %v", err)
 			return
@@ -169,7 +170,7 @@ func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 
 func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
-	cfg := b.getBotSettings()
+	cfg := b.cfg.GetBot()
 	if len(commandSlice) < 2 {
 		var msg strings.Builder
 		msg.WriteString("Currently: `")
@@ -198,8 +199,8 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 		return
 	}
 
-	cfg.Set(botOptionCatchAll, mailbox)
-	err := b.setBotSettings(cfg)
+	cfg.Set(config.BotCatchAll, mailbox)
+	err := b.cfg.SetBot(cfg)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot save bot options: %v", err)
 		return
@@ -210,7 +211,7 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 
 func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
-	cfg := b.getBotSettings()
+	cfg := b.cfg.GetBot()
 	if len(commandSlice) < 2 {
 		var msg strings.Builder
 		msg.WriteString("Currently: `")
@@ -230,8 +231,8 @@ func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
 	}
 
 	roomID := b.parseCommand(evt.Content.AsMessage().Body, false)[1] // get original value, without forced lower case
-	cfg.Set(botOptionAdminRoom, roomID)
-	err := b.setBotSettings(cfg)
+	cfg.Set(config.BotAdminRoom, roomID)
+	err := b.cfg.SetBot(cfg)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot save bot options: %v", err)
 		return
@@ -243,8 +244,8 @@ func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
 }
 
 func (b *Bot) printGreylist(ctx context.Context, roomID id.RoomID) {
-	cfg := b.getBotSettings()
-	greylist := b.getGreylist()
+	cfg := b.cfg.GetBot()
+	greylist := b.cfg.GetGreylist()
 	var msg strings.Builder
 	size := len(greylist)
 	duration := cfg.Greylist()
@@ -252,7 +253,7 @@ func (b *Bot) printGreylist(ctx context.Context, roomID id.RoomID) {
 	if duration == 0 {
 		msg.WriteString("disabled")
 	} else {
-		msg.WriteString(cfg.Get(botOptionGreylist))
+		msg.WriteString(cfg.Get(config.BotGreylist))
 		msg.WriteString("min")
 	}
 	msg.WriteString("`")
@@ -279,10 +280,10 @@ func (b *Bot) runGreylist(ctx context.Context, commandSlice []string) {
 		b.printGreylist(ctx, evt.RoomID)
 		return
 	}
-	cfg := b.getBotSettings()
+	cfg := b.cfg.GetBot()
 	value := utils.SanitizeIntString(commandSlice[1])
-	cfg.Set(botOptionGreylist, value)
-	err := b.setBotSettings(cfg)
+	cfg.Set(config.BotGreylist, value)
+	err := b.cfg.SetBot(cfg)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
 	}
@@ -291,14 +292,14 @@ func (b *Bot) runGreylist(ctx context.Context, commandSlice []string) {
 
 func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
-	cfg := b.getBotSettings()
+	cfg := b.cfg.GetBot()
 	if len(commandSlice) < 2 {
-		banlist := b.getBanlist()
+		banlist := b.cfg.GetBanlist()
 		var msg strings.Builder
 		size := len(banlist)
 		if size > 0 {
 			msg.WriteString("Currently: `")
-			msg.WriteString(cfg.Get(botOptionBanlistEnabled))
+			msg.WriteString(cfg.Get(config.BotBanlistEnabled))
 			msg.WriteString("`, total: ")
 			msg.WriteString(strconv.Itoa(size))
 			msg.WriteString(" hosts (`")
@@ -319,12 +320,11 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 		return
 	}
 	value := utils.SanitizeBoolString(commandSlice[1])
-	cfg.Set(botOptionBanlistEnabled, value)
-	err := b.setBotSettings(cfg)
+	cfg.Set(config.BotBanlistEnabled, value)
+	err := b.cfg.SetBot(cfg)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
 	}
-	b.syncBanlist()
 	b.SendNotice(ctx, evt.RoomID, "banlist has been updated")
 }
 
@@ -334,7 +334,7 @@ func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
 		b.runBanlist(ctx, commandSlice)
 		return
 	}
-	banlist := b.getBanlist()
+	banlist := b.cfg.GetBanlist()
 
 	ips := commandSlice[1:]
 	for _, ip := range ips {
@@ -346,7 +346,7 @@ func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
 		banlist.Add(addr)
 	}
 
-	err := b.setBanlist(banlist)
+	err := b.cfg.SetBanlist(banlist)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot set banlist: %v", err)
 		return
@@ -361,7 +361,7 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 		b.runBanlist(ctx, commandSlice)
 		return
 	}
-	banlist := b.getBanlist()
+	banlist := b.cfg.GetBanlist()
 
 	ips := commandSlice[1:]
 	for _, ip := range ips {
@@ -373,7 +373,7 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 		banlist.Remove(addr)
 	}
 
-	err := b.setBanlist(banlist)
+	err := b.cfg.SetBanlist(banlist)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot set banlist: %v", err)
 		return
@@ -385,7 +385,7 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 func (b *Bot) runBanlistReset(ctx context.Context) {
 	evt := eventFromContext(ctx)
 
-	err := b.setBanlist(bglist{})
+	err := b.cfg.SetBanlist(config.List{})
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot set banlist: %v", err)
 		return

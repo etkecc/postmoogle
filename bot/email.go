@@ -9,13 +9,13 @@ import (
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
+	"gitlab.com/etke.cc/postmoogle/bot/config"
 	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 // account data keys
 const (
-	acQueueKey        = "cc.etke.postmoogle.mailqueue"
 	acMessagePrefix   = "cc.etke.postmoogle.message"
 	acLastEventPrefix = "cc.etke.postmoogle.last"
 )
@@ -35,6 +35,7 @@ const (
 // SetSendmail sets mail sending func to the bot
 func (b *Bot) SetSendmail(sendmail func(string, string, string) error) {
 	b.sendmail = sendmail
+	b.q.SetSendmail(sendmail)
 }
 
 // Sendmail tries to send email immediately, but if it gets 4xx error (greylisting),
@@ -44,7 +45,7 @@ func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) (bool, error) 
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "4") {
 			b.log.Debug("email %s (from=%s to=%s) was added to the queue: %v", eventID, from, to, err)
-			return true, b.enqueueEmail(eventID.String(), from, to, data)
+			return true, b.q.Add(eventID.String(), from, to, data)
 		}
 		return false, err
 	}
@@ -54,7 +55,7 @@ func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) (bool, error) 
 
 // GetDKIMprivkey returns DKIM private key
 func (b *Bot) GetDKIMprivkey() string {
-	return b.getBotSettings().DKIMPrivateKey()
+	return b.cfg.GetBot().DKIMPrivateKey()
 }
 
 func (b *Bot) getMapping(mailbox string) (id.RoomID, bool) {
@@ -75,7 +76,7 @@ func (b *Bot) getMapping(mailbox string) (id.RoomID, bool) {
 func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
 	roomID, ok := b.getMapping(mailbox)
 	if !ok {
-		catchAll := b.getBotSettings().CatchAll()
+		catchAll := b.cfg.GetBot().CatchAll()
 		if catchAll == "" {
 			return roomID, ok
 		}
@@ -87,10 +88,9 @@ func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
 
 // GetIFOptions returns incoming email filtering options (room settings)
 func (b *Bot) GetIFOptions(roomID id.RoomID) email.IncomingFilteringOptions {
-	cfg, err := b.getRoomSettings(roomID)
+	cfg, err := b.cfg.GetRoom(roomID)
 	if err != nil {
 		b.log.Error("cannot retrieve room settings: %v", err)
-		return roomSettings{}
 	}
 
 	return cfg
@@ -102,13 +102,13 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 	if !ok {
 		return errors.New("room not found")
 	}
-	cfg, err := b.getRoomSettings(roomID)
+	cfg, err := b.cfg.GetRoom(roomID)
 	if err != nil {
 		b.Error(ctx, roomID, "cannot get settings: %v", err)
 	}
 
-	b.lock(roomID.String())
-	defer b.unlock(roomID.String())
+	b.mu.Lock(roomID.String())
+	defer b.mu.Unlock(roomID.String())
 
 	var threadID id.EventID
 	if email.InReplyTo != "" || email.References != "" {
@@ -143,7 +143,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	if !b.allowSend(evt.Sender, evt.RoomID) {
 		return
 	}
-	cfg, err := b.getRoomSettings(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot retrieve room settings: %v", err)
 		return
@@ -154,8 +154,8 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		return
 	}
 
-	b.lock(evt.RoomID.String())
-	defer b.unlock(evt.RoomID.String())
+	b.mu.Lock(evt.RoomID.String())
+	defer b.mu.Unlock(evt.RoomID.String())
 
 	meta := b.getParentEmail(evt, mailbox)
 
@@ -181,7 +181,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	meta.References = meta.References + " " + meta.MessageID
 	b.log.Debug("send email reply: %+v", meta)
 	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil)
-	data := eml.Compose(b.getBotSettings().DKIMPrivateKey())
+	data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 	if data == "" {
 		b.SendError(ctx, evt.RoomID, "email body is empty")
 		return
@@ -194,7 +194,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		queued, err = b.Sendmail(evt.ID, meta.From, to, data)
 		if queued {
 			b.log.Error("cannot send email: %v", err)
-			b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, &cfg)
+			b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg)
 			hasErr = true
 			continue
 		}
@@ -207,7 +207,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	}
 
 	if !hasErr {
-		b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, &cfg)
+		b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg)
 	}
 }
 
@@ -352,7 +352,7 @@ func (b *Bot) getParentEmail(evt *event.Event, newFromMailbox string) *parentEma
 
 // saveSentMetadata used to save metadata from !pm sent and thread reply events to a separate notice message
 // because that metadata is needed to determine email thread relations
-func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, recipients []string, eml *email.Email, cfg *roomSettings) {
+func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, recipients []string, eml *email.Email, cfg config.Room) {
 	addrs := strings.Join(recipients, ", ")
 	text := "Email has been sent to " + addrs
 	if queued {

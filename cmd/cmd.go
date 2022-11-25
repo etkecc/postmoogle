@@ -18,13 +18,17 @@ import (
 	lpcfg "gitlab.com/etke.cc/linkpearl/config"
 
 	"gitlab.com/etke.cc/postmoogle/bot"
+	mxconfig "gitlab.com/etke.cc/postmoogle/bot/config"
+	"gitlab.com/etke.cc/postmoogle/bot/queue"
 	"gitlab.com/etke.cc/postmoogle/config"
 	"gitlab.com/etke.cc/postmoogle/smtp"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 var (
+	q     *queue.Queue
 	hc    *healthchecks.Client
+	mxc   *mxconfig.Manager
 	mxb   *bot.Bot
 	cron  *crontab.Crontab
 	smtpm *smtp.Manager
@@ -47,7 +51,7 @@ func main() {
 	log.Debug("starting internal components...")
 	initSentry(cfg)
 	initHealthchecks(cfg)
-	initBot(cfg)
+	initMatrix(cfg)
 	initSMTP(cfg)
 	initCron()
 	initShutdown(quit)
@@ -85,12 +89,15 @@ func initHealthchecks(cfg *config.Config) {
 	go hc.Auto(cfg.Monitoring.HealthechsDuration)
 }
 
-func initBot(cfg *config.Config) {
+func initMatrix(cfg *config.Config) {
 	db, err := sql.Open(cfg.DB.Dialect, cfg.DB.DSN)
 	if err != nil {
 		log.Fatal("cannot initialize SQL database: %v", err)
 	}
 	mxlog := logger.New("matrix.", cfg.LogLevel)
+	cfglog := logger.New("config.", cfg.LogLevel)
+	qlog := logger.New("queue.", cfg.LogLevel)
+
 	lp, err := linkpearl.New(&lpcfg.Config{
 		Homeserver:        cfg.Homeserver,
 		Login:             cfg.Login,
@@ -114,7 +121,9 @@ func initBot(cfg *config.Config) {
 		log.Fatal("cannot initialize matrix bot: %v", err)
 	}
 
-	mxb, err = bot.New(lp, mxlog, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
+	mxc = mxconfig.New(lp, cfglog)
+	q = queue.New(lp, mxc, qlog)
+	mxb, err = bot.New(q, lp, mxlog, mxc, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
 	if err != nil {
 		// nolint // Fatal = panic, not os.Exit()
 		log.Fatal("cannot start matrix bot: %v", err)
@@ -133,15 +142,16 @@ func initSMTP(cfg *config.Config) {
 		LogLevel:    cfg.LogLevel,
 		MaxSize:     cfg.MaxSize,
 		Bot:         mxb,
+		Callers:     []smtp.Caller{mxb, q},
 	})
 }
 
 func initCron() {
 	cron = crontab.New()
 
-	err := cron.AddJob("* * * * *", mxb.ProcessQueue)
+	err := cron.AddJob("* * * * *", q.Process)
 	if err != nil {
-		log.Error("cannot start ProcessQueue cronjob: %v", err)
+		log.Error("cannot start queue processing cronjob: %v", err)
 	}
 }
 

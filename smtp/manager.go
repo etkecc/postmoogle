@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
-	"os"
 	"time"
 
 	"github.com/emersion/go-smtp"
@@ -26,6 +25,7 @@ type Config struct {
 	LogLevel string
 	MaxSize  int
 	Bot      matrixbot
+	Callers  []Caller
 }
 
 type Manager struct {
@@ -47,8 +47,12 @@ type matrixbot interface {
 	GetMapping(string) (id.RoomID, bool)
 	GetIFOptions(id.RoomID) email.IncomingFilteringOptions
 	IncomingEmail(context.Context, *email.Email) error
-	SetSendmail(func(string, string, string) error)
 	GetDKIMprivkey() string
+}
+
+// Caller is Sendmail caller
+type Caller interface {
+	SetSendmail(func(string, string, string) error)
 }
 
 // NewManager creates new SMTP server manager
@@ -59,9 +63,12 @@ func NewManager(cfg *Config) *Manager {
 		bot:     cfg.Bot,
 		domains: cfg.Domains,
 	}
-	cfg.Bot.SetSendmail(mailsrv.SendEmail)
+	for _, caller := range cfg.Callers {
+		caller.SetSendmail(mailsrv.SendEmail)
+	}
 
 	s := smtp.NewServer(mailsrv)
+	s.ErrorLog = loggerWrapper{func(s string, i ...interface{}) { log.Error(s, i...) }}
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = cfg.MaxSize * 1024 * 1024
@@ -73,7 +80,7 @@ func NewManager(cfg *Config) *Manager {
 		s.Domain = cfg.Domains[0]
 	}
 	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
-		s.Debug = os.Stdout
+		s.Debug = loggerWriter{func(s string) { log.Debug(s) }}
 	}
 
 	m := &Manager{
