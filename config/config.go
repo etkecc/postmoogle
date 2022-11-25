@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"gitlab.com/etke.cc/go/env"
 )
 
@@ -32,8 +34,11 @@ func New() *Config {
 			Required: env.Bool("tls.required"),
 			Port:     env.String("tls.port", defaultConfig.TLS.Port),
 		},
-		Sentry: Sentry{
-			DSN: env.String("sentry.dsn", defaultConfig.Sentry.DSN),
+		Monitoring: Monitoring{
+			SentryDSN:          env.String("monitoring.sentry.dsn", env.String("sentry.dsn", "")),
+			SentrySampleRate:   env.Int("monitoring.sentry.rate", env.Int("sentry.rate", 0)),
+			HealchecksUUID:     env.String("monitoring.healthchecks.uuid", ""),
+			HealthechsDuration: time.Duration(env.Int("monitoring.healthchecks.duration", int(defaultConfig.Monitoring.HealthechsDuration))) * time.Second,
 		},
 		LogLevel: env.String("loglevel", defaultConfig.LogLevel),
 		DB: DB{

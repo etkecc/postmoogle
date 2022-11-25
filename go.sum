@@ -30,6 +30,8 @@ github.com/gogs/chardet v0.0.0-20191104214054-4b6791f73a28 h1:gBeyun7mySAKWg7Fb0
 github.com/gogs/chardet v0.0.0-20191104214054-4b6791f73a28/go.mod h1:Pcatq5tYkCW2Q6yrR2VRHlbHpZ/R4/7qyL1TCF7vl14=
 github.com/google/go-cmp v0.5.8 h1:e6P7q2lk1O+qJJb4BtCQXlK8vWEO8V1ZeuEdJNOqZyg=
 github.com/google/go-cmp v0.5.8/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
 github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
 github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWmnc=
@@ -93,6 +95,8 @@ github.com/yuin/goldmark v1.5.3 h1:3HUJmBFbQW9fhQOzMgseU134xfi6hU+mjWywx5Ty+/M=
 github.com/yuin/goldmark v1.5.3/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 gitlab.com/etke.cc/go/env v1.0.0 h1:J98BwzOuELnjsVPFvz5wa79L7IoRV9CmrS41xLYXtSw=
 gitlab.com/etke.cc/go/env v1.0.0/go.mod h1:e1l4RM5MA1sc0R1w/RBDAESWRwgo5cOG9gx8BKUn2C4=
+gitlab.com/etke.cc/go/healthchecks v1.0.1 h1:IxPB+r4KtEM6wf4K7MeQoH1XnuBITMGUqFaaRIgxeUY=
+gitlab.com/etke.cc/go/healthchecks v1.0.1/go.mod h1:EzQjwSawh8tQEX43Ls0dI9mND6iWd5NHtmapdO24fMI=
 gitlab.com/etke.cc/go/logger v1.1.0 h1:Yngp/DDLmJ0jJNLvLXrfan5Gi5QV+r7z6kCczTv8t4U=
 gitlab.com/etke.cc/go/logger v1.1.0/go.mod h1:8Vw5HFXlZQ5XeqvUs5zan+GnhrQyYtm/xe+yj8H/0zk=
 gitlab.com/etke.cc/go/mxidwc v1.0.0 h1:6EAlJXvs3nU4RaMegYq6iFlyVvLw7JZYnZmNCGMYQP0=

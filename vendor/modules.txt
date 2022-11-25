@@ -31,6 +31,9 @@ github.com/getsentry/sentry-go/internal/ratelimit
 github.com/gogs/chardet
 # github.com/google/go-cmp v0.5.8
 ## explicit; go 1.13
+# github.com/google/uuid v1.3.0
+## explicit
+github.com/google/uuid
 # github.com/gorilla/mux v1.8.0
 ## explicit; go 1.12
 github.com/gorilla/mux
@@ -119,6 +122,9 @@ github.com/yuin/goldmark/util
 # gitlab.com/etke.cc/go/env v1.0.0
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/env
+# gitlab.com/etke.cc/go/healthchecks v1.0.1
+## explicit; go 1.18
+gitlab.com/etke.cc/go/healthchecks
 # gitlab.com/etke.cc/go/logger v1.1.0
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/logger

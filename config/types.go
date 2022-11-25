@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 // Config of Postmoogle
 type Config struct {
 	// Homeserver url
@@ -35,8 +37,8 @@ type Config struct {
 	// TLS config
 	TLS TLS
 
-	// Sentry config
-	Sentry Sentry
+	// Monitoring config
+	Monitoring Monitoring
 }
 
 // DB config
@@ -55,9 +57,12 @@ type TLS struct {
 	Required bool
 }
 
-// Sentry config
-type Sentry struct {
-	DSN string
+// Monitoring config
+type Monitoring struct {
+	SentryDSN          string
+	SentrySampleRate   int
+	HealchecksUUID     string
+	HealthechsDuration time.Duration
 }
 
 // Mailboxes config

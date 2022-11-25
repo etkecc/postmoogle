@@ -57,7 +57,10 @@ env vars
 * **POSTMOOGLE_DATA_SECRET** - secure key (password) to encrypt account data, must be 16, 24, or 32 bytes long
 * **POSTMOOGLE_NOENCRYPTION** - disable matrix encryption (libolm) support
 * **POSTMOOGLE_STATUSMSG** - presence status message
-* **POSTMOOGLE_SENTRY_DSN** - sentry DSN
+* **SCHEDULER_MONITORING_SENTRY_DSN** - sentry DSN
+* **SCHEDULER_MONITORING_SENTRY_RATE** - sentry sample rate, from 0 to 100 (default: 20)
+* **SCHEDULER_MONITORING_HEALTHCHECKS_UUID** - healthchecks.io UUID
+* **SCHEDULER_MONITORING_HEALTHCHECKS_DURATION** - heathchecks.io duration between pings in secods (default: 5)
 * **POSTMOOGLE_LOGLEVEL** - log level
 * **POSTMOOGLE_DB_DSN** - database connection string
 * **POSTMOOGLE_DB_DIALECT** - database dialect (postgres, sqlite3)

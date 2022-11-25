@@ -16,6 +16,7 @@ require (
 	github.com/mileusna/crontab v1.2.0
 	github.com/raja/argon2pw v1.0.2-0.20210910183755-a391af63bd39
 	gitlab.com/etke.cc/go/env v1.0.0
+	gitlab.com/etke.cc/go/healthchecks v1.0.1
 	gitlab.com/etke.cc/go/logger v1.1.0
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
 	gitlab.com/etke.cc/go/secgen v1.1.1
@@ -30,6 +31,7 @@ require (
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
 	github.com/gogs/chardet v0.0.0-20191104214054-4b6791f73a28 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.1 // indirect

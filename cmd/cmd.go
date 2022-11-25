@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/mileusna/crontab"
+	"gitlab.com/etke.cc/go/healthchecks"
 	"gitlab.com/etke.cc/go/logger"
 	"gitlab.com/etke.cc/linkpearl"
 	lpcfg "gitlab.com/etke.cc/linkpearl/config"
@@ -22,6 +24,7 @@ import (
 )
 
 var (
+	hc    *healthchecks.Client
 	mxb   *bot.Bot
 	cron  *crontab.Crontab
 	smtpm *smtp.Manager
@@ -43,6 +46,7 @@ func main() {
 
 	log.Debug("starting internal components...")
 	initSentry(cfg)
+	initHealthchecks(cfg)
 	initBot(cfg)
 	initSMTP(cfg)
 	initCron()
@@ -61,12 +65,24 @@ func main() {
 
 func initSentry(cfg *config.Config) {
 	err := sentry.Init(sentry.ClientOptions{
-		Dsn:              cfg.Sentry.DSN,
+		Dsn:              cfg.Monitoring.SentryDSN,
 		AttachStacktrace: true,
+		TracesSampleRate: float64(cfg.Monitoring.SentrySampleRate) / 100,
 	})
 	if err != nil {
 		log.Fatal("cannot initialize sentry: %v", err)
 	}
+}
+
+func initHealthchecks(cfg *config.Config) {
+	if cfg.Monitoring.HealchecksUUID == "" {
+		return
+	}
+	hc = healthchecks.New(cfg.Monitoring.HealchecksUUID, func(operation string, err error) {
+		log.Error("healthchecks operation %q failed: %v", operation, err)
+	})
+	hc.Start(strings.NewReader("starting postmoogle"))
+	go hc.Auto(cfg.Monitoring.HealthechsDuration)
 }
 
 func initBot(cfg *config.Config) {
@@ -155,6 +171,10 @@ func shutdown() {
 	cron.Shutdown()
 	smtpm.Stop()
 	mxb.Stop()
+	if hc != nil {
+		hc.Shutdown()
+		hc.ExitStatus(0, strings.NewReader("shutting down postmoogle"))
+	}
 
 	sentry.Flush(5 * time.Second)
 	log.Info("Postmoogle has been stopped")
@@ -164,8 +184,7 @@ func shutdown() {
 func recovery() {
 	defer shutdown()
 	err := recover()
-	// no problem just shutdown
-	if err == nil {
+	if err != nil {
 		sentry.CurrentHub().Recover(err)
 	}
 }
