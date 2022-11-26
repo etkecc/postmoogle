@@ -4,6 +4,8 @@ import (
 	"net"
 	"sort"
 	"time"
+
+	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 // account data keys
@@ -26,24 +28,15 @@ func (l List) Slice() []string {
 	return slice
 }
 
-func (l List) getKey(addr net.Addr) string {
-	key := addr.String()
-	host, _, _ := net.SplitHostPort(key) //nolint:errcheck // either way it's ok
-	if host != "" {
-		key = host
-	}
-	return key
-}
-
 // Has addr in ban- or greylist
 func (l List) Has(addr net.Addr) bool {
-	_, ok := l[l.getKey(addr)]
+	_, ok := l[utils.AddrIP(addr)]
 	return ok
 }
 
 // Get when addr was added in ban- or greylist
 func (l List) Get(addr net.Addr) (time.Time, bool) {
-	from := l[l.getKey(addr)]
+	from := l[utils.AddrIP(addr)]
 	if from == "" {
 		return time.Time{}, false
 	}
@@ -57,7 +50,7 @@ func (l List) Get(addr net.Addr) (time.Time, bool) {
 
 // Add an addr to ban- or greylist
 func (l List) Add(addr net.Addr) {
-	key := l.getKey(addr)
+	key := utils.AddrIP(addr)
 	if _, ok := l[key]; ok {
 		return
 	}
@@ -67,7 +60,7 @@ func (l List) Add(addr net.Addr) {
 
 // Remove an addr from ban- or greylist
 func (l List) Remove(addr net.Addr) {
-	key := l.getKey(addr)
+	key := utils.AddrIP(addr)
 	if _, ok := l[key]; !ok {
 		return
 	}

@@ -14,6 +14,8 @@ type Config struct {
 	Domains []string
 	// Port for SMTP
 	Port string
+	// Proxies is list of trusted SMTP proxies
+	Proxies []string
 	// RoomID of the admin room
 	LogLevel string
 	// DataSecret is account data secret key (password) to encrypt all account data values

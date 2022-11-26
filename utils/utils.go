@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"net"
 	"strconv"
 	"strings"
 
@@ -20,6 +21,16 @@ func SetLogger(loggerInstance *logger.Logger) {
 // SetDomains for later use
 func SetDomains(slice []string) {
 	domains = slice
+}
+
+// AddrIP returns IP from a network address
+func AddrIP(addr net.Addr) string {
+	key := addr.String()
+	host, _, _ := net.SplitHostPort(key) //nolint:errcheck // either way it's ok
+	if host != "" {
+		key = host
+	}
+	return key
 }
 
 // SanitizeDomain checks that input domain is available for use

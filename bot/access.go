@@ -109,8 +109,25 @@ func (b *Bot) IsBanned(addr net.Addr) bool {
 	return b.cfg.GetBanlist().Has(addr)
 }
 
+// IsTrusted checks if address is a trusted (proxy)
+func (b *Bot) IsTrusted(addr net.Addr) bool {
+	ip := utils.AddrIP(addr)
+	for _, proxy := range b.proxies {
+		if ip == proxy {
+			b.log.Debug("address %s is trusted", ip)
+			return true
+		}
+	}
+
+	b.log.Debug("address %s is NOT trusted", ip)
+	return false
+}
+
 // Ban an address
 func (b *Bot) Ban(addr net.Addr) {
+	if b.IsTrusted(addr) {
+		return
+	}
 	b.log.Debug("attempting to ban %s", addr.String())
 	banlist := b.cfg.GetBanlist()
 	banlist.Add(addr)

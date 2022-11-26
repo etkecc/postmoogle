@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strconv"
 
 	"github.com/emersion/go-msgauth/dkim"
 	"github.com/emersion/go-smtp"
@@ -26,9 +27,10 @@ type incomingSession struct {
 	getFilters   func(id.RoomID) email.IncomingFilteringOptions
 	receiveEmail func(context.Context, *email.Email) error
 	greylisted   func(net.Addr) bool
+	trusted      func(net.Addr) bool
 	ban          func(net.Addr)
 	domains      []string
-	enforceDKIM  bool
+	roomID       id.RoomID
 
 	ctx  context.Context
 	addr net.Addr
@@ -64,38 +66,69 @@ func (s *incomingSession) Rcpt(to string) error {
 		return ErrNoUser
 	}
 
-	roomID, ok := s.getRoomID(utils.Mailbox(to))
+	var ok bool
+	s.roomID, ok = s.getRoomID(utils.Mailbox(to))
 	if !ok {
 		s.log.Debug("mapping for %s not found", to)
 		return ErrNoUser
-	}
-
-	validations := s.getFilters(roomID)
-	s.enforceDKIM = validations.SpamcheckDKIM()
-	if !validateIncoming(s.from, to, s.addr, s.log, validations) {
-		s.ban(s.addr)
-		return ErrBanned
 	}
 
 	s.log.Debug("mail to %s", to)
 	return nil
 }
 
-func (s *incomingSession) Data(r io.Reader) error {
-	if s.greylisted(s.addr) {
-		return &smtp.SMTPError{
-			Code:         451,
-			EnhancedCode: smtp.EnhancedCode{4, 5, 1},
-			Message:      "You have been greylisted, try again a bit later.",
-		}
+// getAddr gets real address of incoming email serder,
+// including special case of trusted proxy
+func (s *incomingSession) getAddr(envelope *enmime.Envelope) net.Addr {
+	if !s.trusted(s.addr) {
+		return s.addr
 	}
+
+	addrHeader := envelope.GetHeader("X-Real-Addr")
+	if addrHeader == "" {
+		return s.addr
+	}
+
+	host, portString, _ := net.SplitHostPort(addrHeader) //nolint:errcheck
+	if host == "" {
+		return s.addr
+	}
+
+	var port int
+	port, _ = strconv.Atoi(portString) //nolint:errcheck
+
+	realAddr := &net.TCPAddr{IP: net.ParseIP(host), Port: port}
+	s.log.Info("real address: %s", realAddr.String())
+	return realAddr
+}
+
+func (s *incomingSession) Data(r io.Reader) error {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		s.log.Error("cannot read DATA: %v", err)
 		return err
 	}
 	reader := bytes.NewReader(data)
-	if s.enforceDKIM {
+	parser := enmime.NewParser()
+	envelope, err := parser.ReadEnvelope(reader)
+	if err != nil {
+		return err
+	}
+	addr := s.getAddr(envelope)
+	reader.Seek(0, io.SeekStart) //nolint:errcheck
+	validations := s.getFilters(s.roomID)
+	if !validateIncoming(s.from, s.tos[0], addr, s.log, validations) {
+		s.ban(addr)
+		return ErrBanned
+	}
+	if s.greylisted(addr) {
+		return &smtp.SMTPError{
+			Code:         451,
+			EnhancedCode: smtp.EnhancedCode{4, 5, 1},
+			Message:      "You have been greylisted, try again a bit later.",
+		}
+	}
+	if validations.SpamcheckDKIM() {
 		results, verr := dkim.Verify(reader)
 		if verr != nil {
 			s.log.Error("cannot verify DKIM: %v", verr)
@@ -107,12 +140,6 @@ func (s *incomingSession) Data(r io.Reader) error {
 				return result.Err
 			}
 		}
-		reader.Seek(0, io.SeekStart) //nolint:errcheck
-	}
-	parser := enmime.NewParser()
-	envelope, err := parser.ReadEnvelope(reader)
-	if err != nil {
-		return err
 	}
 
 	eml := email.FromEnvelope(s.tos[0], envelope)
@@ -125,6 +152,7 @@ func (s *incomingSession) Data(r io.Reader) error {
 	}
 	return nil
 }
+
 func (s *incomingSession) Reset()        {}
 func (s *incomingSession) Logout() error { return nil }
 

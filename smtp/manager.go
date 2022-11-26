@@ -43,6 +43,7 @@ type matrixbot interface {
 	AllowAuth(string, string) (id.RoomID, bool)
 	IsGreylisted(net.Addr) bool
 	IsBanned(net.Addr) bool
+	IsTrusted(net.Addr) bool
 	Ban(net.Addr)
 	GetMapping(string) (id.RoomID, bool)
 	GetIFOptions(id.RoomID) email.IncomingFilteringOptions

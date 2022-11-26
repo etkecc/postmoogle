@@ -123,7 +123,7 @@ func initMatrix(cfg *config.Config) {
 
 	mxc = mxconfig.New(lp, cfglog)
 	q = queue.New(lp, mxc, qlog)
-	mxb, err = bot.New(q, lp, mxlog, mxc, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
+	mxb, err = bot.New(q, lp, mxlog, mxc, cfg.Proxies, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
 	if err != nil {
 		// nolint // Fatal = panic, not os.Exit()
 		log.Fatal("cannot start matrix bot: %v", err)

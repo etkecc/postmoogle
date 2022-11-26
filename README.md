@@ -50,6 +50,7 @@ env vars
 <summary>other optional config parameters</summary>
 
 * **POSTMOOGLE_PORT** - SMTP port to listen for new emails
+* **POSTMOOGLE_PROXIES** - space separated list of IP addresses considered as trusted proxies, thus never banned
 * **POSTMOOGLE_TLS_PORT** - secure SMTP port to listen for new emails. Requires valid cert and key as well
 * **POSTMOOGLE_TLS_CERT** - space separated list of paths to the SSL certificates (chain) of your domains, note that position in the cert list must match the position of the cert's key in the key list
 * **POSTMOOGLE_TLS_KEY** - space separated list of paths to the SSL certificates' private keys of your domains, note that position on the key list must match the position of cert in the cert list

@@ -34,6 +34,7 @@ type Bot struct {
 	adminRooms              []id.RoomID
 	commands                commandList
 	rooms                   sync.Map
+	proxies                 []string
 	sendmail                func(string, string, string) error
 	cfg                     *config.Manager
 	log                     *logger.Logger
@@ -49,6 +50,7 @@ func New(
 	lp *linkpearl.Linkpearl,
 	log *logger.Logger,
 	cfg *config.Manager,
+	proxies []string,
 	prefix string,
 	domains []string,
 	admins []string,
@@ -59,6 +61,7 @@ func New(
 		prefix:     prefix,
 		rooms:      sync.Map{},
 		adminRooms: []id.RoomID{},
+		proxies:    proxies,
 		mbxc:       mbxc,
 		cfg:        cfg,
 		log:        log,

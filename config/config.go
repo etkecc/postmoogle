@@ -19,6 +19,7 @@ func New() *Config {
 		Prefix:       env.String("prefix", defaultConfig.Prefix),
 		Domains:      migrateDomains("domain", "domains"),
 		Port:         env.String("port", defaultConfig.Port),
+		Proxies:      env.Slice("proxies"),
 		NoEncryption: env.Bool("noencryption"),
 		DataSecret:   env.String("data.secret", defaultConfig.DataSecret),
 		MaxSize:      env.Int("maxsize", defaultConfig.MaxSize),
