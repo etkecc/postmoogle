@@ -119,12 +119,14 @@ func (b *Bot) IsTrusted(addr net.Addr) bool {
 		}
 	}
 
-	b.log.Debug("address %s is NOT trusted", ip)
 	return false
 }
 
 // Ban an address
 func (b *Bot) Ban(addr net.Addr) {
+	if !b.cfg.BanlistEnalbed() {
+		return
+	}
 	if b.IsTrusted(addr) {
 		return
 	}

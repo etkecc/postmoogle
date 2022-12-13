@@ -1,8 +1,6 @@
 package config
 
 import (
-	"fmt"
-
 	"gitlab.com/etke.cc/go/logger"
 	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/id"
@@ -32,15 +30,23 @@ func New(lp *linkpearl.Linkpearl, log *logger.Logger) *Manager {
 	return m
 }
 
+// BanlistEnalbed or not
+func (m *Manager) BanlistEnalbed() bool {
+	return m.ble
+}
+
 // GetBot config
 func (m *Manager) GetBot() Bot {
-	config, err := m.lp.GetAccountData(acBotKey)
+	var err error
+	var config Bot
+	config, err = m.lp.GetAccountData(acBotKey)
 	if err != nil {
 		m.log.Error("cannot get bot settings: %v", utils.UnwrapError(err))
 	}
 	if config == nil {
 		config = make(Bot, 0)
 	}
+	m.ble = config.BanlistEnabled()
 
 	return config
 }
@@ -88,7 +94,7 @@ func (m *Manager) GetBanlist() List {
 // SetBanlist config
 func (m *Manager) SetBanlist(cfg List) error {
 	if !m.ble {
-		return fmt.Errorf("banlist is disabled, kupo")
+		return nil
 	}
 
 	m.mu.Lock("banlist")
