@@ -45,6 +45,7 @@ func (m *Manager) GetBot() Bot {
 	}
 	if config == nil {
 		config = make(Bot, 0)
+		return config
 	}
 	m.ble = config.BanlistEnabled()
 
@@ -86,6 +87,7 @@ func (m *Manager) GetBanlist() List {
 	}
 	if config == nil {
 		config = make(List, 0)
+		return config
 	}
 	m.bl = config
 	return config
@@ -115,6 +117,7 @@ func (m *Manager) GetGreylist() List {
 	}
 	if config == nil {
 		config = make(List, 0)
+		return config
 	}
 
 	return config

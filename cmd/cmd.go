@@ -153,6 +153,11 @@ func initCron() {
 	if err != nil {
 		log.Error("cannot start queue processing cronjob: %v", err)
 	}
+
+	err = cron.AddJob("*/5 * * * *", mxb.SyncRooms)
+	if err != nil {
+		log.Error("cannot start sync rooms cronjob: %v", err)
+	}
 }
 
 func initShutdown(quit chan struct{}) {

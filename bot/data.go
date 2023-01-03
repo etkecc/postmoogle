@@ -38,9 +38,11 @@ func (b *Bot) migrate() error {
 }
 
 func (b *Bot) syncRooms() error {
+	adminRooms := []id.RoomID{}
+
 	adminRoom := b.cfg.GetBot().AdminRoom()
 	if adminRoom != "" {
-		b.adminRooms = append(b.adminRooms, adminRoom)
+		adminRooms = append(adminRooms, adminRoom)
 	}
 
 	resp, err := b.lp.GetClient().JoinedRooms()
@@ -60,9 +62,10 @@ func (b *Bot) syncRooms() error {
 		}
 
 		if cfg.Owner() != "" && b.allowAdmin(id.UserID(cfg.Owner()), "") {
-			b.adminRooms = append(b.adminRooms, roomID)
+			adminRooms = append(adminRooms, roomID)
 		}
 	}
+	b.adminRooms = adminRooms
 
 	return nil
 }
@@ -100,4 +103,9 @@ func (b *Bot) initBotUsers() ([]string, error) {
 	}
 	cfg.Set(config.BotUsers, "@*:"+homeserver)
 	return cfg.Users(), b.cfg.SetBot(cfg)
+}
+
+// SyncRooms and mailboxes
+func (b *Bot) SyncRooms() {
+	b.syncRooms() //nolint:errcheck // nothing can be done here
 }
