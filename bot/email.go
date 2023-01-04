@@ -44,7 +44,7 @@ func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) (bool, error) 
 	err := b.sendmail(from, to, data)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "4") {
-			b.log.Debug("email %s (from=%s to=%s) was added to the queue: %v", eventID, from, to, err)
+			b.log.Info("email %s (from=%s to=%s) was added to the queue: %v", eventID, from, to, err)
 			return true, b.q.Add(eventID.String(), from, to, data)
 		}
 		return false, err
@@ -179,7 +179,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 
 	meta.MessageID = email.MessageID(evt.ID, meta.FromDomain)
 	meta.References = meta.References + " " + meta.MessageID
-	b.log.Debug("send email reply: %+v", meta)
+	b.log.Info("sending email reply: %+v", meta)
 	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil)
 	data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 	if data == "" {

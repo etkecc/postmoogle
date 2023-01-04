@@ -67,7 +67,7 @@ func (q *Queue) Process() {
 			return
 		}
 		if dequeue := q.try(itemkey, maxRetries); dequeue {
-			q.log.Debug("email %q has been delivered", id)
+			q.log.Info("email %q has been delivered", id)
 			err = q.Remove(id)
 			if err != nil {
 				q.log.Error("cannot dequeue email %q: %v", id, err)

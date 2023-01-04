@@ -80,8 +80,8 @@ func NewManager(cfg *Config) *Manager {
 	if len(cfg.Domains) == 1 {
 		s.Domain = cfg.Domains[0]
 	}
-	if log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
-		s.Debug = loggerWriter{func(s string) { log.Debug(s) }}
+	if log.GetLevel() == "INFO" || log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
+		s.Debug = loggerWriter{func(s string) { log.Info(s) }}
 	}
 
 	m := &Manager{

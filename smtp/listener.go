@@ -42,7 +42,7 @@ func (l *Listener) Accept() (net.Conn, error) {
 			continue
 		}
 
-		l.log.Debug("accepted connection from %q", conn.RemoteAddr())
+		l.log.Info("accepted connection from %q", conn.RemoteAddr())
 		return conn, nil
 	}
 }

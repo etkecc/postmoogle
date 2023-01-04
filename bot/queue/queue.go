@@ -85,11 +85,11 @@ func (q *Queue) try(itemkey string, maxRetries int) bool {
 
 	err = q.sendmail(item["from"], item["to"], item["data"])
 	if err == nil {
-		q.log.Debug("email %q from queue was delivered")
+		q.log.Info("email %q from queue was delivered")
 		return true
 	}
 
-	q.log.Debug("attempted to deliver email id=%q, retry=%q, but it's not ready yet: %v", item["id"], item["attempts"], err)
+	q.log.Info("attempted to deliver email id=%q, retry=%q, but it's not ready yet: %v", item["id"], item["attempts"], err)
 	attempts++
 	item["attempts"] = strconv.Itoa(attempts)
 	err = q.lp.SetAccountData(itemkey, item)
