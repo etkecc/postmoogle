@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
@@ -282,6 +283,10 @@ func (b *Bot) handle(ctx context.Context) {
 	content := evt.Content.AsMessage()
 	if content == nil {
 		b.Error(ctx, evt.RoomID, "cannot read message")
+		return
+	}
+	// ignore any type apart from text (e.g. reactions, redactions, notices, etc)
+	if content.MsgType != event.MsgText {
 		return
 	}
 	message := strings.TrimSpace(content.Body)
