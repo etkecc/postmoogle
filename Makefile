@@ -1,6 +1,7 @@
 ### CI vars
 CI_LOGIN_COMMAND = @echo "Not a CI, skip login"
 CI_REGISTRY_IMAGE ?= registry.gitlab.com/etke.cc/postmoogle
+REGISTRY_IMAGE ?= registry.etke.cc/etke.cc/postmoogle
 CI_COMMIT_TAG ?= latest
 # for main branch it must be set explicitly
 ifeq ($(CI_COMMIT_TAG), main)
@@ -51,4 +52,4 @@ login:
 # docker build
 docker:
 	docker buildx create --use
-	docker buildx build --platform linux/arm64/v8,linux/amd64 --push -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG} .
+	docker buildx build --platform linux/arm64/v8,linux/amd64 --push -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG} -t ${REGISTRY_IMAGE}:${CI_COMMIT_TAG} .
