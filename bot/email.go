@@ -275,7 +275,7 @@ func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) {
 
 // Recipients returns list of recipients (to, cc)
 func (e parentEmail) Recipients() []string {
-	return append(email.AddressList(e.CC), e.To)
+	return append(email.AddressList(e.CC), strings.Split(email.Address(e.To), ",")...)
 }
 
 func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {

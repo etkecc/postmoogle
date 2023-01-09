@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/mail"
 	"regexp"
+	"strings"
 	"time"
 
 	"maunium.net/go/mautrix/id"
@@ -26,6 +27,10 @@ func MessageID(eventID id.EventID, domain string) string {
 func Address(email string) string {
 	addr, _ := mail.ParseAddress(email) //nolint:errcheck // if it fails here, nothing will help
 	if addr == nil {
+		list := AddressList(email)
+		if len(list) > 0 {
+			return strings.Join(list, ",")
+		}
 		return email
 	}
 
