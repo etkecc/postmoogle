@@ -128,7 +128,6 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 
 	b.setThreadID(roomID, email.MessageID, threadID)
 	b.setLastEventID(roomID, threadID, eventID)
-	threadID = eventID
 
 	if !cfg.NoFiles() {
 		b.sendFiles(ctx, roomID, email.Files, cfg.NoThreads(), threadID)
