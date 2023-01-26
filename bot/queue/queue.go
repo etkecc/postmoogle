@@ -60,7 +60,7 @@ func (q *Queue) Remove(id string) error {
 
 	q.mu.Lock(itemkey)
 	defer q.mu.Unlock(itemkey)
-	return q.lp.SetAccountData(itemkey, nil)
+	return q.lp.SetAccountData(itemkey, map[string]string{})
 }
 
 // try to send email
