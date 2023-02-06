@@ -188,7 +188,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 
 	var queued bool
 	var hasErr bool
-	recipients := meta.Recipients()
+	recipients := meta.Recipients
 	for _, to := range recipients {
 		queued, err = b.Sendmail(evt.ID, meta.From, to, data)
 		if queued {
@@ -221,6 +221,7 @@ type parentEmail struct {
 	InReplyTo  string
 	References string
 	Subject    string
+	Recipients []string
 }
 
 // fixtofrom attempts to "fix" or rather reverse the To, From and CC headers
@@ -228,7 +229,7 @@ type parentEmail struct {
 // that will be sent from postmoogle.
 // To do so, we need to reverse From and To headers, but Cc should be adjusted as well,
 // thus that hacky workaround below:
-func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) {
+func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) string {
 	newSenders := make(map[string]string, len(domains))
 	for _, domain := range domains {
 		sender := newSenderMailbox + "@" + domain
@@ -270,11 +271,28 @@ func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) {
 			e.CC = strings.ReplaceAll(e.CC, newSender, originalFrom)
 		}
 	}
+
+	return previousSender
 }
 
-// Recipients returns list of recipients (to, cc)
-func (e parentEmail) Recipients() []string {
-	return append(email.AddressList(e.CC), strings.Split(email.Address(e.To), ",")...)
+func (e *parentEmail) calculateRecipients(from string) {
+	recipients := map[string]struct{}{}
+	recipients[e.From] = struct{}{}
+
+	for _, addr := range strings.Split(email.Address(e.To), ",") {
+		recipients[addr] = struct{}{}
+	}
+	for _, addr := range email.AddressList(e.CC) {
+		recipients[addr] = struct{}{}
+	}
+	delete(recipients, from)
+
+	rcpts := make([]string, 0, len(recipients))
+	for rcpt := range recipients {
+		rcpts = append(rcpts, rcpt)
+	}
+
+	e.Recipients = rcpts
 }
 
 func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
@@ -330,7 +348,8 @@ func (b *Bot) getParentEmail(evt *event.Event, newFromMailbox string) *parentEma
 	parent.RcptTo = utils.EventField[string](&parentEvt.Content, eventRcptToKey)
 	parent.InReplyTo = utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
 	parent.References = utils.EventField[string](&parentEvt.Content, eventReferencesKey)
-	parent.fixtofrom(newFromMailbox, b.domains)
+	senderEmail := parent.fixtofrom(newFromMailbox, b.domains)
+	parent.calculateRecipients(senderEmail)
 	parent.MessageID = email.MessageID(parentEvt.ID, parent.FromDomain)
 	if parent.InReplyTo == "" {
 		parent.InReplyTo = parent.MessageID
