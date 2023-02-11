@@ -6,23 +6,23 @@ lint:
   stage: test
   image: registry.gitlab.com/etke.cc/base/build
   script:
-    - make lint
+    - just lint
 
 unit:
   stage: test
   image: registry.gitlab.com/etke.cc/base/build
   script:
-    - make test
+    - just test
 
 docker:
   stage: release
   only: ['main', 'tags']
   services:
     - docker:dind
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/jdrouet/docker-with-buildx:stable
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/jdrouet/docker-with-buildx:latest
   before_script:
-    - apk --no-cache add make
+    - apk --no-cache add just
   script:
-    - make login docker
+    - just login docker
   tags:
     - docker
