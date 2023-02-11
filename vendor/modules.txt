@@ -134,7 +134,7 @@ gitlab.com/etke.cc/go/mxidwc
 # gitlab.com/etke.cc/go/secgen v1.1.1
 ## explicit; go 1.19
 gitlab.com/etke.cc/go/secgen
-# gitlab.com/etke.cc/go/trysmtp v1.1.1
+# gitlab.com/etke.cc/go/trysmtp v1.1.2
 ## explicit; go 1.17
 gitlab.com/etke.cc/go/trysmtp
 # gitlab.com/etke.cc/go/validator v1.0.6

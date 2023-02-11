@@ -103,8 +103,8 @@ gitlab.com/etke.cc/go/mxidwc v1.0.0 h1:6EAlJXvs3nU4RaMegYq6iFlyVvLw7JZYnZmNCGMYQ
 gitlab.com/etke.cc/go/mxidwc v1.0.0/go.mod h1:E/0kh45SAN9+ntTG0cwkAEKdaPxzvxVmnjwivm9nmz8=
 gitlab.com/etke.cc/go/secgen v1.1.1 h1:RmKOki725HIhWJHzPtAc9X4YvBneczndchpMgoDkE8w=
 gitlab.com/etke.cc/go/secgen v1.1.1/go.mod h1:3pJqRGeWApzx7qXjABqz2o2SMCNpKSZao/gXVdasqE8=
-gitlab.com/etke.cc/go/trysmtp v1.1.1 h1:4mbkfsfipidG2eO8/zSozJ78Vv/lRAcdznvjK0fMVuo=
-gitlab.com/etke.cc/go/trysmtp v1.1.1/go.mod h1:lOO7tTdAE0a3ETV3wN3GJ7I1Tqewu7YTpPWaOmTteV0=
+gitlab.com/etke.cc/go/trysmtp v1.1.2 h1:Jg+J/zgx77wqJ9J5L5dlKFoQLka6yYTXa2wf+GNhjnQ=
+gitlab.com/etke.cc/go/trysmtp v1.1.2/go.mod h1:lOO7tTdAE0a3ETV3wN3GJ7I1Tqewu7YTpPWaOmTteV0=
 gitlab.com/etke.cc/go/validator v1.0.6 h1:w0Muxf9Pqw7xvF7NaaswE6d7r9U3nB2t2l5PnFMrecQ=
 gitlab.com/etke.cc/go/validator v1.0.6/go.mod h1:Id0SxRj0J3IPhiKlj0w1plxVLZfHlkwipn7HfRZsDts=
 gitlab.com/etke.cc/linkpearl v0.0.0-20221116205701-65547c5608e6 h1:+HDT2/bx3Hug++aeDE/PaoRRcnKdYzEm6i2RlOAzPXo=

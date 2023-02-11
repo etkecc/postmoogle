@@ -93,9 +93,12 @@ func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, 
 func (m *mailServer) SendEmail(from, to, data string) error {
 	m.log.Debug("Sending email from %s to %s", from, to)
 	conn, err := trysmtp.Connect(from, to)
-	if err != nil {
+	if conn == nil {
 		m.log.Error("cannot connect to SMTP server of %s: %v", to, err)
 		return err
+	}
+	if err != nil {
+		m.log.Warn("connection to the SMTP server of %s returned the following non-fatal error(-s): %v", err)
 	}
 	defer conn.Close()
 

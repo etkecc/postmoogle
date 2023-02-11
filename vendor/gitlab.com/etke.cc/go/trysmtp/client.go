@@ -12,15 +12,16 @@ import (
 var SMTPAddrs = []string{":25", ":587", ":465"}
 
 // Connect to SMTP server and call MAIL and RCPT commands
+// NOTE: check if client is not nil, because it can return non-fatal errors with initialized client
 func Connect(from, to string) (*smtp.Client, error) {
 	localname := strings.SplitN(from, "@", 2)[1]
 	hostname := strings.SplitN(to, "@", 2)[1]
-	client, err := initClient(localname, hostname)
-	if err != nil {
-		return nil, err
+	client, cerr := initClient(localname, hostname)
+	if client == nil {
+		return nil, cerr
 	}
 
-	err = client.Mail(from)
+	err := client.Mail(from)
 	if err != nil {
 		client.Close()
 		return nil, err
@@ -32,7 +33,7 @@ func Connect(from, to string) (*smtp.Client, error) {
 		return nil, err
 	}
 
-	return client, nil
+	return client, cerr
 }
 
 func unwrapErrors(errs []error) error {
