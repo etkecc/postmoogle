@@ -13,6 +13,7 @@ so you can use it to send emails from your apps and scripts as well.
 ### Receive
 
 - [x] SMTP server (plaintext and SSL)
+- [x] live reload of SSL certs
 - [x] Matrix bot
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms

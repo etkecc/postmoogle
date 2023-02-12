@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/emersion/go-smtp"
+	"github.com/fsnotify/fsnotify"
 	"gitlab.com/etke.cc/go/logger"
 	"maunium.net/go/mautrix/id"
 
@@ -28,15 +30,24 @@ type Config struct {
 	Callers  []Caller
 }
 
+type TLSConfig struct {
+	Listener *Listener
+	Config   *tls.Config
+	Certs    []string
+	Keys     []string
+	Port     string
+	Mu       sync.Mutex
+}
+
 type Manager struct {
 	log  *logger.Logger
 	bot  matrixbot
+	fsw  *FSWatcher
 	smtp *smtp.Server
 	errs chan error
 
-	port    string
-	tlsPort string
-	tlsCfg  *tls.Config
+	port string
+	tls  TLSConfig
 }
 
 type matrixbot interface {
@@ -84,14 +95,39 @@ func NewManager(cfg *Config) *Manager {
 		s.Debug = loggerWriter{func(s string) { log.Info(s) }}
 	}
 
-	m := &Manager{
-		smtp:    s,
-		bot:     cfg.Bot,
-		log:     log,
-		port:    cfg.Port,
-		tlsPort: cfg.TLSPort,
+	fsw, err := NewFSWatcher(append(cfg.TLSCerts, cfg.TLSKeys...), cfg.LogLevel)
+	if err != nil {
+		log.Error("cannot start FS watcher: %v", err)
 	}
-	m.loadTLSConfig(cfg.TLSCerts, cfg.TLSKeys)
+
+	m := &Manager{
+		smtp: s,
+		bot:  cfg.Bot,
+		log:  log,
+		fsw:  fsw,
+		port: cfg.Port,
+		tls: TLSConfig{
+			Certs: cfg.TLSCerts,
+			Keys:  cfg.TLSKeys,
+			Port:  cfg.TLSPort,
+		},
+	}
+
+	m.tls.Mu.Lock()
+	m.loadTLSConfig()
+	m.tls.Mu.Unlock()
+
+	if m.fsw != nil {
+		go m.fsw.Start(func(_ fsnotify.Event) {
+			m.tls.Mu.Lock()
+			defer m.tls.Mu.Unlock()
+
+			ok := m.loadTLSConfig()
+			if ok {
+				m.tls.Listener.SetTLSConfig(m.tls.Config)
+			}
+		})
+	}
 	return m
 }
 
@@ -99,8 +135,8 @@ func NewManager(cfg *Config) *Manager {
 func (m *Manager) Start() error {
 	m.errs = make(chan error, 1)
 	go m.listen(m.port, nil)
-	if m.tlsCfg != nil {
-		go m.listen(m.tlsPort, m.tlsCfg)
+	if m.tls.Config != nil {
+		go m.listen(m.tls.Port, m.tls.Config)
 	}
 
 	return <-m.errs
@@ -108,6 +144,7 @@ func (m *Manager) Start() error {
 
 // Stop SMTP server
 func (m *Manager) Stop() {
+	m.fsw.Stop()
 	err := m.smtp.Close()
 	if err != nil {
 		m.log.Error("cannot stop SMTP server properly: %v", err)
@@ -115,20 +152,16 @@ func (m *Manager) Stop() {
 	m.log.Info("SMTP server has been stopped")
 }
 
-func (m *Manager) listen(port string, tlsCfg *tls.Config) {
-	var l net.Listener
-	var err error
-	if tlsCfg != nil {
-		l, err = tls.Listen("tcp", ":"+port, tlsCfg)
-	} else {
-		l, err = net.Listen("tcp", ":"+port)
-	}
+func (m *Manager) listen(port string, tlsConfig *tls.Config) {
+	lwrapper, err := NewListener(port, tlsConfig, m.bot.IsBanned, m.log)
 	if err != nil {
 		m.log.Error("cannot start listener on %s: %v", port, err)
 		m.errs <- err
 		return
 	}
-	lwrapper := NewListener(l, m.bot.IsBanned, m.log)
+	if tlsConfig != nil {
+		m.tls.Listener = lwrapper
+	}
 	m.log.Info("Starting SMTP server on port %s", port)
 
 	err = m.smtp.Serve(lwrapper)
@@ -139,15 +172,17 @@ func (m *Manager) listen(port string, tlsCfg *tls.Config) {
 	}
 }
 
-func (m *Manager) loadTLSConfig(certs, keys []string) {
-	if len(certs) == 0 || len(keys) == 0 {
+// loadTLSConfig returns true if certs were loaded and false if not
+func (m *Manager) loadTLSConfig() bool {
+	m.log.Debug("loading SSL certs...")
+	if len(m.tls.Certs) == 0 || len(m.tls.Keys) == 0 {
 		m.log.Warn("SSL certificates are not provided")
-		return
+		return false
 	}
 
-	certificates := make([]tls.Certificate, 0, len(certs))
-	for i, path := range certs {
-		tlsCert, err := tls.LoadX509KeyPair(path, keys[i])
+	certificates := make([]tls.Certificate, 0, len(m.tls.Certs))
+	for i, path := range m.tls.Certs {
+		tlsCert, err := tls.LoadX509KeyPair(path, m.tls.Keys[i])
 		if err != nil {
 			m.log.Error("cannot load SSL certificate: %v", err)
 			continue
@@ -155,9 +190,10 @@ func (m *Manager) loadTLSConfig(certs, keys []string) {
 		certificates = append(certificates, tlsCert)
 	}
 	if len(certificates) == 0 {
-		return
+		return false
 	}
 
-	m.tlsCfg = &tls.Config{Certificates: certificates}
-	m.smtp.TLSConfig = m.tlsCfg
+	m.tls.Config = &tls.Config{Certificates: certificates}
+	m.smtp.TLSConfig = m.tls.Config
+	return true
 }
