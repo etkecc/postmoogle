@@ -1,6 +1,7 @@
 package smtp
 
 import (
+	"crypto/tls"
 	"net"
 
 	"gitlab.com/etke.cc/go/logger"
@@ -10,17 +11,28 @@ import (
 type Listener struct {
 	log      *logger.Logger
 	done     chan struct{}
+	tls      *tls.Config
 	listener net.Listener
 	isBanned func(net.Addr) bool
 }
 
-func NewListener(actual net.Listener, isBanned func(net.Addr) bool, log *logger.Logger) *Listener {
+func NewListener(port string, tlsConfig *tls.Config, isBanned func(net.Addr) bool, log *logger.Logger) (*Listener, error) {
+	actual, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Listener{
 		log:      log,
 		done:     make(chan struct{}, 1),
+		tls:      tlsConfig,
 		listener: actual,
 		isBanned: isBanned,
-	}
+	}, nil
+}
+
+func (l *Listener) SetTLSConfig(cfg *tls.Config) {
+	l.tls = cfg
 }
 
 // Accept waits for and returns the next connection to the listener.
@@ -43,6 +55,10 @@ func (l *Listener) Accept() (net.Conn, error) {
 		}
 
 		l.log.Info("accepted connection from %q", conn.RemoteAddr())
+
+		if l.tls != nil {
+			return tls.Server(conn, l.tls), nil
+		}
 		return conn, nil
 	}
 }
