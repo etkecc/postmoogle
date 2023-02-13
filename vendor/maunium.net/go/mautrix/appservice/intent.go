@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/event"
@@ -256,11 +255,12 @@ func (intent *IntentAPI) SendCustomMembershipEvent(roomID id.RoomID, target id.U
 			ok = memberContent != nil
 		}
 		if !ok {
-			err := intent.StateEvent(roomID, event.StateMember, target.String(), &memberContent)
+			profile, err := intent.GetProfile(target)
 			if err != nil {
-				intent.Logger.Debugfln("Failed to get member info for %s/%s to fill new %s membership event: %v", roomID, target, membership, err)
+				intent.Logger.Debugfln("Failed to get profile for %s to fill new %s membership event: %v", target, membership, err)
 			} else {
-				ok = true
+				content.Displayname = profile.DisplayName
+				content.AvatarURL = profile.AvatarURL.CUString()
 			}
 		}
 	}
@@ -400,21 +400,6 @@ func (intent *IntentAPI) SetPowerLevel(roomID id.RoomID, userID id.UserID, level
 		return intent.SendStateEvent(roomID, event.StatePowerLevels, "", &pl)
 	}
 	return nil, nil
-}
-
-func (intent *IntentAPI) UserTyping(roomID id.RoomID, typing bool, timeout time.Duration) (resp *mautrix.RespTyping, err error) {
-	if intent.as.StateStore.IsTyping(roomID, intent.UserID) == typing {
-		return
-	}
-	resp, err = intent.Client.UserTyping(roomID, typing, timeout)
-	if err != nil {
-		return
-	}
-	if !typing {
-		timeout = -1
-	}
-	intent.as.StateStore.SetTyping(roomID, intent.UserID, timeout)
-	return
 }
 
 func (intent *IntentAPI) SendText(roomID id.RoomID, text string) (*mautrix.RespSendEvent, error) {

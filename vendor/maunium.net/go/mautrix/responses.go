@@ -160,6 +160,11 @@ type RespUserDisplayName struct {
 	DisplayName string `json:"displayname"`
 }
 
+type RespUserProfile struct {
+	DisplayName string        `json:"displayname"`
+	AvatarURL   id.ContentURI `json:"avatar_url"`
+}
+
 // RespRegisterAvailable is the JSON response for https://spec.matrix.org/v1.4/client-server-api/#get_matrixclientv3registeravailable
 type RespRegisterAvailable struct {
 	Available bool `json:"available"`
@@ -246,8 +251,9 @@ type RespSync struct {
 	Presence    SyncEventsList `json:"presence"`
 	ToDevice    SyncEventsList `json:"to_device"`
 
-	DeviceLists    DeviceLists `json:"device_lists"`
-	DeviceOTKCount OTKCount    `json:"device_one_time_keys_count"`
+	DeviceLists    DeviceLists       `json:"device_lists"`
+	DeviceOTKCount OTKCount          `json:"device_one_time_keys_count"`
+	FallbackKeys   []id.KeyAlgorithm `json:"device_unused_fallback_key_types"`
 
 	Rooms RespSyncRooms `json:"rooms"`
 }
@@ -256,6 +262,7 @@ type RespSyncRooms struct {
 	Leave  map[id.RoomID]*SyncLeftRoom    `json:"leave,omitempty"`
 	Join   map[id.RoomID]*SyncJoinedRoom  `json:"join,omitempty"`
 	Invite map[id.RoomID]*SyncInvitedRoom `json:"invite,omitempty"`
+	Knock  map[id.RoomID]*SyncKnockedRoom `json:"knock,omitempty"`
 }
 
 type marshalableRespSync RespSync
@@ -330,6 +337,10 @@ var syncInvitedRoomPathsToDelete = []string{"summary"}
 
 func (sir SyncInvitedRoom) MarshalJSON() ([]byte, error) {
 	return util.MarshalAndDeleteEmpty((marshalableSyncInvitedRoom)(sir), syncInvitedRoomPathsToDelete)
+}
+
+type SyncKnockedRoom struct {
+	State SyncEventsList `json:"knock_state"`
 }
 
 type RespTurnServer struct {
@@ -538,5 +549,16 @@ type ChildRoomsChunk struct {
 
 type StrippedStateWithTime struct {
 	event.StrippedState
+	Timestamp jsontime.UnixMilli `json:"origin_server_ts"`
+}
+
+type RespBeeperMergeRoom RespCreateRoom
+
+type RespBeeperSplitRoom struct {
+	RoomIDs map[string]id.RoomID `json:"room_ids"`
+}
+
+type RespTimestampToEvent struct {
+	EventID   id.EventID         `json:"event_id"`
 	Timestamp jsontime.UnixMilli `json:"origin_server_ts"`
 }

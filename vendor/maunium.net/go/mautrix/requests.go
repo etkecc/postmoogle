@@ -31,6 +31,13 @@ const (
 	IdentifierTypePhone      = "m.id.phone"
 )
 
+type Direction rune
+
+const (
+	DirectionForward  Direction = 'f'
+	DirectionBackward Direction = 'b'
+)
+
 // ReqRegister is the JSON request for https://spec.matrix.org/v1.2/client-server-api/#post_matrixclientv3register
 type ReqRegister struct {
 	Username                 string      `json:"username,omitempty"`
@@ -334,13 +341,17 @@ type ReqBatchSend struct {
 }
 
 type ReqSetReadMarkers struct {
-	Read        id.EventID `json:"m.read"`
-	ReadPrivate id.EventID `json:"m.read.private"`
-	FullyRead   id.EventID `json:"m.fully_read"`
+	Read        id.EventID `json:"m.read,omitempty"`
+	ReadPrivate id.EventID `json:"m.read.private,omitempty"`
+	FullyRead   id.EventID `json:"m.fully_read,omitempty"`
 
-	BeeperReadExtra        interface{} `json:"com.beeper.read.extra"`
-	BeeperReadPrivateExtra interface{} `json:"com.beeper.read.private.extra"`
-	BeeperFullyReadExtra   interface{} `json:"com.beeper.fully_read.extra"`
+	BeeperReadExtra        interface{} `json:"com.beeper.read.extra,omitempty"`
+	BeeperReadPrivateExtra interface{} `json:"com.beeper.read.private.extra,omitempty"`
+	BeeperFullyReadExtra   interface{} `json:"com.beeper.fully_read.extra,omitempty"`
+}
+
+type ReqSendReceipt struct {
+	ThreadID string `json:"thread_id,omitempty"`
 }
 
 // ReqHierarchy contains the parameters for https://spec.matrix.org/v1.4/client-server-api/#get_matrixclientv1roomsroomidhierarchy
@@ -379,4 +390,24 @@ func (req *ReqHierarchy) Query() map[string]string {
 		query["suggested_only"] = "true"
 	}
 	return query
+}
+
+type ReqBeeperMergeRoom struct {
+	NewRoom ReqCreateRoom `json:"create"`
+	Key     string        `json:"key"`
+	Rooms   []id.RoomID   `json:"rooms"`
+	User    id.UserID     `json:"user_id"`
+}
+
+type BeeperSplitRoomPart struct {
+	UserID  id.UserID     `json:"user_id"`
+	Values  []string      `json:"values"`
+	NewRoom ReqCreateRoom `json:"create"`
+}
+
+type ReqBeeperSplitRoom struct {
+	RoomID id.RoomID `json:"-"`
+
+	Key   string                `json:"key"`
+	Parts []BeeperSplitRoomPart `json:"parts"`
 }

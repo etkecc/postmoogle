@@ -46,7 +46,7 @@ func (s *Store) WithCrypto(userID id.UserID, deviceID id.DeviceID, logger config
 		[]byte(userID),
 	)
 
-	return s.s.Upgrade()
+	return s.s.DB.Upgrade()
 }
 
 // GetDialect returns database dialect
