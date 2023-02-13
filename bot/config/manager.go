@@ -10,8 +10,6 @@ import (
 
 // Manager of configs
 type Manager struct {
-	bl  List
-	ble bool
 	mu  utils.Mutex
 	log *logger.Logger
 	lp  *linkpearl.Linkpearl
@@ -21,18 +19,11 @@ type Manager struct {
 func New(lp *linkpearl.Linkpearl, log *logger.Logger) *Manager {
 	m := &Manager{
 		mu:  utils.NewMutex(),
-		bl:  make(List, 0),
 		lp:  lp,
 		log: log,
 	}
-	m.ble = m.GetBot().BanlistEnabled()
 
 	return m
-}
-
-// BanlistEnalbed or not
-func (m *Manager) BanlistEnalbed() bool {
-	return m.ble
 }
 
 // GetBot config
@@ -47,14 +38,12 @@ func (m *Manager) GetBot() Bot {
 		config = make(Bot, 0)
 		return config
 	}
-	m.ble = config.BanlistEnabled()
 
 	return config
 }
 
 // SetBot config
 func (m *Manager) SetBot(cfg Bot) error {
-	m.ble = cfg.BanlistEnabled()
 	return utils.UnwrapError(m.lp.SetAccountData(acBotKey, cfg))
 }
 
@@ -75,8 +64,8 @@ func (m *Manager) SetRoom(roomID id.RoomID, cfg Room) error {
 
 // GetBanlist config
 func (m *Manager) GetBanlist() List {
-	if len(m.bl) > 0 || !m.ble {
-		return m.bl
+	if !m.GetBot().BanlistEnabled() {
+		return make(List, 0)
 	}
 
 	m.mu.Lock("banlist")
@@ -89,22 +78,20 @@ func (m *Manager) GetBanlist() List {
 		config = make(List, 0)
 		return config
 	}
-	m.bl = config
 	return config
 }
 
 // SetBanlist config
 func (m *Manager) SetBanlist(cfg List) error {
-	if !m.ble {
+	if !m.GetBot().BanlistEnabled() {
 		return nil
 	}
 
 	m.mu.Lock("banlist")
+	defer m.mu.Unlock("banlist")
 	if cfg == nil {
 		cfg = make(List, 0)
 	}
-	m.bl = cfg
-	defer m.mu.Unlock("banlist")
 
 	return utils.UnwrapError(m.lp.SetAccountData(acBanlistKey, cfg))
 }

@@ -124,7 +124,7 @@ func (b *Bot) IsTrusted(addr net.Addr) bool {
 
 // Ban an address
 func (b *Bot) Ban(addr net.Addr) {
-	if !b.cfg.BanlistEnalbed() {
+	if !b.cfg.GetBot().BanlistEnabled() {
 		return
 	}
 	if b.IsTrusted(addr) {

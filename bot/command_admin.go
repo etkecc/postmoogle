@@ -334,6 +334,10 @@ func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
 		b.runBanlist(ctx, commandSlice)
 		return
 	}
+	if !b.cfg.GetBot().BanlistEnabled() {
+		b.SendNotice(ctx, evt.RoomID, "banlist is disabled, you have to enable it first, kupo")
+		return
+	}
 	banlist := b.cfg.GetBanlist()
 
 	ips := commandSlice[1:]
@@ -361,6 +365,10 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 		b.runBanlist(ctx, commandSlice)
 		return
 	}
+	if !b.cfg.GetBot().BanlistEnabled() {
+		b.SendNotice(ctx, evt.RoomID, "banlist is disabled, you have to enable it first, kupo")
+		return
+	}
 	banlist := b.cfg.GetBanlist()
 
 	ips := commandSlice[1:]
@@ -384,6 +392,10 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 
 func (b *Bot) runBanlistReset(ctx context.Context) {
 	evt := eventFromContext(ctx)
+	if !b.cfg.GetBot().BanlistEnabled() {
+		b.SendNotice(ctx, evt.RoomID, "banlist is disabled, you have to enable it first, kupo")
+		return
+	}
 
 	err := b.cfg.SetBanlist(config.List{})
 	if err != nil {
