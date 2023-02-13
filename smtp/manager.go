@@ -174,7 +174,7 @@ func (m *Manager) listen(port string, tlsConfig *tls.Config) {
 
 // loadTLSConfig returns true if certs were loaded and false if not
 func (m *Manager) loadTLSConfig() bool {
-	m.log.Debug("loading SSL certs...")
+	m.log.Info("(re)loading TLS config")
 	if len(m.tls.Certs) == 0 || len(m.tls.Keys) == 0 {
 		m.log.Warn("SSL certificates are not provided")
 		return false
