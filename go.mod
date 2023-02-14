@@ -21,7 +21,7 @@ require (
 	gitlab.com/etke.cc/go/logger v1.1.0
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
 	gitlab.com/etke.cc/go/secgen v1.1.1
-	gitlab.com/etke.cc/go/trysmtp v1.1.2
+	gitlab.com/etke.cc/go/trysmtp v1.1.3
 	gitlab.com/etke.cc/go/validator v1.0.6
 	gitlab.com/etke.cc/linkpearl v0.0.0-20230213101923-10ee6beb7577
 	maunium.net/go/mautrix v0.13.0

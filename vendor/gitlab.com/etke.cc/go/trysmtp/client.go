@@ -41,14 +41,16 @@ func unwrapErrors(errs []error) error {
 		return nil
 	}
 
-	tokens := strings.Repeat("%v; ", len(errs))
-	// make it compatible with < 1.18
-	ierrs := make([]interface{}, len(errs))
-	for _, err := range errs {
-		ierrs = append(ierrs, err)
+	var text strings.Builder
+	last := len(errs) - 1
+	for i := 0; i < len(errs); i++ {
+		text.WriteString(errs[i].Error())
+		if i < last {
+			text.WriteString("; ")
+		}
 	}
 
-	return fmt.Errorf(tokens, ierrs...)
+	return fmt.Errorf(text.String())
 }
 
 func initClient(localname, hostname string) (*smtp.Client, error) {
@@ -60,6 +62,9 @@ func initClient(localname, hostname string) (*smtp.Client, error) {
 	cerrs := []error{}
 	var client *smtp.Client
 	for _, mx := range mxs {
+		if mx.Host == "." {
+			continue // no records case
+		}
 		for _, addr := range SMTPAddrs {
 			client, err = trySMTP(localname, strings.TrimSuffix(mx.Host, "."), addr)
 			if err != nil {
@@ -73,15 +78,13 @@ func initClient(localname, hostname string) (*smtp.Client, error) {
 
 	// If there are no MX records, according to https://datatracker.ietf.org/doc/html/rfc5321#section-5.1,
 	// we're supposed to try talking directly to the host.
-	if len(mxs) == 0 {
-		for _, addr := range SMTPAddrs {
-			client, err = trySMTP(localname, hostname, addr)
-			if err != nil {
-				cerrs = append(cerrs, err)
-			}
-			if client != nil {
-				return client, unwrapErrors(cerrs)
-			}
+	for _, addr := range SMTPAddrs {
+		client, err = trySMTP(localname, hostname, addr)
+		if err != nil {
+			cerrs = append(cerrs, err)
+		}
+		if client != nil {
+			return client, unwrapErrors(cerrs)
 		}
 	}
 
