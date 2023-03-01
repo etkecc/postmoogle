@@ -17,35 +17,37 @@ import (
 
 // Email object
 type Email struct {
-	Date       string
-	MessageID  string
-	InReplyTo  string
-	References string
-	From       string
-	To         string
-	RcptTo     string
-	CC         []string
-	Subject    string
-	Text       string
-	HTML       string
-	Files      []*utils.File
+	Date        string
+	MessageID   string
+	InReplyTo   string
+	References  string
+	From        string
+	To          string
+	RcptTo      string
+	CC          []string
+	Subject     string
+	Text        string
+	HTML        string
+	Files       []*utils.File
+	InlineFiles []*utils.File
 }
 
 // New constructs Email object
-func New(messageID, inReplyTo, references, subject, from, to, rcptto, cc, text, html string, files []*utils.File) *Email {
+func New(messageID, inReplyTo, references, subject, from, to, rcptto, cc, text, html string, files, inline []*utils.File) *Email {
 	email := &Email{
-		Date:       dateNow(),
-		MessageID:  messageID,
-		InReplyTo:  inReplyTo,
-		References: references,
-		From:       Address(from),
-		To:         Address(to),
-		CC:         AddressList(cc),
-		RcptTo:     Address(rcptto),
-		Subject:    subject,
-		Text:       text,
-		HTML:       html,
-		Files:      files,
+		Date:        dateNow(),
+		MessageID:   messageID,
+		InReplyTo:   inReplyTo,
+		References:  references,
+		From:        Address(from),
+		To:          Address(to),
+		CC:          AddressList(cc),
+		RcptTo:      Address(rcptto),
+		Subject:     subject,
+		Text:        text,
+		HTML:        html,
+		Files:       files,
+		InlineFiles: inline,
 	}
 
 	if html != "" {
@@ -72,19 +74,26 @@ func FromEnvelope(rcptto string, envelope *enmime.Envelope) *Email {
 		files = append(files, file)
 	}
 
+	inlines := make([]*utils.File, 0, len(envelope.Inlines))
+	for _, inline := range envelope.Inlines {
+		file := utils.NewFile(inline.FileName, inline.Content)
+		inlines = append(inlines, file)
+	}
+
 	email := &Email{
-		Date:       date,
-		MessageID:  envelope.GetHeader("Message-Id"),
-		InReplyTo:  envelope.GetHeader("In-Reply-To"),
-		References: envelope.GetHeader("References"),
-		From:       Address(envelope.GetHeader("From")),
-		To:         Address(envelope.GetHeader("To")),
-		RcptTo:     Address(rcptto),
-		CC:         AddressList(envelope.GetHeader("Cc")),
-		Subject:    envelope.GetHeader("Subject"),
-		Text:       envelope.Text,
-		HTML:       html,
-		Files:      files,
+		Date:        date,
+		MessageID:   envelope.GetHeader("Message-Id"),
+		InReplyTo:   envelope.GetHeader("In-Reply-To"),
+		References:  envelope.GetHeader("References"),
+		From:        Address(envelope.GetHeader("From")),
+		To:          Address(envelope.GetHeader("To")),
+		RcptTo:      Address(rcptto),
+		CC:          AddressList(envelope.GetHeader("Cc")),
+		Subject:     envelope.GetHeader("Subject"),
+		Text:        envelope.Text,
+		HTML:        html,
+		Files:       files,
+		InlineFiles: inlines,
 	}
 
 	return email

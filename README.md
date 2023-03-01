@@ -111,6 +111,7 @@ If you want to change them - check available options in the help message (`!pm h
 * **!pm nohtml** - Get or set `nohtml` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)
 * **!pm nothreads** - Get or set `nothreads` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)
 * **!pm nofiles** - Get or set `nofiles` of the room (`true` - ignore email attachments; `false` - upload email attachments)
+* **!pm noinlines** - Get or set `noinlines` of the room (`true` - ignore inline attachments; `false` - upload inline attachments)
 
 ---
 

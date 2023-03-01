@@ -26,6 +26,7 @@ const (
 	RoomNoHTML        = "nohtml"
 	RoomNoThreads     = "nothreads"
 	RoomNoFiles       = "nofiles"
+	RoomNoInlines     = "noinlines"
 	RoomPassword      = "password"
 	RoomSpamcheckDKIM = "spamcheck:dkim"
 	RoomSpamcheckSMTP = "spamcheck:smtp"
@@ -94,6 +95,10 @@ func (s Room) NoThreads() bool {
 
 func (s Room) NoFiles() bool {
 	return utils.Bool(s.Get(RoomNoFiles))
+}
+
+func (s Room) NoInlines() bool {
+	return utils.Bool(s.Get(RoomNoInlines))
 }
 
 func (s Room) SpamcheckDKIM() bool {

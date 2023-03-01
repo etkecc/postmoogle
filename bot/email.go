@@ -129,6 +129,10 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 	b.setThreadID(roomID, email.MessageID, threadID)
 	b.setLastEventID(roomID, threadID, eventID)
 
+	if !cfg.NoInlines() {
+		b.sendFiles(ctx, roomID, email.InlineFiles, cfg.NoThreads(), threadID)
+	}
+
 	if !cfg.NoFiles() {
 		b.sendFiles(ctx, roomID, email.Files, cfg.NoThreads(), threadID)
 	}
@@ -179,7 +183,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	meta.MessageID = email.MessageID(evt.ID, meta.FromDomain)
 	meta.References = meta.References + " " + meta.MessageID
 	b.log.Info("sending email reply: %+v", meta)
-	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil)
+	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil, nil)
 	data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 	if data == "" {
 		b.SendError(ctx, evt.RoomID, "email body is empty")

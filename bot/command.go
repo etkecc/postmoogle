@@ -167,6 +167,15 @@ func (b *Bot) initCommands() commandList {
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
+		{
+			key: config.RoomNoInlines,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - ignore inline attachments; `false` - upload inline attachments)",
+				config.RoomNoFiles,
+			),
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
+		},
 		{allowed: b.allowOwner, description: "mailbox antispam"}, // delimiter
 		{
 			key:         config.RoomSpamcheckMX,
@@ -491,7 +500,7 @@ func (b *Bot) runSend(ctx context.Context) {
 	ID := email.MessageID(evt.ID, domain)
 	for _, to := range tos {
 		recipients := []string{to}
-		eml := email.New(ID, "", " "+ID, subject, from, to, to, "", body, htmlBody, nil)
+		eml := email.New(ID, "", " "+ID, subject, from, to, to, "", body, htmlBody, nil, nil)
 		data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 		if data == "" {
 			b.SendError(ctx, evt.RoomID, "email body is empty")
