@@ -294,8 +294,8 @@ func (b *Bot) handle(ctx context.Context) {
 		b.Error(ctx, evt.RoomID, "cannot read message")
 		return
 	}
-	// ignore any type apart from text (e.g. reactions, redactions, notices, etc)
-	if content.MsgType != event.MsgText {
+	// ignore notices
+	if content.MsgType == event.MsgNotice {
 		return
 	}
 	message := strings.TrimSpace(content.Body)
