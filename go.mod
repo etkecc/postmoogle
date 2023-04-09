@@ -17,6 +17,7 @@ require (
 	github.com/mileusna/crontab v1.2.0
 	github.com/raja/argon2pw v1.0.2-0.20210910183755-a391af63bd39
 	gitlab.com/etke.cc/go/env v1.0.0
+	gitlab.com/etke.cc/go/fswatcher v1.0.0
 	gitlab.com/etke.cc/go/healthchecks v1.0.1
 	gitlab.com/etke.cc/go/logger v1.1.0
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
@@ -53,7 +54,7 @@ require (
 	github.com/yuin/goldmark v1.5.4 // indirect
 	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/net v0.6.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	maunium.net/go/maulogger/v2 v2.3.2 // indirect

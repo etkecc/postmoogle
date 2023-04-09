@@ -9,6 +9,7 @@ import (
 
 	"github.com/emersion/go-smtp"
 	"github.com/fsnotify/fsnotify"
+	"gitlab.com/etke.cc/go/fswatcher"
 	"gitlab.com/etke.cc/go/logger"
 	"maunium.net/go/mautrix/id"
 
@@ -42,7 +43,7 @@ type TLSConfig struct {
 type Manager struct {
 	log  *logger.Logger
 	bot  matrixbot
-	fsw  *FSWatcher
+	fsw  *fswatcher.Watcher
 	smtp *smtp.Server
 	errs chan error
 
@@ -95,7 +96,7 @@ func NewManager(cfg *Config) *Manager {
 		s.Debug = loggerWriter{func(s string) { log.Info(s) }}
 	}
 
-	fsw, err := NewFSWatcher(append(cfg.TLSCerts, cfg.TLSKeys...), cfg.LogLevel)
+	fsw, err := fswatcher.New(append(cfg.TLSCerts, cfg.TLSKeys...), 0)
 	if err != nil {
 		log.Error("cannot start FS watcher: %v", err)
 	}

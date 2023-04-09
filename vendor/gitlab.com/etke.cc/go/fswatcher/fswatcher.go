@@ -1,4 +1,4 @@
-package smtp
+package fswatcher
 
 import (
 	"math"
@@ -7,20 +7,25 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"gitlab.com/etke.cc/go/logger"
 )
 
-const fsdelay = 100 * time.Millisecond
+// DefaultDelay to avoid unnecessary handler calls
+const DefaultDelay = 100 * time.Millisecond
 
-type FSWatcher struct {
+// Watcher of file system changes
+type Watcher struct {
 	watcher *fsnotify.Watcher
+	delay   time.Duration
 	files   []string
-	log     *logger.Logger
 	mu      sync.Mutex
 	t       map[string]*time.Timer
 }
 
-func NewFSWatcher(files []string, loglevel string) (*FSWatcher, error) {
+// Creates FS Watcher
+func New(files []string, delay time.Duration) (*Watcher, error) {
+	if delay <= 0 {
+		delay = DefaultDelay
+	}
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -33,36 +38,24 @@ func NewFSWatcher(files []string, loglevel string) (*FSWatcher, error) {
 		}
 	}
 
-	fswatcher := &FSWatcher{
+	fswatcher := &Watcher{
 		watcher: watcher,
+		delay:   delay,
 		files:   files,
-		log:     logger.New("fs.", loglevel),
 		t:       make(map[string]*time.Timer),
 	}
 
 	return fswatcher, nil
 }
 
-func (w *FSWatcher) watch(handler func(e fsnotify.Event)) {
-	for {
-		select {
-		case err, ok := <-w.watcher.Errors:
-			if !ok {
-				return
-			}
-			w.log.Error("%v", err)
-		case e, ok := <-w.watcher.Events:
-			if !ok {
-				return
-			}
-
-			handler(e)
-		}
+func (w *Watcher) watch(handler func(e fsnotify.Event)) {
+	for e := range w.watcher.Events {
+		handler(e)
 	}
 }
 
 // Start watcher
-func (w *FSWatcher) Start(handler func(e fsnotify.Event)) {
+func (w *Watcher) Start(handler func(e fsnotify.Event)) {
 	w.watch(func(e fsnotify.Event) {
 		var found bool
 		for _, f := range w.files {
@@ -78,7 +71,6 @@ func (w *FSWatcher) Start(handler func(e fsnotify.Event)) {
 		w.mu.Unlock()
 		if !ok {
 			t = time.AfterFunc(math.MaxInt64, func() {
-				w.log.Info("handling fs event %+v", e)
 				handler(e)
 			})
 			t.Stop()
@@ -87,14 +79,11 @@ func (w *FSWatcher) Start(handler func(e fsnotify.Event)) {
 			w.t[e.Name] = t
 			w.mu.Unlock()
 		}
-		t.Reset(fsdelay)
+		t.Reset(w.delay)
 	})
 }
 
 // Stop watcher
-func (w *FSWatcher) Stop() {
-	err := w.watcher.Close()
-	if err != nil {
-		w.log.Error("cannot stop fs watcher: %v", err)
-	}
+func (w *Watcher) Stop() error {
+	return w.watcher.Close()
 }
