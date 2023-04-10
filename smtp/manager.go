@@ -145,11 +145,16 @@ func (m *Manager) Start() error {
 
 // Stop SMTP server
 func (m *Manager) Stop() {
-	m.fsw.Stop()
-	err := m.smtp.Close()
+	err := m.fsw.Stop()
+	if err != nil {
+		m.log.Error("cannot stop filesystem watcher properly: %v", err)
+	}
+
+	err = m.smtp.Close()
 	if err != nil {
 		m.log.Error("cannot stop SMTP server properly: %v", err)
 	}
+
 	m.log.Info("SMTP server has been stopped")
 }
 

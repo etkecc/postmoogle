@@ -146,6 +146,9 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	if !b.allowSend(evt.Sender, evt.RoomID) {
 		return
 	}
+	if !b.allowReply(evt.Sender, evt.RoomID) {
+		return
+	}
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot retrieve room settings: %v", err)

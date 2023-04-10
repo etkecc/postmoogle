@@ -19,6 +19,7 @@ const (
 	RoomMailbox       = "mailbox"
 	RoomDomain        = "domain"
 	RoomNoSend        = "nosend"
+	RoomNoReplies     = "noreplies"
 	RoomNoCC          = "nocc"
 	RoomNoSender      = "nosender"
 	RoomNoRecipient   = "norecipient"
@@ -67,6 +68,10 @@ func (s Room) Password() string {
 
 func (s Room) NoSend() bool {
 	return utils.Bool(s.Get(RoomNoSend))
+}
+
+func (s Room) NoReplies() bool {
+	return utils.Bool(s.Get(RoomNoReplies))
 }
 
 func (s Room) NoCC() bool {

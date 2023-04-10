@@ -105,6 +105,15 @@ func (b *Bot) initCommands() commandList {
 			allowed:   b.allowOwner,
 		},
 		{
+			key: config.RoomNoReplies,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - ignore matrix replies; `false` - parse matrix replies)",
+				config.RoomNoReplies,
+			),
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
+		},
+		{
 			key: config.RoomNoSender,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",

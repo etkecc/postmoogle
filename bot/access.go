@@ -73,6 +73,20 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 	return !cfg.NoSend()
 }
 
+func (b *Bot) allowReply(actorID id.UserID, targetRoomID id.RoomID) bool {
+	if !b.allowUsers(actorID) {
+		return false
+	}
+
+	cfg, err := b.cfg.GetRoom(targetRoomID)
+	if err != nil {
+		b.Error(sentry.SetHubOnContext(context.Background(), sentry.CurrentHub()), targetRoomID, "failed to retrieve settings: %v", err)
+		return false
+	}
+
+	return !cfg.NoReplies()
+}
+
 func (b *Bot) isReserved(mailbox string) bool {
 	for _, reserved := range b.mbxc.Reserved {
 		if mailbox == reserved {
