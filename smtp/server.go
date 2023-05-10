@@ -26,10 +26,10 @@ var (
 )
 
 type mailServer struct {
-	bot        matrixbot
-	log        *logger.Logger
-	domains    []string
-	mailSender MailSender
+	bot     matrixbot
+	log     *logger.Logger
+	domains []string
+	sender  MailSender
 }
 
 // Login used for outgoing mail submissions only (when you use postmoogle as smtp server in your scripts)
@@ -54,7 +54,7 @@ func (m *mailServer) Login(state *smtp.ConnectionState, username, password strin
 
 	return &outgoingSession{
 		ctx:       sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
-		sendmail:  m.SendEmail,
+		sendmail:  m.sender.Send,
 		privkey:   m.bot.GetDKIMprivkey(),
 		from:      username,
 		log:       m.log,
@@ -85,11 +85,6 @@ func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, 
 		addr:         state.RemoteAddr,
 		tos:          []string{},
 	}, nil
-}
-
-// SendEmail to external mail server
-func (m *mailServer) SendEmail(from, to, data string) error {
-	return m.mailSender.Send(from, to, data)
 }
 
 // ReceiveEmail - incoming mail into matrix room

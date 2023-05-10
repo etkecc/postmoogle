@@ -14,21 +14,31 @@ type MailSender interface {
 	Send(from string, to string, data string) error
 }
 
+// SMTP client
 type Client struct {
 	config *RelayConfig
 	log    *logger.Logger
 }
 
-func newClient(cfg *RelayConfig, log *logger.Logger) Client {
-	return Client{
+func newClient(cfg *RelayConfig, log *logger.Logger) *Client {
+	return &Client{
 		config: cfg,
 		log:    log,
 	}
 }
 
+// Send email
 func (c Client) Send(from string, to string, data string) error {
 	c.log.Debug("Sending email from %s to %s", from, to)
-	conn, err := c.createSmtpClient(from, to)
+
+	var conn *smtp.Client
+	var err error
+	if c.config.Host != "" {
+		conn, err = c.createDirectClient(from, to)
+	} else {
+		conn, err = trysmtp.Connect(from, to)
+	}
+
 	if conn == nil {
 		c.log.Error("cannot connect to SMTP server of %s: %v", to, err)
 		return err
@@ -56,19 +66,11 @@ func (c Client) Send(from string, to string, data string) error {
 	return nil
 }
 
-func (c *Client) createSmtpClient(from string, to string) (*smtp.Client, error) {
-	if c.config.Host != "" {
-		return c.createDirectClient(from, to)
-	}
-
-	return trysmtp.Connect(from, to)
-}
-
+// createDirectClient connects directly to the provided smtp host
 func (c *Client) createDirectClient(from string, to string) (*smtp.Client, error) {
 	localname := strings.SplitN(from, "@", 2)[1]
 	target := c.config.Host + ":" + c.config.Port
 	conn, err := smtp.Dial(target)
-
 	if err != nil {
 		return nil, err
 	}
