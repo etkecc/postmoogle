@@ -70,6 +70,10 @@ env vars
 * **POSTMOOGLE_MAILBOXES_ACTIVATION** - activation flow for new mailboxes, [docs/mailboxes.md](docs/mailboxes.md)
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
 * **POSTMOOGLE_ADMINS** - a space-separated list of admin users. See `POSTMOOGLE_USERS` for syntax examples
+* **POSTMOOGLE_RELAY_HOST** - SMTP hostname of relay host (e.g. Sendgrid)
+* **POSTMOOGLE_RELAY_PORT** - SMTP port of relay host
+* **POSTMOOGLE_RELAY_USERNAME** - Username of relay host
+* **POSTMOOGLE_RELAY_PASSWORD** - Password of relay host
 
 You can find default values in [config/defaults.go](config/defaults.go)
 

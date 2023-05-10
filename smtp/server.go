@@ -2,13 +2,10 @@ package smtp
 
 import (
 	"context"
-	"io"
-	"strings"
 
 	"github.com/emersion/go-smtp"
 	"github.com/getsentry/sentry-go"
 	"gitlab.com/etke.cc/go/logger"
-	"gitlab.com/etke.cc/go/trysmtp"
 
 	"gitlab.com/etke.cc/postmoogle/email"
 )
@@ -29,9 +26,10 @@ var (
 )
 
 type mailServer struct {
-	bot     matrixbot
-	log     *logger.Logger
-	domains []string
+	bot        matrixbot
+	log        *logger.Logger
+	domains    []string
+	mailSender MailSender
 }
 
 // Login used for outgoing mail submissions only (when you use postmoogle as smtp server in your scripts)
@@ -91,33 +89,7 @@ func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, 
 
 // SendEmail to external mail server
 func (m *mailServer) SendEmail(from, to, data string) error {
-	m.log.Debug("Sending email from %s to %s", from, to)
-	conn, err := trysmtp.Connect(from, to)
-	if conn == nil {
-		m.log.Error("cannot connect to SMTP server of %s: %v", to, err)
-		return err
-	}
-	if err != nil {
-		m.log.Warn("connection to the SMTP server of %s returned the following non-fatal error(-s): %v", err)
-	}
-	defer conn.Close()
-
-	var w io.WriteCloser
-	w, err = conn.Data()
-	if err != nil {
-		m.log.Error("cannot send DATA command: %v", err)
-		return err
-	}
-	defer w.Close()
-	m.log.Debug("sending DATA:\n%s", data)
-	_, err = strings.NewReader(data).WriteTo(w)
-	if err != nil {
-		m.log.Debug("cannot write DATA: %v", err)
-		return err
-	}
-
-	m.log.Debug("email has been sent")
-	return nil
+	return m.mailSender.Send(from, to, data)
 }
 
 // ReceiveEmail - incoming mail into matrix room

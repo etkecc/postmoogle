@@ -29,6 +29,7 @@ type Config struct {
 	MaxSize  int
 	Bot      matrixbot
 	Callers  []Caller
+	Relay    RelayConfig
 }
 
 type TLSConfig struct {
@@ -38,6 +39,13 @@ type TLSConfig struct {
 	Keys     []string
 	Port     string
 	Mu       sync.Mutex
+}
+
+type RelayConfig struct {
+	Host     string
+	Port     string
+	Usename  string
+	Password string
 }
 
 type Manager struct {
@@ -71,10 +79,14 @@ type Caller interface {
 // NewManager creates new SMTP server manager
 func NewManager(cfg *Config) *Manager {
 	log := logger.New("smtp.", cfg.LogLevel)
+
+	smtpClient := newClient(&cfg.Relay, log)
+
 	mailsrv := &mailServer{
-		log:     log,
-		bot:     cfg.Bot,
-		domains: cfg.Domains,
+		log:        log,
+		bot:        cfg.Bot,
+		domains:    cfg.Domains,
+		mailSender: smtpClient,
 	}
 	for _, caller := range cfg.Callers {
 		caller.SetSendmail(mailsrv.SendEmail)

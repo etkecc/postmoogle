@@ -143,6 +143,12 @@ func initSMTP(cfg *config.Config) {
 		MaxSize:     cfg.MaxSize,
 		Bot:         mxb,
 		Callers:     []smtp.Caller{mxb, q},
+		Relay: smtp.RelayConfig{
+			Host:     cfg.Relay.Host,
+			Port:     cfg.Relay.Port,
+			Usename:  cfg.Relay.Username,
+			Password: cfg.Relay.Password,
+		},
 	})
 }
 
