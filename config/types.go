@@ -41,6 +41,8 @@ type Config struct {
 
 	// Monitoring config
 	Monitoring Monitoring
+
+	Relay Relay
 }
 
 // DB config
@@ -71,4 +73,12 @@ type Monitoring struct {
 type Mailboxes struct {
 	Reserved   []string
 	Activation string
+}
+
+// Relay config
+type Relay struct {
+	Host     string
+	Port     string
+	Username string
+	Password string
 }

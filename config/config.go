@@ -46,6 +46,12 @@ func New() *Config {
 			DSN:     env.String("db.dsn", defaultConfig.DB.DSN),
 			Dialect: env.String("db.dialect", defaultConfig.DB.Dialect),
 		},
+		Relay: Relay{
+			Host:     env.String("relay.host", defaultConfig.Relay.Host),
+			Port:     env.String("relay.port", defaultConfig.Relay.Port),
+			Username: env.String("relay.username", defaultConfig.Relay.Username),
+			Password: env.String("relay.password", defaultConfig.Relay.Password),
+		},
 	}
 
 	return cfg
