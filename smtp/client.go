@@ -6,7 +6,7 @@ import (
 	"net/smtp"
 	"strings"
 
-	"gitlab.com/etke.cc/go/logger"
+	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/go/trysmtp"
 )
 
@@ -17,10 +17,10 @@ type MailSender interface {
 // SMTP client
 type Client struct {
 	config *RelayConfig
-	log    *logger.Logger
+	log    *zerolog.Logger
 }
 
-func newClient(cfg *RelayConfig, log *logger.Logger) *Client {
+func newClient(cfg *RelayConfig, log *zerolog.Logger) *Client {
 	return &Client{
 		config: cfg,
 		log:    log,
@@ -29,7 +29,7 @@ func newClient(cfg *RelayConfig, log *logger.Logger) *Client {
 
 // Send email
 func (c Client) Send(from string, to string, data string) error {
-	c.log.Debug("Sending email from %s to %s", from, to)
+	c.log.Debug().Str("from", from).Str("to", to).Msg("sending email")
 
 	var conn *smtp.Client
 	var err error
@@ -40,29 +40,29 @@ func (c Client) Send(from string, to string, data string) error {
 	}
 
 	if conn == nil {
-		c.log.Error("cannot connect to SMTP server of %s: %v", to, err)
+		c.log.Error().Err(err).Str("server_of", to).Msg("cannot connect to SMTP server")
 		return err
 	}
 	if err != nil {
-		c.log.Warn("connection to the SMTP server of %s returned the following non-fatal error(-s): %v", err)
+		c.log.Warn().Err(err).Str("server_of", to).Msg("connection to the SMTP server returned non-fatal error(-s)")
 	}
 	defer conn.Close()
 
 	var w io.WriteCloser
 	w, err = conn.Data()
 	if err != nil {
-		c.log.Error("cannot send DATA command: %v", err)
+		c.log.Error().Err(err).Msg("cannot send DATA command")
 		return err
 	}
 	defer w.Close()
-	c.log.Debug("sending DATA:\n%s", data)
+	c.log.Debug().Str("DATA", data).Msg("sending command")
 	_, err = strings.NewReader(data).WriteTo(w)
 	if err != nil {
-		c.log.Debug("cannot write DATA: %v", err)
+		c.log.Error().Err(err).Msg("cannot write DATA")
 		return err
 	}
 
-	c.log.Debug("email has been sent")
+	c.log.Debug().Msg("email has been sent")
 	return nil
 }
 

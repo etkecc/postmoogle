@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/getsentry/sentry-go"
-	"gitlab.com/etke.cc/go/logger"
+	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
@@ -32,12 +32,13 @@ type Bot struct {
 	allowedUsers            []*regexp.Regexp
 	allowedAdmins           []*regexp.Regexp
 	adminRooms              []id.RoomID
+	ignoreBefore            int64 // mautrix 0.15.x migration
 	commands                commandList
 	rooms                   sync.Map
 	proxies                 []string
 	sendmail                func(string, string, string) error
 	cfg                     *config.Manager
-	log                     *logger.Logger
+	log                     *zerolog.Logger
 	lp                      *linkpearl.Linkpearl
 	mu                      utils.Mutex
 	q                       *queue.Queue
@@ -48,7 +49,7 @@ type Bot struct {
 func New(
 	q *queue.Queue,
 	lp *linkpearl.Linkpearl,
-	log *logger.Logger,
+	log *zerolog.Logger,
 	cfg *config.Manager,
 	proxies []string,
 	prefix string,
@@ -92,12 +93,9 @@ func New(
 
 // Error message to the log and matrix room
 func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args ...interface{}) {
-	b.log.Error(message, args...)
 	err := fmt.Errorf(message, args...)
+	b.log.Error().Err(err).Msg("something is wrong")
 
-	if hub := sentry.GetHubFromContext(ctx); hub != nil {
-		sentry.GetHubFromContext(ctx).CaptureException(err)
-	}
 	if roomID != "" {
 		b.SendError(ctx, roomID, err.Error())
 	}
@@ -120,15 +118,16 @@ func (b *Bot) SendNotice(ctx context.Context, roomID id.RoomID, message string) 
 
 // Start performs matrix /sync
 func (b *Bot) Start(statusMsg string) error {
-	if err := b.migrate(); err != nil {
+	if err := b.migrateMautrix015(); err != nil {
 		return err
 	}
+
 	if err := b.syncRooms(); err != nil {
 		return err
 	}
 
 	b.initSync()
-	b.log.Info("Postmoogle has been started")
+	b.log.Info().Msg("Postmoogle has been started")
 	return b.lp.Start(statusMsg)
 }
 
@@ -136,7 +135,7 @@ func (b *Bot) Start(statusMsg string) error {
 func (b *Bot) Stop() {
 	err := b.lp.GetClient().SetPresence(event.PresenceOffline)
 	if err != nil {
-		b.log.Error("cannot set presence = offline: %v", err)
+		b.log.Error().Err(err).Msg("cannot set presence = offline")
 	}
 	b.lp.GetClient().StopSync()
 }

@@ -9,8 +9,8 @@ import (
 
 	"github.com/emersion/go-smtp"
 	"github.com/fsnotify/fsnotify"
+	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/go/fswatcher"
-	"gitlab.com/etke.cc/go/logger"
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/email"
@@ -25,11 +25,11 @@ type Config struct {
 	TLSPort     string
 	TLSRequired bool
 
-	LogLevel string
-	MaxSize  int
-	Bot      matrixbot
-	Callers  []Caller
-	Relay    *RelayConfig
+	Logger  *zerolog.Logger
+	MaxSize int
+	Bot     matrixbot
+	Callers []Caller
+	Relay   *RelayConfig
 }
 
 type TLSConfig struct {
@@ -49,7 +49,7 @@ type RelayConfig struct {
 }
 
 type Manager struct {
-	log  *logger.Logger
+	log  *zerolog.Logger
 	bot  matrixbot
 	fsw  *fswatcher.Watcher
 	smtp *smtp.Server
@@ -78,19 +78,18 @@ type Caller interface {
 
 // NewManager creates new SMTP server manager
 func NewManager(cfg *Config) *Manager {
-	log := logger.New("smtp.", cfg.LogLevel)
 	mailsrv := &mailServer{
-		log:     log,
+		log:     cfg.Logger,
 		bot:     cfg.Bot,
 		domains: cfg.Domains,
-		sender:  newClient(cfg.Relay, log),
+		sender:  newClient(cfg.Relay, cfg.Logger),
 	}
 	for _, caller := range cfg.Callers {
 		caller.SetSendmail(mailsrv.sender.Send)
 	}
 
 	s := smtp.NewServer(mailsrv)
-	s.ErrorLog = loggerWrapper{func(s string, i ...interface{}) { log.Error(s, i...) }}
+	s.ErrorLog = loggerWrapper{func(s string, i ...interface{}) { cfg.Logger.Error().Msgf(s, i...) }}
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = cfg.MaxSize * 1024 * 1024
@@ -101,19 +100,20 @@ func NewManager(cfg *Config) *Manager {
 	if len(cfg.Domains) == 1 {
 		s.Domain = cfg.Domains[0]
 	}
-	if log.GetLevel() == "INFO" || log.GetLevel() == "DEBUG" || log.GetLevel() == "TRACE" {
-		s.Debug = loggerWriter{func(s string) { log.Info(s) }}
+	loglevel := cfg.Logger.GetLevel()
+	if loglevel == zerolog.InfoLevel || loglevel == zerolog.DebugLevel || loglevel == zerolog.TraceLevel {
+		s.Debug = loggerWriter{func(s string) { cfg.Logger.Info().Msg(s) }}
 	}
 
 	fsw, err := fswatcher.New(append(cfg.TLSCerts, cfg.TLSKeys...), 0)
 	if err != nil {
-		log.Error("cannot start FS watcher: %v", err)
+		cfg.Logger.Error().Err(err).Msg("cannot start FS watcher")
 	}
 
 	m := &Manager{
 		smtp: s,
 		bot:  cfg.Bot,
-		log:  log,
+		log:  cfg.Logger,
 		fsw:  fsw,
 		port: cfg.Port,
 		tls: TLSConfig{
@@ -156,32 +156,32 @@ func (m *Manager) Start() error {
 func (m *Manager) Stop() {
 	err := m.fsw.Stop()
 	if err != nil {
-		m.log.Error("cannot stop filesystem watcher properly: %v", err)
+		m.log.Error().Err(err).Msg("cannot stop filesystem watcher properly")
 	}
 
 	err = m.smtp.Close()
 	if err != nil {
-		m.log.Error("cannot stop SMTP server properly: %v", err)
+		m.log.Error().Err(err).Msg("cannot stop SMTP server properly")
 	}
 
-	m.log.Info("SMTP server has been stopped")
+	m.log.Info().Msg("SMTP server has been stopped")
 }
 
 func (m *Manager) listen(port string, tlsConfig *tls.Config) {
 	lwrapper, err := NewListener(port, tlsConfig, m.bot.IsBanned, m.log)
 	if err != nil {
-		m.log.Error("cannot start listener on %s: %v", port, err)
+		m.log.Error().Err(err).Str("port", port).Msg("cannot start listener")
 		m.errs <- err
 		return
 	}
 	if tlsConfig != nil {
 		m.tls.Listener = lwrapper
 	}
-	m.log.Info("Starting SMTP server on port %s", port)
+	m.log.Info().Str("port", port).Msg("Starting SMTP server")
 
 	err = m.smtp.Serve(lwrapper)
 	if err != nil {
-		m.log.Error("cannot start SMTP server on %s: %v", port, err)
+		m.log.Error().Str("port", port).Err(err).Msg("cannot start SMTP server")
 		m.errs <- err
 		close(m.errs)
 	}
@@ -189,9 +189,9 @@ func (m *Manager) listen(port string, tlsConfig *tls.Config) {
 
 // loadTLSConfig returns true if certs were loaded and false if not
 func (m *Manager) loadTLSConfig() bool {
-	m.log.Info("(re)loading TLS config")
+	m.log.Info().Msg("(re)loading TLS config")
 	if len(m.tls.Certs) == 0 || len(m.tls.Keys) == 0 {
-		m.log.Warn("SSL certificates are not provided")
+		m.log.Warn().Msg("SSL certificates are not provided")
 		return false
 	}
 
@@ -199,7 +199,7 @@ func (m *Manager) loadTLSConfig() bool {
 	for i, path := range m.tls.Certs {
 		tlsCert, err := tls.LoadX509KeyPair(path, m.tls.Keys[i])
 		if err != nil {
-			m.log.Error("cannot load SSL certificate: %v", err)
+			m.log.Error().Err(err).Msg("cannot load SSL certificate")
 			continue
 		}
 		certificates = append(certificates, tlsCert)

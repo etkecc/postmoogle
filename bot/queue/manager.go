@@ -1,7 +1,7 @@
 package queue
 
 import (
-	"gitlab.com/etke.cc/go/logger"
+	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/linkpearl"
 
 	"gitlab.com/etke.cc/postmoogle/bot/config"
@@ -10,8 +10,8 @@ import (
 
 const (
 	acQueueKey          = "cc.etke.postmoogle.mailqueue"
-	defaultQueueBatch   = 1
-	defaultQueueRetries = 3
+	defaultQueueBatch   = 10
+	defaultQueueRetries = 100
 )
 
 // Queue manager
@@ -19,12 +19,12 @@ type Queue struct {
 	mu       utils.Mutex
 	lp       *linkpearl.Linkpearl
 	cfg      *config.Manager
-	log      *logger.Logger
+	log      *zerolog.Logger
 	sendmail func(string, string, string) error
 }
 
 // New queue
-func New(lp *linkpearl.Linkpearl, cfg *config.Manager, log *logger.Logger) *Queue {
+func New(lp *linkpearl.Linkpearl, cfg *config.Manager, log *zerolog.Logger) *Queue {
 	return &Queue{
 		mu:  utils.Mutex{},
 		lp:  lp,
@@ -40,7 +40,7 @@ func (q *Queue) SetSendmail(function func(string, string, string) error) {
 
 // Process queue
 func (q *Queue) Process() {
-	q.log.Debug("staring queue processing...")
+	q.log.Debug().Msg("staring queue processing...")
 	cfg := q.cfg.GetBot()
 
 	batchSize := cfg.QueueBatch()
@@ -57,23 +57,23 @@ func (q *Queue) Process() {
 	defer q.mu.Unlock(acQueueKey)
 	index, err := q.lp.GetAccountData(acQueueKey)
 	if err != nil {
-		q.log.Error("cannot get queue index: %v", err)
+		q.log.Error().Err(err).Msg("cannot get queue index")
 	}
 
 	i := 0
 	for id, itemkey := range index {
 		if i > batchSize {
-			q.log.Debug("finished re-deliveries from queue")
+			q.log.Debug().Msg("finished re-deliveries from queue")
 			return
 		}
 		if dequeue := q.try(itemkey, maxRetries); dequeue {
-			q.log.Info("email %q has been delivered", id)
+			q.log.Info().Str("id", id).Msg("email has been delivered")
 			err = q.Remove(id)
 			if err != nil {
-				q.log.Error("cannot dequeue email %q: %v", id, err)
+				q.log.Error().Err(err).Str("id", id).Msg("cannot dequeue email")
 			}
 		}
 		i++
 	}
-	q.log.Debug("ended queue processing")
+	q.log.Debug().Msg("ended queue processing")
 }

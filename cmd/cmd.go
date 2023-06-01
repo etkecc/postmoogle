@@ -2,20 +2,21 @@ package main
 
 import (
 	"database/sql"
+	"io"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
+	zlogsentry "github.com/archdx/zerolog-sentry"
 	"github.com/getsentry/sentry-go"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/mileusna/crontab"
+	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/go/healthchecks"
-	"gitlab.com/etke.cc/go/logger"
 	"gitlab.com/etke.cc/linkpearl"
-	lpcfg "gitlab.com/etke.cc/linkpearl/config"
 
 	"gitlab.com/etke.cc/postmoogle/bot"
 	mxconfig "gitlab.com/etke.cc/postmoogle/bot/config"
@@ -32,24 +33,23 @@ var (
 	mxb   *bot.Bot
 	cron  *crontab.Crontab
 	smtpm *smtp.Manager
-	log   *logger.Logger
+	log   zerolog.Logger
 )
 
 func main() {
 	quit := make(chan struct{})
 
 	cfg := config.New()
-	log = logger.New("postmoogle.", cfg.LogLevel)
-	utils.SetLogger(log)
+	initLog(cfg)
+	utils.SetLogger(&log)
 	utils.SetDomains(cfg.Domains)
 
-	log.Info("#############################")
-	log.Info("Postmoogle")
-	log.Info("Matrix: true")
-	log.Info("#############################")
+	log.Info().Msg("#############################")
+	log.Info().Msg("Postmoogle")
+	log.Info().Msg("Matrix: true")
+	log.Info().Msg("#############################")
 
-	log.Debug("starting internal components...")
-	initSentry(cfg)
+	log.Debug().Msg("starting internal components...")
 	initHealthchecks(cfg)
 	initMatrix(cfg)
 	initSMTP(cfg)
@@ -61,21 +61,27 @@ func main() {
 
 	if err := smtpm.Start(); err != nil {
 		//nolint:gocritic
-		log.Fatal("SMTP server crashed: %v", err)
+		log.Fatal().Err(err).Msg("SMTP server crashed")
 	}
 
 	<-quit
 }
 
-func initSentry(cfg *config.Config) {
-	err := sentry.Init(sentry.ClientOptions{
-		Dsn:              cfg.Monitoring.SentryDSN,
-		AttachStacktrace: true,
-		TracesSampleRate: float64(cfg.Monitoring.SentrySampleRate) / 100,
-	})
+func initLog(cfg *config.Config) {
+	loglevel, err := zerolog.ParseLevel(cfg.LogLevel)
 	if err != nil {
-		log.Fatal("cannot initialize sentry: %v", err)
+		loglevel = zerolog.InfoLevel
 	}
+	zerolog.SetGlobalLevel(loglevel)
+	var w io.Writer
+	consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout, PartsExclude: []string{zerolog.TimestampFieldName}}
+	sentryWriter, err := zlogsentry.New(cfg.Monitoring.SentryDSN)
+	if err == nil {
+		w = io.MultiWriter(sentryWriter, consoleWriter)
+	} else {
+		w = consoleWriter
+	}
+	log = zerolog.New(w).With().Timestamp().Caller().Logger()
 }
 
 func initHealthchecks(cfg *config.Config) {
@@ -83,7 +89,7 @@ func initHealthchecks(cfg *config.Config) {
 		return
 	}
 	hc = healthchecks.New(cfg.Monitoring.HealchecksUUID, func(operation string, err error) {
-		log.Error("healthchecks operation %q failed: %v", operation, err)
+		log.Error().Err(err).Str("operation", operation).Msg("healthchecks operation failed")
 	})
 	hc.Start(strings.NewReader("starting postmoogle"))
 	go hc.Auto(cfg.Monitoring.HealthechsDuration)
@@ -92,43 +98,30 @@ func initHealthchecks(cfg *config.Config) {
 func initMatrix(cfg *config.Config) {
 	db, err := sql.Open(cfg.DB.Dialect, cfg.DB.DSN)
 	if err != nil {
-		log.Fatal("cannot initialize SQL database: %v", err)
+		log.Fatal().Err(err).Msg("cannot initialize SQL database")
 	}
-	mxlog := logger.New("matrix.", cfg.LogLevel)
-	cfglog := logger.New("config.", cfg.LogLevel)
-	qlog := logger.New("queue.", cfg.LogLevel)
 
-	lp, err := linkpearl.New(&lpcfg.Config{
+	lp, err := linkpearl.New(&linkpearl.Config{
 		Homeserver:        cfg.Homeserver,
 		Login:             cfg.Login,
 		Password:          cfg.Password,
 		DB:                db,
 		Dialect:           cfg.DB.Dialect,
-		NoEncryption:      cfg.NoEncryption,
 		AccountDataSecret: cfg.DataSecret,
-		AccountDataLogReplace: map[string]string{
-			"password": "<redacted>",
-			"dkim.pem": "<redacted>",
-			"dkim.pub": "<redacted>",
-		},
-		LPLogger:     mxlog,
-		APILogger:    logger.New("api.", "INFO"),
-		StoreLogger:  logger.New("store.", "INFO"),
-		CryptoLogger: logger.New("olm.", "INFO"),
+		Logger:            log,
 	})
 	if err != nil {
 		// nolint // Fatal = panic, not os.Exit()
-		log.Fatal("cannot initialize matrix bot: %v", err)
+		log.Fatal().Err(err).Msg("cannot initialize matrix bot")
 	}
 
-	mxc = mxconfig.New(lp, cfglog)
-	q = queue.New(lp, mxc, qlog)
-	mxb, err = bot.New(q, lp, mxlog, mxc, cfg.Proxies, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
+	mxc = mxconfig.New(lp, &log)
+	q = queue.New(lp, mxc, &log)
+	mxb, err = bot.New(q, lp, &log, mxc, cfg.Proxies, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
 	if err != nil {
-		// nolint // Fatal = panic, not os.Exit()
-		log.Fatal("cannot start matrix bot: %v", err)
+		log.Panic().Err(err).Msg("cannot start matrix bot")
 	}
-	log.Debug("bot has been created")
+	log.Debug().Msg("bot has been created")
 }
 
 func initSMTP(cfg *config.Config) {
@@ -139,7 +132,7 @@ func initSMTP(cfg *config.Config) {
 		TLSKeys:     cfg.TLS.Keys,
 		TLSPort:     cfg.TLS.Port,
 		TLSRequired: cfg.TLS.Required,
-		LogLevel:    cfg.LogLevel,
+		Logger:      &log,
 		MaxSize:     cfg.MaxSize,
 		Bot:         mxb,
 		Callers:     []smtp.Caller{mxb, q},
@@ -157,12 +150,12 @@ func initCron() {
 
 	err := cron.AddJob("* * * * *", q.Process)
 	if err != nil {
-		log.Error("cannot start queue processing cronjob: %v", err)
+		log.Error().Err(err).Msg("cannot start queue processing cronjob")
 	}
 
 	err = cron.AddJob("*/5 * * * *", mxb.SyncRooms)
 	if err != nil {
-		log.Error("cannot start sync rooms cronjob: %v", err)
+		log.Error().Err(err).Msg("cannot start sync rooms cronjob")
 	}
 }
 
@@ -179,16 +172,16 @@ func initShutdown(quit chan struct{}) {
 }
 
 func startBot(statusMsg string) {
-	log.Debug("starting matrix bot: %s...", statusMsg)
+	log.Debug().Str("status message", statusMsg).Msg("starting matrix bot...")
 	err := mxb.Start(statusMsg)
 	if err != nil {
 		//nolint:gocritic
-		log.Fatal("cannot start the bot: %v", err)
+		log.Panic().Err(err).Msg("cannot start the bot")
 	}
 }
 
 func shutdown() {
-	log.Info("Shutting down...")
+	log.Info().Msg("Shutting down...")
 	cron.Shutdown()
 	smtpm.Stop()
 	mxb.Stop()
@@ -198,7 +191,7 @@ func shutdown() {
 	}
 
 	sentry.Flush(5 * time.Second)
-	log.Info("Postmoogle has been stopped")
+	log.Info().Msg("Postmoogle has been stopped")
 	os.Exit(0)
 }
 

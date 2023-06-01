@@ -295,7 +295,7 @@ func (b *Bot) handle(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	err := b.lp.GetClient().MarkRead(evt.RoomID, evt.ID)
 	if err != nil {
-		b.log.Error("cannot send read receipt: %v", err)
+		b.log.Error().Err(err).Msg("cannot send read receipt")
 	}
 
 	content := evt.Content.AsMessage()
@@ -322,7 +322,7 @@ func (b *Bot) handle(ctx context.Context) {
 	}
 	_, err = b.lp.GetClient().UserTyping(evt.RoomID, true, 30*time.Second)
 	if err != nil {
-		b.log.Error("cannot send typing notification: %v", err)
+		b.log.Error().Err(err).Msg("cannot send typing notification")
 	}
 	defer b.lp.GetClient().UserTyping(evt.RoomID, false, 30*time.Second) //nolint:errcheck
 
@@ -406,7 +406,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 
 	cfg, serr := b.cfg.GetRoom(evt.RoomID)
 	if serr != nil {
-		b.log.Error("cannot retrieve settings: %v", serr)
+		b.log.Error().Err(serr).Msg("cannot retrieve settings")
 	}
 
 	var msg strings.Builder
@@ -517,7 +517,7 @@ func (b *Bot) runSend(ctx context.Context) {
 		}
 		queued, err := b.Sendmail(evt.ID, from, to, data)
 		if queued {
-			b.log.Error("cannot send email: %v", err)
+			b.log.Error().Err(err).Msg("cannot send email")
 			b.saveSentMetadata(ctx, queued, evt.ID, recipients, eml, cfg)
 			continue
 		}

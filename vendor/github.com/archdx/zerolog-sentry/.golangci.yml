@@ -1,0 +1,20 @@
+linters:
+  enable-all: false
+  enable:
+    - unparam
+    - whitespace
+    - unconvert
+    - bodyclose
+    - gofmt
+    - nakedret
+    - prealloc
+    - rowserrcheck
+    - unconvert
+    - gocritic
+    - godox
+    - errcheck
+    - ineffassign
+
+linters-settings:
+  govet:
+    check-shadowing: true

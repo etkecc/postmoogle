@@ -72,7 +72,7 @@ func ParseContent(evt *event.Event, eventType event.Type) {
 	}
 	perr := evt.Content.ParseRaw(eventType)
 	if perr != nil {
-		log.Error("cannot parse event content: %v", perr)
+		log.Error().Err(perr).Msg("cannot parse event content")
 	}
 }
 

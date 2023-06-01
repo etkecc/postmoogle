@@ -105,11 +105,11 @@ func (b *Bot) IsGreylisted(addr net.Addr) bool {
 	greylist := b.cfg.GetGreylist()
 	greylistedAt, ok := greylist.Get(addr)
 	if !ok {
-		b.log.Debug("greylisting %s", addr.String())
+		b.log.Debug().Str("addr", addr.String()).Msg("greylisting")
 		greylist.Add(addr)
 		err := b.cfg.SetGreylist(greylist)
 		if err != nil {
-			b.log.Error("cannot update greylist with %s: %v", addr.String(), err)
+			b.log.Error().Err(err).Str("addr", addr.String()).Msg("cannot update greylist")
 		}
 		return true
 	}
@@ -128,7 +128,7 @@ func (b *Bot) IsTrusted(addr net.Addr) bool {
 	ip := utils.AddrIP(addr)
 	for _, proxy := range b.proxies {
 		if ip == proxy {
-			b.log.Debug("address %s is trusted", ip)
+			b.log.Debug().Str("addr", ip).Msg("address is trusted")
 			return true
 		}
 	}
@@ -144,12 +144,12 @@ func (b *Bot) Ban(addr net.Addr) {
 	if b.IsTrusted(addr) {
 		return
 	}
-	b.log.Debug("attempting to ban %s", addr.String())
+	b.log.Debug().Str("addr", addr.String()).Msg("attempting to ban")
 	banlist := b.cfg.GetBanlist()
 	banlist.Add(addr)
 	err := b.cfg.SetBanlist(banlist)
 	if err != nil {
-		b.log.Error("cannot update banlist with %s: %v", addr.String(), err)
+		b.log.Error().Err(err).Str("addr", addr.String()).Msg("cannot update banlist")
 	}
 }
 
@@ -172,18 +172,18 @@ func (b *Bot) AllowAuth(email, password string) (id.RoomID, bool) {
 	}
 	cfg, err := b.cfg.GetRoom(roomID)
 	if err != nil {
-		b.log.Error("failed to retrieve settings: %v", err)
+		b.log.Error().Err(err).Msg("failed to retrieve settings")
 		return "", false
 	}
 
 	if cfg.NoSend() {
-		b.log.Warn("trying to send email from %q (%q), but it's receive-only", email, roomID)
+		b.log.Warn().Str("email", email).Str("roomID", roomID.String()).Msg("trying to send email, but room is receive-only")
 		return "", false
 	}
 
 	allow, err := argon2pw.CompareHashWithPassword(cfg.Password(), password)
 	if err != nil {
-		b.log.Warn("Password for %s is not valid: %v", email, err)
+		b.log.Warn().Err(err).Str("email", email).Msg("Password is not valid")
 	}
 	return roomID, allow
 }
