@@ -5,7 +5,7 @@ import (
 
 	"github.com/emersion/go-smtp"
 	"github.com/getsentry/sentry-go"
-	"gitlab.com/etke.cc/go/logger"
+	"github.com/rs/zerolog"
 
 	"gitlab.com/etke.cc/postmoogle/email"
 )
@@ -27,27 +27,27 @@ var (
 
 type mailServer struct {
 	bot     matrixbot
-	log     *logger.Logger
+	log     *zerolog.Logger
 	domains []string
 	sender  MailSender
 }
 
 // Login used for outgoing mail submissions only (when you use postmoogle as smtp server in your scripts)
 func (m *mailServer) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
-	m.log.Debug("Login state=%+v username=%+v", state, username)
+	m.log.Debug().Str("username", username).Any("state", state).Msg("Login")
 	if m.bot.IsBanned(state.RemoteAddr) {
 		return nil, ErrBanned
 	}
 
 	if !email.AddressValid(username) {
-		m.log.Debug("address %s is invalid", username)
+		m.log.Debug().Str("address", username).Msg("address is invalid")
 		m.bot.Ban(state.RemoteAddr)
 		return nil, ErrBanned
 	}
 
 	roomID, allow := m.bot.AllowAuth(username, password)
 	if !allow {
-		m.log.Debug("username=%s or password=<redacted> is invalid", username)
+		m.log.Debug().Str("username", username).Msg("username or password is invalid")
 		m.bot.Ban(state.RemoteAddr)
 		return nil, ErrBanned
 	}
@@ -67,7 +67,7 @@ func (m *mailServer) Login(state *smtp.ConnectionState, username, password strin
 
 // AnonymousLogin used for incoming mail submissions only
 func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
-	m.log.Debug("AnonymousLogin state=%+v", state)
+	m.log.Debug().Any("state", state).Msg("AnonymousLogin")
 	if m.bot.IsBanned(state.RemoteAddr) {
 		return nil, ErrBanned
 	}

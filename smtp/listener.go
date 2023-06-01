@@ -5,12 +5,12 @@ import (
 	"net"
 	"sync"
 
-	"gitlab.com/etke.cc/go/logger"
+	"github.com/rs/zerolog"
 )
 
 // Listener that rejects connections from banned hosts
 type Listener struct {
-	log      *logger.Logger
+	log      *zerolog.Logger
 	done     chan struct{}
 	tls      *tls.Config
 	tlsMu    sync.Mutex
@@ -18,7 +18,7 @@ type Listener struct {
 	isBanned func(net.Addr) bool
 }
 
-func NewListener(port string, tlsConfig *tls.Config, isBanned func(net.Addr) bool, log *logger.Logger) (*Listener, error) {
+func NewListener(port string, tlsConfig *tls.Config, isBanned func(net.Addr) bool, log *zerolog.Logger) (*Listener, error) {
 	actual, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return nil, err
@@ -48,17 +48,17 @@ func (l *Listener) Accept() (net.Conn, error) {
 			case <-l.done:
 				return conn, err
 			default:
-				l.log.Warn("cannot accept connection: %v", err)
+				l.log.Warn().Err(err).Msg("cannot accept connection")
 				continue
 			}
 		}
 		if l.isBanned(conn.RemoteAddr()) {
 			conn.Close()
-			l.log.Info("rejected connection from %q (already banned)", conn.RemoteAddr())
+			l.log.Info().Str("addr", conn.RemoteAddr().String()).Msg("rejected connection (already banned)")
 			continue
 		}
 
-		l.log.Info("accepted connection from %q", conn.RemoteAddr())
+		l.log.Info().Str("addr", conn.RemoteAddr().String()).Msg("accepted connection")
 
 		if l.tls != nil {
 			return l.acceptTLS(conn)

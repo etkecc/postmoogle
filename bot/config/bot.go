@@ -13,15 +13,16 @@ const acBotKey = "cc.etke.postmoogle.config"
 
 // bot options keys
 const (
-	BotAdminRoom      = "adminroom"
-	BotUsers          = "users"
-	BotCatchAll       = "catch-all"
-	BotDKIMSignature  = "dkim.pub"
-	BotDKIMPrivateKey = "dkim.pem"
-	BotQueueBatch     = "queue:batch"
-	BotQueueRetries   = "queue:retries"
-	BotBanlistEnabled = "banlist:enabled"
-	BotGreylist       = "greylist"
+	BotAdminRoom           = "adminroom"
+	BotUsers               = "users"
+	BotCatchAll            = "catch-all"
+	BotDKIMSignature       = "dkim.pub"
+	BotDKIMPrivateKey      = "dkim.pem"
+	BotQueueBatch          = "queue:batch"
+	BotQueueRetries        = "queue:retries"
+	BotBanlistEnabled      = "banlist:enabled"
+	BotGreylist            = "greylist"
+	BotMautrix015Migration = "mautrix015migration"
 )
 
 // Bot map
@@ -35,6 +36,11 @@ func (s Bot) Get(key string) string {
 // Set option
 func (s Bot) Set(key, value string) {
 	s[strings.ToLower(strings.TrimSpace(key))] = value
+}
+
+// Mautrix015Migration option (timestamp)
+func (s Bot) Mautrix015Migration() int64 {
+	return utils.Int64(s.Get(BotMautrix015Migration))
 }
 
 // Users option

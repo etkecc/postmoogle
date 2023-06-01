@@ -22,17 +22,12 @@ func (b *Bot) initSync() {
 		func(_ mautrix.EventSource, evt *event.Event) {
 			go b.onMessage(evt)
 		})
-	b.lp.OnEventType(
-		event.EventEncrypted,
-		func(_ mautrix.EventSource, evt *event.Event) {
-			go b.onEncryptedMessage(evt)
-		})
 }
 
 // joinPermit is called by linkpearl when processing "invite" events and deciding if rooms should be auto-joined or not
 func (b *Bot) joinPermit(evt *event.Event) bool {
 	if !mxidwc.Match(evt.Sender.String(), b.allowedUsers) {
-		b.log.Debug("Rejecting room invitation from unallowed user: %s", evt.Sender)
+		b.log.Debug().Str("userID", evt.Sender.String()).Msg("Rejecting room invitation from unallowed user")
 		return false
 	}
 
@@ -40,6 +35,11 @@ func (b *Bot) joinPermit(evt *event.Event) bool {
 }
 
 func (b *Bot) onMembership(evt *event.Event) {
+	// mautrix 0.15.x migration
+	if b.ignoreBefore >= evt.Timestamp {
+		return
+	}
+
 	ctx := newContext(evt)
 
 	evtType := evt.Content.AsMember().Membership
@@ -60,28 +60,12 @@ func (b *Bot) onMessage(evt *event.Event) {
 	if evt.Sender == b.lp.GetClient().UserID {
 		return
 	}
+	// mautrix 0.15.x migration
+	if b.ignoreBefore >= evt.Timestamp {
+		return
+	}
+
 	ctx := newContext(evt)
-	b.handle(ctx)
-}
-
-func (b *Bot) onEncryptedMessage(evt *event.Event) {
-	// ignore own messages
-	if evt.Sender == b.lp.GetClient().UserID {
-		return
-	}
-	// ignore encrypted events in noecryption mode
-	if b.lp.GetMachine() == nil {
-		return
-	}
-	ctx := newContext(evt)
-
-	decrypted, err := b.lp.GetMachine().DecryptMegolmEvent(evt)
-	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot decrypt a message: %v", err)
-		return
-	}
-	ctx = eventToContext(ctx, decrypted)
-
 	b.handle(ctx)
 }
 
@@ -92,7 +76,7 @@ func (b *Bot) onBotJoin(ctx context.Context) {
 	// as described in this bug report: https://github.com/matrix-org/synapse/issues/9768
 	_, ok := b.handledMembershipEvents.LoadOrStore(evt.ID, true)
 	if ok {
-		b.log.Info("Suppressing already handled event %s", evt.ID)
+		b.log.Info().Str("eventID", evt.ID.String()).Msg("Suppressing already handled event")
 		return
 	}
 
@@ -104,13 +88,18 @@ func (b *Bot) onLeave(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	_, ok := b.handledMembershipEvents.LoadOrStore(evt.ID, true)
 	if ok {
-		b.log.Info("Suppressing already handled event %s", evt.ID)
+		b.log.Info().Str("eventID", evt.ID.String()).Msg("Suppressing already handled event")
 		return
 	}
-	members := b.lp.GetStore().GetRoomMembers(evt.RoomID)
+	members, err := b.lp.GetClient().StateStore.GetRoomJoinedOrInvitedMembers(evt.RoomID)
+	if err != nil {
+		b.log.Error().Err(err).Str("roomID", evt.RoomID.String()).Msg("cannot get joined or invited members")
+		return
+	}
+
 	count := len(members)
 	if count == 1 && members[0] == b.lp.GetClient().UserID {
-		b.log.Info("no more users left in the %s room", evt.RoomID)
+		b.log.Info().Str("roomID", evt.RoomID.String()).Msg("no more users left in the room")
 		b.runStop(ctx)
 		_, err := b.lp.GetClient().LeaveRoom(evt.RoomID)
 		if err != nil {

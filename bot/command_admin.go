@@ -37,7 +37,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		}
 		config, err := b.cfg.GetRoom(roomID)
 		if err != nil {
-			b.log.Error("cannot retrieve settings: %v", err)
+			b.log.Error().Err(err).Msg("cannot retrieve settings")
 		}
 
 		mailboxes[mailbox] = config

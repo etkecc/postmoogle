@@ -12,7 +12,7 @@ import (
 	"github.com/emersion/go-smtp"
 	"github.com/getsentry/sentry-go"
 	"github.com/jhillyerd/enmime"
-	"gitlab.com/etke.cc/go/logger"
+	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/go/validator"
 	"maunium.net/go/mautrix/id"
 
@@ -22,7 +22,7 @@ import (
 
 // incomingSession represents an SMTP-submission session receiving emails from remote servers
 type incomingSession struct {
-	log          *logger.Logger
+	log          *zerolog.Logger
 	getRoomID    func(string) (id.RoomID, bool)
 	getFilters   func(id.RoomID) email.IncomingFilteringOptions
 	receiveEmail func(context.Context, *email.Email) error
@@ -41,12 +41,12 @@ type incomingSession struct {
 func (s *incomingSession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
 	if !email.AddressValid(from) {
-		s.log.Debug("address %s is invalid", from)
+		s.log.Debug().Str("from", from).Msg("address is invalid")
 		s.ban(s.addr)
 		return ErrBanned
 	}
 	s.from = from
-	s.log.Debug("mail from %s, options: %+v", from, opts)
+	s.log.Debug().Str("from", from).Any("options", opts).Msg("incoming mail")
 	return nil
 }
 
@@ -62,18 +62,18 @@ func (s *incomingSession) Rcpt(to string) error {
 		}
 	}
 	if !domainok {
-		s.log.Debug("wrong domain of %s", to)
+		s.log.Debug().Str("to", to).Msg("wrong domain")
 		return ErrNoUser
 	}
 
 	var ok bool
 	s.roomID, ok = s.getRoomID(utils.Mailbox(to))
 	if !ok {
-		s.log.Debug("mapping for %s not found", to)
+		s.log.Debug().Str("to", to).Msg("mapping not found")
 		return ErrNoUser
 	}
 
-	s.log.Debug("mail to %s", to)
+	s.log.Debug().Str("to", to).Msg("mail")
 	return nil
 }
 
@@ -98,14 +98,14 @@ func (s *incomingSession) getAddr(envelope *enmime.Envelope) net.Addr {
 	port, _ = strconv.Atoi(portString) //nolint:errcheck
 
 	realAddr := &net.TCPAddr{IP: net.ParseIP(host), Port: port}
-	s.log.Info("real address: %s", realAddr.String())
+	s.log.Info().Str("addr", realAddr.String()).Msg("real address")
 	return realAddr
 }
 
 func (s *incomingSession) Data(r io.Reader) error {
 	data, err := io.ReadAll(r)
 	if err != nil {
-		s.log.Error("cannot read DATA: %v", err)
+		s.log.Error().Err(err).Msg("cannot read DATA")
 		return err
 	}
 	reader := bytes.NewReader(data)
@@ -131,12 +131,12 @@ func (s *incomingSession) Data(r io.Reader) error {
 	if validations.SpamcheckDKIM() {
 		results, verr := dkim.Verify(reader)
 		if verr != nil {
-			s.log.Error("cannot verify DKIM: %v", verr)
+			s.log.Error().Err(verr).Msg("cannot verify DKIM")
 			return verr
 		}
 		for _, result := range results {
 			if result.Err != nil {
-				s.log.Info("DKIM verification of %q failed: %v", result.Domain, result.Err)
+				s.log.Info().Str("domain", result.Domain).Err(result.Err).Msg("DKIM verification failed")
 				return result.Err
 			}
 		}
@@ -158,7 +158,7 @@ func (s *incomingSession) Logout() error { return nil }
 
 // outgoingSession represents an SMTP-submission session sending emails from external scripts, using postmoogle as SMTP server
 type outgoingSession struct {
-	log       *logger.Logger
+	log       *zerolog.Logger
 	sendmail  func(string, string, string) error
 	privkey   string
 	domains   []string
@@ -184,17 +184,17 @@ func (s *outgoingSession) Mail(from string, opts smtp.MailOptions) error {
 		}
 	}
 	if !domainok {
-		s.log.Debug("wrong domain of %s", from)
+		s.log.Debug().Str("from", from).Msg("wrong domain")
 		return ErrNoUser
 	}
 
 	roomID, ok := s.getRoomID(utils.Mailbox(from))
 	if !ok {
-		s.log.Debug("mapping for %s not found", from)
+		s.log.Debug().Str("from", from).Msg("mapping not found")
 		return ErrNoUser
 	}
 	if s.fromRoom != roomID {
-		s.log.Warn("sender from %q tries to impersonate %q", s.fromRoom, roomID)
+		s.log.Warn().Str("from_roomID", s.fromRoom.String()).Str("roomID", roomID.String()).Msg("sender from different room tries to impersonate another mailbox")
 		return ErrNoUser
 	}
 	return nil
@@ -204,7 +204,7 @@ func (s *outgoingSession) Rcpt(to string) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("to", to)
 	s.tos = append(s.tos, to)
 
-	s.log.Debug("mail to %s", to)
+	s.log.Debug().Str("to", to).Msg("mail")
 	return nil
 }
 
@@ -228,7 +228,7 @@ func (s *outgoingSession) Data(r io.Reader) error {
 func (s *outgoingSession) Reset()        {}
 func (s *outgoingSession) Logout() error { return nil }
 
-func validateIncoming(from, to string, senderAddr net.Addr, log *logger.Logger, options email.IncomingFilteringOptions) bool {
+func validateIncoming(from, to string, senderAddr net.Addr, log *zerolog.Logger, options email.IncomingFilteringOptions) bool {
 	var sender net.IP
 	switch netaddr := senderAddr.(type) {
 	case *net.TCPAddr:
@@ -244,7 +244,7 @@ func validateIncoming(from, to string, senderAddr net.Addr, log *logger.Logger, 
 		SPF:   options.SpamcheckSPF(),
 		SMTP:  options.SpamcheckSMTP(),
 	}
-	v := validator.New(options.Spamlist(), enforce, to, log)
+	v := validator.New(options.Spamlist(), enforce, to, &validatorLoggerWrapper{log: log})
 
 	return v.Email(from, sender)
 }

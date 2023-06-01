@@ -5,16 +5,16 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.com/etke.cc/go/logger"
+	"github.com/rs/zerolog"
 )
 
 var (
-	log     *logger.Logger
+	log     *zerolog.Logger
 	domains []string
 )
 
 // SetLogger for utils
-func SetLogger(loggerInstance *logger.Logger) {
+func SetLogger(loggerInstance *zerolog.Logger) {
 	log = loggerInstance
 }
 
@@ -75,6 +75,19 @@ func Int(str string) int {
 		return 0
 	}
 
+	return i
+}
+
+// Int64 converts string into int64
+func Int64(str string) int64 {
+	if str == "" {
+		return 0
+	}
+
+	i, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		return 0
+	}
 	return i
 }
 

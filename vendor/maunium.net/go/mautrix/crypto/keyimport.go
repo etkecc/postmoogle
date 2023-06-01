@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tulir Asokan
+// Copyright (c) 2023 Tulir Asokan
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"maunium.net/go/mautrix/crypto/olm"
 	"maunium.net/go/mautrix/id"
@@ -108,6 +109,8 @@ func (mach *OlmMachine) importExportedRoomKey(session ExportedSession) (bool, er
 		RoomID:     session.RoomID,
 		// TODO should we add something here to mark the signing key as unverified like key requests do?
 		ForwardingChains: session.ForwardingChains,
+
+		ReceivedAt: time.Now().UTC(),
 	}
 	existingIGS, _ := mach.CryptoStore.GetGroupSession(igs.RoomID, igs.SenderKey, igs.ID())
 	if existingIGS != nil && existingIGS.Internal.FirstKnownIndex() <= igs.Internal.FirstKnownIndex() {
@@ -136,14 +139,18 @@ func (mach *OlmMachine) ImportKeys(passphrase string, data []byte) (int, int, er
 
 	count := 0
 	for _, session := range sessions {
+		log := mach.Log.With().
+			Str("room_id", session.RoomID.String()).
+			Str("session_id", session.SessionID.String()).
+			Logger()
 		imported, err := mach.importExportedRoomKey(session)
 		if err != nil {
-			mach.Log.Warn("Failed to import Megolm session %s/%s from file: %v", session.RoomID, session.SessionID, err)
+			log.Error().Err(err).Msg("Failed to import Megolm session from file")
 		} else if imported {
-			mach.Log.Debug("Imported Megolm session %s/%s from file", session.RoomID, session.SessionID)
+			log.Debug().Msg("Imported Megolm session from file")
 			count++
 		} else {
-			mach.Log.Debug("Skipped Megolm session %s/%s: already in store", session.RoomID, session.SessionID)
+			log.Debug().Msg("Skipped Megolm session which is already in the store")
 		}
 	}
 	return count, len(sessions), nil

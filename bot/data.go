@@ -1,41 +1,13 @@
 package bot
 
 import (
+	"strconv"
+	"time"
+
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/bot/config"
 )
-
-var migrations = []string{}
-
-func (b *Bot) migrate() error {
-	b.log.Debug("migrating database...")
-	tx, beginErr := b.lp.GetDB().Begin()
-	if beginErr != nil {
-		b.log.Error("cannot begin transaction: %v", beginErr)
-		return beginErr
-	}
-
-	for _, query := range migrations {
-		_, execErr := tx.Exec(query)
-		if execErr != nil {
-			b.log.Error("cannot apply migration: %v", execErr)
-			// nolint // we already have the execErr to return
-			tx.Rollback()
-			return execErr
-		}
-	}
-
-	commitErr := tx.Commit()
-	if commitErr != nil {
-		b.log.Error("cannot commit transaction: %v", commitErr)
-		// nolint // we already have the commitErr to return
-		tx.Rollback()
-		return commitErr
-	}
-
-	return nil
-}
 
 func (b *Bot) syncRooms() error {
 	adminRooms := []id.RoomID{}
@@ -73,7 +45,7 @@ func (b *Bot) syncRooms() error {
 func (b *Bot) migrateRoomSettings(roomID id.RoomID) {
 	cfg, err := b.cfg.GetRoom(roomID)
 	if err != nil {
-		b.log.Error("cannot retrieve room settings: %v", err)
+		b.log.Error().Err(err).Msg("cannot retrieve room settings")
 		return
 	}
 	if _, ok := cfg[config.RoomActive]; !ok {
@@ -86,8 +58,31 @@ func (b *Bot) migrateRoomSettings(roomID id.RoomID) {
 	cfg.MigrateSpamlistSettings()
 	err = b.cfg.SetRoom(roomID, cfg)
 	if err != nil {
-		b.log.Error("cannot migrate room settings: %v", err)
+		b.log.Error().Err(err).Msg("cannot migrate room settings")
 	}
+}
+
+// migrateMautrix015 adds a special timestamp to bot's config
+// to ignore any message events happened before that timestamp
+// with migration to maturix 0.15.x the state store has been changed
+// alongside with other database configs to simplify maintenance,
+// but with that simplification there is no proper way to migrate
+// existing sync token and session info. No data loss, tho.
+func (b *Bot) migrateMautrix015() error {
+	cfg := b.cfg.GetBot()
+	ts := cfg.Mautrix015Migration()
+	// already migrated
+	if ts > 0 {
+		b.ignoreBefore = ts
+		return nil
+	}
+
+	ts = time.Now().UTC().UnixMilli()
+	b.ignoreBefore = ts
+
+	tss := strconv.FormatInt(ts, 10)
+	cfg.Set(config.BotMautrix015Migration, tss)
+	return b.cfg.SetBot(cfg)
 }
 
 func (b *Bot) initBotUsers() ([]string, error) {

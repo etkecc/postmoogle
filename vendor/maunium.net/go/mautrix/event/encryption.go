@@ -8,6 +8,7 @@ package event
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"maunium.net/go/mautrix/id"
 )
@@ -41,6 +42,7 @@ type EncryptedEventContent struct {
 	OlmCiphertext    OlmCiphertexts `json:"-"`
 
 	RelatesTo *RelatesTo `json:"m.relates_to,omitempty"`
+	Mentions  *Mentions  `json:"m.mentions,omitempty"`
 }
 
 type OlmCiphertexts map[id.Curve25519]struct {
@@ -92,6 +94,10 @@ type RoomKeyEventContent struct {
 	RoomID     id.RoomID    `json:"room_id"`
 	SessionID  id.SessionID `json:"session_id"`
 	SessionKey string       `json:"session_key"`
+
+	MaxAge      int64 `json:"com.beeper.max_age_ms"`
+	MaxMessages int   `json:"com.beeper.max_messages"`
+	IsScheduled bool  `json:"com.beeper.is_scheduled"`
 }
 
 // ForwardedRoomKeyEventContent represents the content of a m.forwarded_room_key to_device event.
@@ -101,6 +107,10 @@ type ForwardedRoomKeyEventContent struct {
 	SenderKey          id.SenderKey `json:"sender_key"`
 	SenderClaimedKey   id.Ed25519   `json:"sender_claimed_ed25519_key"`
 	ForwardingKeyChain []string     `json:"forwarding_curve25519_key_chain"`
+
+	MaxAge      int64 `json:"com.beeper.max_age_ms"`
+	MaxMessages int   `json:"com.beeper.max_messages"`
+	IsScheduled bool  `json:"com.beeper.is_scheduled"`
 }
 
 type KeyRequestAction string
@@ -134,6 +144,8 @@ const (
 	RoomKeyWithheldUnauthorized RoomKeyWithheldCode = "m.unauthorised"
 	RoomKeyWithheldUnavailable  RoomKeyWithheldCode = "m.unavailable"
 	RoomKeyWithheldNoOlmSession RoomKeyWithheldCode = "m.no_olm"
+
+	RoomKeyWithheldBeeperRedacted RoomKeyWithheldCode = "com.beeper.redacted"
 )
 
 type RoomKeyWithheldEventContent struct {
@@ -143,6 +155,25 @@ type RoomKeyWithheldEventContent struct {
 	SenderKey id.SenderKey        `json:"sender_key"`
 	Code      RoomKeyWithheldCode `json:"code"`
 	Reason    string              `json:"reason,omitempty"`
+}
+
+const groupSessionWithheldMsg = "group session has been withheld: %s"
+
+func (withheld *RoomKeyWithheldEventContent) Error() string {
+	switch withheld.Code {
+	case RoomKeyWithheldBlacklisted, RoomKeyWithheldUnverified, RoomKeyWithheldUnauthorized, RoomKeyWithheldUnavailable, RoomKeyWithheldNoOlmSession:
+		return fmt.Sprintf(groupSessionWithheldMsg, withheld.Code)
+	default:
+		return fmt.Sprintf(groupSessionWithheldMsg+" (%s)", withheld.Code, withheld.Reason)
+	}
+}
+
+func (withheld *RoomKeyWithheldEventContent) Is(other error) bool {
+	otherWithheld, ok := other.(*RoomKeyWithheldEventContent)
+	if !ok {
+		return false
+	}
+	return withheld.Code == "" || otherWithheld.Code == "" || withheld.Code == otherWithheld.Code
 }
 
 type DummyEventContent struct{}

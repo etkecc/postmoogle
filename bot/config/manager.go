@@ -1,7 +1,7 @@
 package config
 
 import (
-	"gitlab.com/etke.cc/go/logger"
+	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/id"
 
@@ -11,12 +11,12 @@ import (
 // Manager of configs
 type Manager struct {
 	mu  utils.Mutex
-	log *logger.Logger
+	log *zerolog.Logger
 	lp  *linkpearl.Linkpearl
 }
 
 // New config manager
-func New(lp *linkpearl.Linkpearl, log *logger.Logger) *Manager {
+func New(lp *linkpearl.Linkpearl, log *zerolog.Logger) *Manager {
 	m := &Manager{
 		mu:  utils.NewMutex(),
 		lp:  lp,
@@ -32,7 +32,7 @@ func (m *Manager) GetBot() Bot {
 	var config Bot
 	config, err = m.lp.GetAccountData(acBotKey)
 	if err != nil {
-		m.log.Error("cannot get bot settings: %v", utils.UnwrapError(err))
+		m.log.Error().Err(utils.UnwrapError(err)).Msg("cannot get bot settings")
 	}
 	if config == nil {
 		config = make(Bot, 0)
@@ -72,7 +72,7 @@ func (m *Manager) GetBanlist() List {
 	defer m.mu.Unlock("banlist")
 	config, err := m.lp.GetAccountData(acBanlistKey)
 	if err != nil {
-		m.log.Error("cannot get banlist: %v", utils.UnwrapError(err))
+		m.log.Error().Err(utils.UnwrapError(err)).Msg("cannot get banlist")
 	}
 	if config == nil {
 		config = make(List, 0)
@@ -100,7 +100,7 @@ func (m *Manager) SetBanlist(cfg List) error {
 func (m *Manager) GetGreylist() List {
 	config, err := m.lp.GetAccountData(acGreylistKey)
 	if err != nil {
-		m.log.Error("cannot get banlist: %v", utils.UnwrapError(err))
+		m.log.Error().Err(utils.UnwrapError(err)).Msg("cannot get banlist")
 	}
 	if config == nil {
 		config = make(List, 0)

@@ -2,6 +2,12 @@
 ## explicit; go 1.15
 blitiri.com.ar/go/spf
 blitiri.com.ar/go/spf/internal/dnstest
+# github.com/archdx/zerolog-sentry v1.2.0
+## explicit; go 1.18
+github.com/archdx/zerolog-sentry
+# github.com/buger/jsonparser v1.0.0
+## explicit; go 1.13
+github.com/buger/jsonparser
 # github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a
 ## explicit
 github.com/cention-sany/utf7
@@ -32,17 +38,9 @@ github.com/getsentry/sentry-go/internal/ratelimit
 # github.com/gogs/chardet v0.0.0-20191104214054-4b6791f73a28
 ## explicit
 github.com/gogs/chardet
-# github.com/google/go-cmp v0.5.8
-## explicit; go 1.13
 # github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
-# github.com/gorilla/mux v1.8.0
-## explicit; go 1.12
-github.com/gorilla/mux
-# github.com/gorilla/websocket v1.5.0
-## explicit; go 1.12
-github.com/gorilla/websocket
 # github.com/hashicorp/golang-lru/v2 v2.0.1
 ## explicit; go 1.18
 github.com/hashicorp/golang-lru/v2
@@ -56,7 +54,7 @@ github.com/jhillyerd/enmime
 github.com/jhillyerd/enmime/internal/coding
 github.com/jhillyerd/enmime/internal/stringutil
 github.com/jhillyerd/enmime/mediatype
-# github.com/lib/pq v1.10.7
+# github.com/lib/pq v1.10.9
 ## explicit; go 1.13
 github.com/lib/pq
 github.com/lib/pq/oid
@@ -64,7 +62,7 @@ github.com/lib/pq/scram
 # github.com/mattn/go-colorable v0.1.13
 ## explicit; go 1.15
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.17
+# github.com/mattn/go-isatty v0.0.19
 ## explicit; go 1.15
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.12
@@ -91,7 +89,7 @@ github.com/raja/argon2pw
 # github.com/rivo/uniseg v0.2.0
 ## explicit; go 1.12
 github.com/rivo/uniseg
-# github.com/rs/zerolog v1.29.0
+# github.com/rs/zerolog v1.29.1
 ## explicit; go 1.15
 github.com/rs/zerolog
 github.com/rs/zerolog/internal/cbor
@@ -131,9 +129,6 @@ gitlab.com/etke.cc/go/fswatcher
 # gitlab.com/etke.cc/go/healthchecks v1.0.1
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/healthchecks
-# gitlab.com/etke.cc/go/logger v1.1.0
-## explicit; go 1.18
-gitlab.com/etke.cc/go/logger
 # gitlab.com/etke.cc/go/mxidwc v1.0.0
 ## explicit; go 1.19
 gitlab.com/etke.cc/go/mxidwc
@@ -146,12 +141,10 @@ gitlab.com/etke.cc/go/trysmtp
 # gitlab.com/etke.cc/go/validator v1.0.6
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/validator
-# gitlab.com/etke.cc/linkpearl v0.0.0-20230213101923-10ee6beb7577
+# gitlab.com/etke.cc/linkpearl v0.0.0-20230526215607-4c7da70feda4
 ## explicit; go 1.18
 gitlab.com/etke.cc/linkpearl
-gitlab.com/etke.cc/linkpearl/config
-gitlab.com/etke.cc/linkpearl/store
-# golang.org/x/crypto v0.6.0
+# golang.org/x/crypto v0.9.0
 ## explicit; go 1.17
 golang.org/x/crypto/argon2
 golang.org/x/crypto/blake2b
@@ -166,20 +159,23 @@ golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/net v0.6.0
+# golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
+## explicit; go 1.20
+golang.org/x/exp/maps
+# golang.org/x/net v0.10.0
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/publicsuffix
-# golang.org/x/sys v0.7.0
+# golang.org/x/sys v0.8.0
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.7.0
+# golang.org/x/text v0.9.0
 ## explicit; go 1.17
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
@@ -193,20 +189,17 @@ golang.org/x/text/encoding/unicode
 golang.org/x/text/internal/utf8internal
 golang.org/x/text/runes
 golang.org/x/text/transform
-# gopkg.in/yaml.v3 v3.0.1
-## explicit
-gopkg.in/yaml.v3
-# maunium.net/go/maulogger/v2 v2.3.2
-## explicit; go 1.11
+# maunium.net/go/maulogger/v2 v2.4.1
+## explicit; go 1.19
 maunium.net/go/maulogger/v2
-# maunium.net/go/mautrix v0.13.0
-## explicit; go 1.18
+maunium.net/go/maulogger/v2/maulogadapt
+# maunium.net/go/mautrix v0.15.2
+## explicit; go 1.19
 maunium.net/go/mautrix
-maunium.net/go/mautrix/appservice
-maunium.net/go/mautrix/bridge/bridgeconfig
 maunium.net/go/mautrix/crypto
 maunium.net/go/mautrix/crypto/attachment
 maunium.net/go/mautrix/crypto/canonicaljson
+maunium.net/go/mautrix/crypto/cryptohelper
 maunium.net/go/mautrix/crypto/olm
 maunium.net/go/mautrix/crypto/sql_store_upgrade
 maunium.net/go/mautrix/crypto/ssss
@@ -217,8 +210,8 @@ maunium.net/go/mautrix/format/mdext
 maunium.net/go/mautrix/id
 maunium.net/go/mautrix/pushrules
 maunium.net/go/mautrix/pushrules/glob
+maunium.net/go/mautrix/sqlstatestore
 maunium.net/go/mautrix/util
 maunium.net/go/mautrix/util/base58
-maunium.net/go/mautrix/util/configupgrade
 maunium.net/go/mautrix/util/dbutil
 maunium.net/go/mautrix/util/jsontime

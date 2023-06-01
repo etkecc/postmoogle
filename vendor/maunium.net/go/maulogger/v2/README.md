@@ -1,6 +1,6 @@
 # maulogger
-A logger in Go.
+A logger in Go. Deprecated in favor of [zerolog](https://github.com/rs/zerolog).
 
-Docs: [godoc.org/maunium.net/go/maulogger](https://godoc.org/maunium.net/go/maulogger)
-
-Go get: `go get maunium.net/go/maulogger`
+Utilities for migrating gracefully can be found in the maulogadapt package,
+it includes both wrapping a zerolog in the maulogger interface, and wrapping a
+maulogger as a zerolog output writer.

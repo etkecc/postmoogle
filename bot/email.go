@@ -44,7 +44,7 @@ func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) (bool, error) 
 	err := b.sendmail(from, to, data)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "4") {
-			b.log.Info("email %s (from=%s to=%s) was added to the queue: %v", eventID, from, to, err)
+			b.log.Info().Err(err).Str("id", eventID.String()).Str("from", from).Str("to", to).Msg("email has been added to the queue")
 			return true, b.q.Add(eventID.String(), from, to, data)
 		}
 		return false, err
@@ -90,7 +90,7 @@ func (b *Bot) GetMapping(mailbox string) (id.RoomID, bool) {
 func (b *Bot) GetIFOptions(roomID id.RoomID) email.IncomingFilteringOptions {
 	cfg, err := b.cfg.GetRoom(roomID)
 	if err != nil {
-		b.log.Error("cannot retrieve room settings: %v", err)
+		b.log.Error().Err(err).Msg("cannot retrieve room settings")
 	}
 
 	return cfg
@@ -185,7 +185,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 
 	meta.MessageID = email.MessageID(evt.ID, meta.FromDomain)
 	meta.References = meta.References + " " + meta.MessageID
-	b.log.Info("sending email reply: %+v", meta)
+	b.log.Info().Any("meta", meta).Msg("sending email reply")
 	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil, nil)
 	data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 	if data == "" {
@@ -198,7 +198,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	for _, to := range recipients {
 		queued, err = b.Sendmail(evt.ID, meta.From, to, data)
 		if queued {
-			b.log.Error("cannot send email: %v", err)
+			b.log.Error().Err(err).Msg("cannot send email")
 			b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg)
 			continue
 		}
@@ -300,36 +300,33 @@ func (e *parentEmail) calculateRecipients(from string) {
 func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 	content := evt.Content.AsMessage()
 	threadID := utils.EventParent(evt.ID, content)
-	b.log.Debug("looking up for the parent event of %s within thread %s", evt.ID, threadID)
+	b.log.Debug().Str("eventID", evt.ID.String()).Str("threadID", threadID.String()).Msg("looking up for the parent event within thread")
 	if threadID == evt.ID {
-		b.log.Debug("event %s is the thread itself")
+		b.log.Debug().Str("eventID", evt.ID.String()).Msg("event is the thread itself")
 		return threadID, evt
 	}
 	lastEventID := b.getLastEventID(evt.RoomID, threadID)
-	b.log.Debug("the last event of the thread %s (and parent of the %s) is %s", threadID, evt.ID, lastEventID)
+	b.log.Debug().Str("eventID", evt.ID.String()).Str("threadID", threadID.String()).Str("lastEventID", lastEventID.String()).Msg("the last event of the thread (and parent of the event) has been found")
 	if lastEventID == evt.ID {
 		return threadID, evt
 	}
 	parentEvt, err := b.lp.GetClient().GetEvent(evt.RoomID, lastEventID)
 	if err != nil {
-		b.log.Error("cannot get parent event: %v", err)
+		b.log.Error().Err(err).Msg("cannot get parent event")
 		return threadID, nil
 	}
 	utils.ParseContent(parentEvt, parentEvt.Type)
-	b.log.Debug("type of the parsed content is: %T", parentEvt.Content.Parsed)
 
-	if !b.lp.GetStore().IsEncrypted(evt.RoomID) {
-		b.log.Debug("found the last event (plaintext) of the thread %s (and parent of the %s): %+v", threadID, evt.ID, parentEvt)
+	if !b.lp.GetMachine().StateStore.IsEncrypted(evt.RoomID) {
 		return threadID, parentEvt
 	}
 
-	decrypted, err := b.lp.GetMachine().DecryptMegolmEvent(parentEvt)
+	decrypted, err := b.lp.GetClient().Crypto.Decrypt(parentEvt)
 	if err != nil {
-		b.log.Error("cannot decrypt parent event: %v", err)
+		b.log.Error().Err(err).Msg("cannot decrypt parent event")
 		return threadID, nil
 	}
 
-	b.log.Debug("found the last event (decrypted) of the thread %s (and parent of the %s): %+v", threadID, evt.ID, parentEvt)
 	return threadID, decrypted
 }
 
@@ -422,7 +419,7 @@ func (b *Bot) getThreadID(roomID id.RoomID, messageID string, references string)
 		key := acMessagePrefix + "." + refID
 		data, err := b.lp.GetRoomAccountData(roomID, key)
 		if err != nil {
-			b.log.Error("cannot retrieve thread ID from %s: %v", key, err)
+			b.log.Error().Err(err).Str("key", key).Msg("cannot retrieve thread ID")
 			continue
 		}
 		if data["eventID"] != "" {
@@ -437,7 +434,7 @@ func (b *Bot) setThreadID(roomID id.RoomID, messageID string, eventID id.EventID
 	key := acMessagePrefix + "." + messageID
 	err := b.lp.SetRoomAccountData(roomID, key, map[string]string{"eventID": eventID.String()})
 	if err != nil {
-		b.log.Error("cannot save thread ID to %s: %v", key, err)
+		b.log.Error().Err(err).Str("key", key).Msg("cannot save thread ID")
 	}
 }
 
@@ -445,7 +442,7 @@ func (b *Bot) getLastEventID(roomID id.RoomID, threadID id.EventID) id.EventID {
 	key := acLastEventPrefix + "." + threadID.String()
 	data, err := b.lp.GetRoomAccountData(roomID, key)
 	if err != nil {
-		b.log.Error("cannot retrieve last event ID from %s: %v", key, err)
+		b.log.Error().Err(err).Str("key", key).Msg("cannot retrieve last event ID")
 		return threadID
 	}
 	if data["eventID"] != "" {
@@ -459,6 +456,6 @@ func (b *Bot) setLastEventID(roomID id.RoomID, threadID id.EventID, eventID id.E
 	key := acLastEventPrefix + "." + threadID.String()
 	err := b.lp.SetRoomAccountData(roomID, key, map[string]string{"eventID": eventID.String()})
 	if err != nil {
-		b.log.Error("cannot save thread ID to %s: %v", key, err)
+		b.log.Error().Err(err).Str("key", key).Msg("cannot save thread ID")
 	}
 }

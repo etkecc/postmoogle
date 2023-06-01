@@ -27,14 +27,14 @@ func (b *Bot) ActivateMailbox(ownerID id.UserID, roomID id.RoomID, mailbox strin
 }
 
 func (b *Bot) activateNone(ownerID id.UserID, roomID id.RoomID, mailbox string) bool {
-	b.log.Debug("activating mailbox %q (%q) of %q through flow 'none'", mailbox, roomID, ownerID)
+	b.log.Debug().Str("mailbox", mailbox).Str("roomID", roomID.String()).Str("ownerID", ownerID.String()).Msg("activating mailbox through the flow 'none'")
 	b.rooms.Store(mailbox, roomID)
 
 	return true
 }
 
 func (b *Bot) activateNotify(ownerID id.UserID, roomID id.RoomID, mailbox string) bool {
-	b.log.Debug("activating mailbox %q (%q) of %q through flow 'notify'", mailbox, roomID, ownerID)
+	b.log.Debug().Str("mailbox", mailbox).Str("roomID", roomID.String()).Str("ownerID", ownerID.String()).Msg("activating mailbox through the flow 'notify'")
 	b.rooms.Store(mailbox, roomID)
 	if len(b.adminRooms) == 0 {
 		return true
@@ -45,7 +45,7 @@ func (b *Bot) activateNotify(ownerID id.UserID, roomID id.RoomID, mailbox string
 		content := format.RenderMarkdown(msg, true, true)
 		_, err := b.lp.Send(adminRoom, &content)
 		if err != nil {
-			b.log.Info("cannot send mailbox activation notification to the admin room %q", adminRoom)
+			b.log.Info().Str("adminRoom", adminRoom.String()).Msg("cannot send mailbox activation notification to the admin room")
 			continue
 		}
 		break
