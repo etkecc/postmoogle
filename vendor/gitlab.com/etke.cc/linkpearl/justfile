@@ -5,7 +5,7 @@ default:
 # update go deps
 update:
     go get .
-    go get -u maunium.net/go/mautrix
+    go get maunium.net/go/mautrix@latest
     go mod tidy
 
 # run linter
