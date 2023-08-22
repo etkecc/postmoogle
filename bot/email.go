@@ -120,7 +120,10 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 	content := email.Content(threadID, cfg.ContentOptions())
 	eventID, serr := b.lp.Send(roomID, content)
 	if serr != nil {
-		return utils.UnwrapError(serr)
+		if !strings.Contains(serr.Error(), "M_UNKNOWN") { // 	if it's not an unknown event event error
+			return utils.UnwrapError(serr)
+		}
+		threadID = "" // unknown event edge case - remove existing thread ID to avoid complications
 	}
 	if threadID == "" {
 		threadID = eventID
