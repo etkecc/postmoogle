@@ -180,7 +180,7 @@ func (b *Bot) initCommands() commandList {
 			key: config.RoomNoInlines,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - ignore inline attachments; `false` - upload inline attachments)",
-				config.RoomNoFiles,
+				config.RoomNoInlines,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
