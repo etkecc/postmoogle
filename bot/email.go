@@ -425,9 +425,15 @@ func (b *Bot) getThreadID(roomID id.RoomID, messageID string, references string)
 			b.log.Error().Err(err).Str("key", key).Msg("cannot retrieve thread ID")
 			continue
 		}
-		if data["eventID"] != "" {
-			return id.EventID(data["eventID"])
+		if data["eventID"] == "" {
+			continue
 		}
+		resp, err := b.lp.GetClient().GetEvent(roomID, id.EventID(data["eventID"]))
+		if err != nil {
+			b.log.Warn().Err(err).Str("roomID", roomID.String()).Str("eventID", data["eventID"]).Msg("cannot get event by id (may be removed)")
+			continue
+		}
+		return resp.ID
 	}
 
 	return ""
