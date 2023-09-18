@@ -6,11 +6,11 @@ import (
 
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/rs/zerolog"
+	"go.mau.fi/util/dbutil"
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/crypto/cryptohelper"
 	"maunium.net/go/mautrix/event"
-	"maunium.net/go/mautrix/util/dbutil"
 )
 
 const (

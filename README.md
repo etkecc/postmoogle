@@ -66,6 +66,7 @@ env vars
 * **POSTMOOGLE_DB_DSN** - database connection string
 * **POSTMOOGLE_DB_DIALECT** - database dialect (postgres, sqlite3)
 * **POSTMOOGLE_MAILBOXES_RESERVED** - space separated list of reserved mailboxes, [docs/mailboxes.md](docs/mailboxes.md)
+* **POSTMOOGLE_MAILBOXES_FORWARDED** - space separated list of forwarded from emails that should be ignored when sending replies
 * **POSTMOOGLE_MAILBOXES_ACTIVATION** - activation flow for new mailboxes, [docs/mailboxes.md](docs/mailboxes.md)
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
 * **POSTMOOGLE_ADMINS** - a space-separated list of admin users. See `POSTMOOGLE_USERS` for syntax examples

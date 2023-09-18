@@ -21,6 +21,7 @@ import (
 // Mailboxes config
 type MBXConfig struct {
 	Reserved   []string
+	Forwarded  []string
 	Activation string
 }
 

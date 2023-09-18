@@ -17,7 +17,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/mileusna/crontab v1.2.0
 	github.com/raja/argon2pw v1.0.2-0.20210910183755-a391af63bd39
-	github.com/rs/zerolog v1.29.1
+	github.com/rs/zerolog v1.30.0
 	gitlab.com/etke.cc/go/env v1.0.0
 	gitlab.com/etke.cc/go/fswatcher v1.0.0
 	gitlab.com/etke.cc/go/healthchecks v1.0.1
@@ -25,8 +25,8 @@ require (
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/go/trysmtp v1.1.3
 	gitlab.com/etke.cc/go/validator v1.0.6
-	gitlab.com/etke.cc/linkpearl v0.0.0-20230616132249-490d525152ec
-	maunium.net/go/mautrix v0.15.3
+	gitlab.com/etke.cc/linkpearl v0.0.0-20230916181909-246862c25568
+	maunium.net/go/mautrix v0.16.1
 )
 
 require (
@@ -45,15 +45,16 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
-	github.com/tidwall/gjson v1.14.4 // indirect
+	github.com/tidwall/gjson v1.16.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	github.com/yuin/goldmark v1.5.4 // indirect
-	golang.org/x/crypto v0.10.0 // indirect
-	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
-	golang.org/x/net v0.11.0 // indirect
-	golang.org/x/sys v0.9.0 // indirect
-	golang.org/x/text v0.10.0 // indirect
+	github.com/yuin/goldmark v1.5.6 // indirect
+	go.mau.fi/util v0.1.0 // indirect
+	golang.org/x/crypto v0.13.0 // indirect
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
+	golang.org/x/net v0.15.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	maunium.net/go/maulogger/v2 v2.4.1 // indirect
 )

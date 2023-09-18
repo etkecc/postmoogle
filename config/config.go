@@ -27,6 +27,7 @@ func New() *Config {
 		Admins:       env.Slice("admins"),
 		Mailboxes: Mailboxes{
 			Reserved:   env.Slice("mailboxes.reserved"),
+			Forwarded:  env.Slice("mailboxes.forwarded"),
 			Activation: env.String("mailboxes.activation", defaultConfig.Mailboxes.Activation),
 		},
 		TLS: TLS{

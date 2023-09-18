@@ -18,13 +18,13 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"go.mau.fi/util/dbutil"
 
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/crypto/olm"
 	"maunium.net/go/mautrix/crypto/sql_store_upgrade"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
-	"maunium.net/go/mautrix/util/dbutil"
 )
 
 var PostgresArrayWrapper func(interface{}) interface {
@@ -409,6 +409,22 @@ func (store *SQLCryptoStore) RedactExpiredGroupSessions() ([]id.SessionID, error
 		return nil, fmt.Errorf("unsupported dialect")
 	}
 	res, err := store.DB.Query(query, event.RoomKeyWithheldBeeperRedacted, "Session redacted: expired", store.AccountID)
+	var sessionIDs []id.SessionID
+	for res.Next() {
+		var sessionID id.SessionID
+		_ = res.Scan(&sessionID)
+		sessionIDs = append(sessionIDs, sessionID)
+	}
+	return sessionIDs, err
+}
+
+func (store *SQLCryptoStore) RedactOutdatedGroupSessions() ([]id.SessionID, error) {
+	res, err := store.DB.Query(`
+			UPDATE crypto_megolm_inbound_session
+			SET withheld_code=$1, withheld_reason=$2, session=NULL, forwarding_chains=NULL
+			WHERE account_id=$3 AND session IS NOT NULL AND received_at IS NULL
+			RETURNING session_id
+		`, event.RoomKeyWithheldBeeperRedacted, "Session redacted: outdated", store.AccountID)
 	var sessionIDs []id.SessionID
 	for res.Next() {
 		var sessionID id.SessionID

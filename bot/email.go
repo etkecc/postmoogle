@@ -280,7 +280,7 @@ func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) strin
 	return previousSender
 }
 
-func (e *parentEmail) calculateRecipients(from string) {
+func (e *parentEmail) calculateRecipients(from string, forwardedFrom []string) {
 	recipients := map[string]struct{}{}
 	recipients[e.From] = struct{}{}
 
@@ -289,6 +289,10 @@ func (e *parentEmail) calculateRecipients(from string) {
 	}
 	for _, addr := range email.AddressList(e.CC) {
 		recipients[addr] = struct{}{}
+	}
+
+	for _, addr := range forwardedFrom {
+		delete(recipients, addr)
 	}
 	delete(recipients, from)
 
@@ -351,7 +355,7 @@ func (b *Bot) getParentEmail(evt *event.Event, newFromMailbox string) *parentEma
 	parent.InReplyTo = utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
 	parent.References = utils.EventField[string](&parentEvt.Content, eventReferencesKey)
 	senderEmail := parent.fixtofrom(newFromMailbox, b.domains)
-	parent.calculateRecipients(senderEmail)
+	parent.calculateRecipients(senderEmail, b.mbxc.Forwarded)
 	parent.MessageID = email.MessageID(parentEvt.ID, parent.FromDomain)
 	if parent.InReplyTo == "" {
 		parent.InReplyTo = parent.MessageID

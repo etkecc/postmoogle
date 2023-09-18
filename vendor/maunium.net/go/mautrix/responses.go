@@ -3,16 +3,17 @@ package mautrix
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
+	"go.mau.fi/util/jsontime"
 
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
-	"maunium.net/go/mautrix/util"
-	"maunium.net/go/mautrix/util/jsontime"
 )
 
 // RespWhoami is the JSON response for https://spec.matrix.org/v1.2/client-server-api/#get_matrixclientv3accountwhoami
@@ -270,8 +271,26 @@ type marshalableRespSync RespSync
 
 var syncPathsToDelete = []string{"account_data", "presence", "to_device", "device_lists", "device_one_time_keys_count", "rooms"}
 
+// marshalAndDeleteEmpty marshals a JSON object, then uses gjson to delete empty objects at the given gjson paths.
+func marshalAndDeleteEmpty(marshalable interface{}, paths []string) ([]byte, error) {
+	data, err := json.Marshal(marshalable)
+	if err != nil {
+		return nil, err
+	}
+	for _, path := range paths {
+		res := gjson.GetBytes(data, path)
+		if res.IsObject() && len(res.Raw) == 2 {
+			data, err = sjson.DeleteBytes(data, path)
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete empty %s: %w", path, err)
+			}
+		}
+	}
+	return data, nil
+}
+
 func (rs *RespSync) MarshalJSON() ([]byte, error) {
-	return util.MarshalAndDeleteEmpty((*marshalableRespSync)(rs), syncPathsToDelete)
+	return marshalAndDeleteEmpty((*marshalableRespSync)(rs), syncPathsToDelete)
 }
 
 type DeviceLists struct {
@@ -299,7 +318,7 @@ type marshalableSyncLeftRoom SyncLeftRoom
 var syncLeftRoomPathsToDelete = []string{"summary", "state", "timeline"}
 
 func (slr SyncLeftRoom) MarshalJSON() ([]byte, error) {
-	return util.MarshalAndDeleteEmpty((marshalableSyncLeftRoom)(slr), syncLeftRoomPathsToDelete)
+	return marshalAndDeleteEmpty((marshalableSyncLeftRoom)(slr), syncLeftRoomPathsToDelete)
 }
 
 type SyncJoinedRoom struct {
@@ -324,7 +343,7 @@ type marshalableSyncJoinedRoom SyncJoinedRoom
 var syncJoinedRoomPathsToDelete = []string{"summary", "state", "timeline", "ephemeral", "account_data"}
 
 func (sjr SyncJoinedRoom) MarshalJSON() ([]byte, error) {
-	return util.MarshalAndDeleteEmpty((marshalableSyncJoinedRoom)(sjr), syncJoinedRoomPathsToDelete)
+	return marshalAndDeleteEmpty((marshalableSyncJoinedRoom)(sjr), syncJoinedRoomPathsToDelete)
 }
 
 type SyncInvitedRoom struct {
@@ -337,7 +356,7 @@ type marshalableSyncInvitedRoom SyncInvitedRoom
 var syncInvitedRoomPathsToDelete = []string{"summary"}
 
 func (sir SyncInvitedRoom) MarshalJSON() ([]byte, error) {
-	return util.MarshalAndDeleteEmpty((marshalableSyncInvitedRoom)(sir), syncInvitedRoomPathsToDelete)
+	return marshalAndDeleteEmpty((marshalableSyncInvitedRoom)(sir), syncInvitedRoomPathsToDelete)
 }
 
 type SyncKnockedRoom struct {
@@ -402,6 +421,7 @@ type RespDeviceInfo struct {
 	LastSeenTS  int64       `json:"last_seen_ts"`
 }
 
+// Deprecated: MSC2716 was abandoned
 type RespBatchSend struct {
 	StateEventIDs []id.EventID `json:"state_event_ids"`
 	EventIDs      []id.EventID `json:"event_ids"`
@@ -411,6 +431,10 @@ type RespBatchSend struct {
 	BaseInsertionEventID id.EventID `json:"base_insertion_event_id"`
 
 	NextBatchID id.BatchID `json:"next_batch_id"`
+}
+
+type RespBeeperBatchSend struct {
+	EventIDs []id.EventID `json:"event_ids"`
 }
 
 // RespCapabilities is the JSON response for https://spec.matrix.org/v1.3/client-server-api/#get_matrixclientv3capabilities

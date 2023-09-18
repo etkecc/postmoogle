@@ -15,7 +15,8 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"maunium.net/go/mautrix/util"
+	"go.mau.fi/util/exerrors"
+	"go.mau.fi/util/random"
 )
 
 var (
@@ -33,10 +34,10 @@ const (
 
 func (db *Database) DoTxn(ctx context.Context, opts *sql.TxOptions, fn func(ctx context.Context) error) error {
 	if ctx.Value(ContextKeyDatabaseTransaction) != nil {
-		zerolog.Ctx(ctx).Debug().Msg("Already in a transaction, not creating a new one")
+		zerolog.Ctx(ctx).Trace().Msg("Already in a transaction, not creating a new one")
 		return fn(ctx)
 	}
-	log := zerolog.Ctx(ctx).With().Str("db_txn_id", util.RandomString(12)).Logger()
+	log := zerolog.Ctx(ctx).With().Str("db_txn_id", random.String(12)).Logger()
 	start := time.Now()
 	defer func() {
 		dur := time.Since(start)
@@ -49,13 +50,13 @@ func (db *Database) DoTxn(ctx context.Context, opts *sql.TxOptions, fn func(ctx 
 			log.Warn().
 				Float64("duration_seconds", dur.Seconds()).
 				Caller(callerSkip).
-				Msg("Transaction took a long time")
+				Msg("Transaction took long")
 		}
 	}()
 	tx, err := db.BeginTx(ctx, opts)
 	if err != nil {
 		log.Trace().Err(err).Msg("Failed to begin transaction")
-		return util.NewDualError(ErrTxnBegin, err)
+		return exerrors.NewDualError(ErrTxnBegin, err)
 	}
 	log.Trace().Msg("Transaction started")
 	tx.noTotalLog = true
@@ -75,7 +76,7 @@ func (db *Database) DoTxn(ctx context.Context, opts *sql.TxOptions, fn func(ctx 
 	err = tx.Commit()
 	if err != nil {
 		log.Trace().Err(err).Msg("Commit failed")
-		return util.NewDualError(ErrTxnCommit, err)
+		return exerrors.NewDualError(ErrTxnCommit, err)
 	}
 	log.Trace().Msg("Commit successful")
 	return nil

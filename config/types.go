@@ -72,6 +72,7 @@ type Monitoring struct {
 // Mailboxes config
 type Mailboxes struct {
 	Reserved   []string
+	Forwarded  []string
 	Activation string
 }
 

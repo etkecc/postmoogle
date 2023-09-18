@@ -11,8 +11,6 @@ import (
 	"regexp"
 	"strings"
 
-	"golang.org/x/net/html"
-
 	"maunium.net/go/mautrix/id"
 )
 
@@ -23,7 +21,7 @@ func TrimReplyFallbackHTML(html string) string {
 }
 
 func TrimReplyFallbackText(text string) string {
-	if !strings.HasPrefix(text, "> ") || !strings.Contains(text, "\n") {
+	if (!strings.HasPrefix(text, "> <") && !strings.HasPrefix(text, "> * <")) || !strings.Contains(text, "\n") {
 		return text
 	}
 
@@ -59,7 +57,7 @@ func (evt *Event) GenerateReplyFallbackHTML() string {
 	parsedContent.RemoveReplyFallback()
 	body := parsedContent.FormattedBody
 	if len(body) == 0 {
-		body = strings.ReplaceAll(html.EscapeString(parsedContent.Body), "\n", "<br/>")
+		body = TextToHTML(parsedContent.Body)
 	}
 
 	senderDisplayName := evt.Sender

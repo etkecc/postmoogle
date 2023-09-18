@@ -23,6 +23,8 @@ const (
 	AuthTypeAppservice AuthType = "m.login.application_service"
 
 	AuthTypeSynapseJWT AuthType = "org.matrix.login.jwt"
+
+	AuthTypeDevtureSharedSecret AuthType = "com.devture.shared_secret_auth"
 )
 
 type IdentifierType string
@@ -331,6 +333,7 @@ type ReqPutPushRule struct {
 	Pattern    string                     `json:"pattern"`
 }
 
+// Deprecated: MSC2716 was abandoned
 type ReqBatchSend struct {
 	PrevEventID id.EventID `json:"-"`
 	BatchID     id.BatchID `json:"-"`
@@ -340,6 +343,16 @@ type ReqBatchSend struct {
 
 	StateEventsAtStart []*event.Event `json:"state_events_at_start"`
 	Events             []*event.Event `json:"events"`
+}
+
+type ReqBeeperBatchSend struct {
+	// ForwardIfNoMessages should be set to true if the batch should be forward
+	// backfilled if there are no messages currently in the room.
+	ForwardIfNoMessages bool           `json:"forward_if_no_messages"`
+	Forward             bool           `json:"forward"`
+	SendNotification    bool           `json:"send_notification"`
+	MarkReadBy          id.UserID      `json:"mark_read_by,omitempty"`
+	Events              []*event.Event `json:"events"`
 }
 
 type ReqSetReadMarkers struct {

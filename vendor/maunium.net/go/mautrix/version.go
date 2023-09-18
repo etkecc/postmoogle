@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const Version = "v0.15.3"
+const Version = "v0.16.1"
 
 var GoModVersion = ""
 var Commit = ""

@@ -1,3 +1,38 @@
+## v0.16.1 (2023-09-16)
+
+* **Breaking change *(id)*** Updated user ID localpart encoding to not encode
+  `+` as per [MSC4009].
+* *(bridge)* Added bridge utility to handle double puppeting logins.
+  * The utility supports automatic logins with all three current methods
+    (shared secret, legacy appservice, new appservice).
+* *(appservice)* Added warning logs and timeout on appservice event handling.
+  * Defaults to warning after 30 seconds and timeout 15 minutes after that.
+  * Timeouts can be adjusted or disabled by setting `ExecSync` variables in the
+    `EventProcessor`.
+* *(crypto/olm)* Added `PkDecryption` wrapper.
+
+[MSC4009]: https://github.com/matrix-org/matrix-spec-proposals/pull/4009
+
+## v0.16.0 (2023-08-16)
+
+* Bumped minimum Go version to 1.20.
+* **Breaking change *(util)*** Moved package to [go.mau.fi/util](https://go.mau.fi/util/)
+* *(event)* Removed MSC2716 `historical` field in the `m.room.power_levels`
+  event content struct.
+* *(bridge)* Added `--version-json` flag to print bridge version info as JSON.
+* *(appservice)* Added option to use custom transaction handler for websocket mode.
+
+## v0.15.4 (2023-07-16)
+
+* *(client)* Deprecated MSC2716 methods and added new Beeper-specific batch
+  send methods, as upstream MSC2716 support has been abandoned.
+* *(client)* Added proper error handling and automatic retries to media
+  downloads.
+* *(crypto, bridge)* Added option to remove all keys that were received before
+  the automatic ratcheting was implemented (in v0.15.1).
+* *(dbutil)* Added `JSON` utility for writing/reading arbitrary JSON objects to
+  the db conveniently without manually de/serializing.
+
 ## v0.15.3 (2023-06-16)
 
 * *(synapseadmin)* Added wrappers for some Synapse admin API endpoints.
