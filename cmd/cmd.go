@@ -105,6 +105,7 @@ func initMatrix(cfg *config.Config) {
 		Homeserver:        cfg.Homeserver,
 		Login:             cfg.Login,
 		Password:          cfg.Password,
+		SharedSecret:      cfg.SharedSecret,
 		DB:                db,
 		Dialect:           cfg.DB.Dialect,
 		AccountDataSecret: cfg.DataSecret,

@@ -25,7 +25,7 @@ require (
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/go/trysmtp v1.1.3
 	gitlab.com/etke.cc/go/validator v1.0.6
-	gitlab.com/etke.cc/linkpearl v0.0.0-20230916181909-246862c25568
+	gitlab.com/etke.cc/linkpearl v0.0.0-20230920071429-25fe33ba08d0
 	maunium.net/go/mautrix v0.16.1
 )
 

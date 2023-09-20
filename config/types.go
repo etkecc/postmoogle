@@ -6,10 +6,12 @@ import "time"
 type Config struct {
 	// Homeserver url
 	Homeserver string
-	// Login is a MXID localpart (scheduler - OK, @scheduler:example.com - wrong)
+	// Login is a localpart if logging in with password (postmoogle) OR full MXID if logging in with shared secret (@postmoogle:example.com)
 	Login string
 	// Password for login/password auth only
 	Password string
+	// SharedSecret for login/sharedsecret auth only
+	SharedSecret string
 	// Domains for SMTP
 	Domains []string
 	// Port for SMTP

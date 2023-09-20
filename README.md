@@ -43,8 +43,9 @@ so you can use it to send emails from your apps and scripts as well.
 env vars
 
 * **POSTMOOGLE_HOMESERVER** - homeserver url, eg: `https://matrix.example.com`
-* **POSTMOOGLE_LOGIN** - user login/localpart, eg: `moogle`
-* **POSTMOOGLE_PASSWORD** - user password
+* **POSTMOOGLE_LOGIN** - user login, localpart when logging in with password (e.g., `moogle`), OR full MXID when using shared secret (e.g., `@moogle:example.com`)
+* **POSTMOOGLE_PASSWORD** - user password, alternatively you may use shared secret
+* **POSTMOOGLE_SHAREDSECRET** - alternative to password, shared secret ([details](https://github.com/devture/matrix-synapse-shared-secret-auth))
 * **POSTMOOGLE_DOMAINS** - space separated list of SMTP domains to listen for new emails. The first domain acts as the default domain, all other as aliases
 
 <details>

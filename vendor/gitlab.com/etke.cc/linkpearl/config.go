@@ -1,7 +1,10 @@
 package linkpearl
 
 import (
+	"crypto/hmac"
+	"crypto/sha512"
 	"database/sql"
+	"encoding/hex"
 
 	"github.com/rs/zerolog"
 	"maunium.net/go/mautrix"
@@ -12,10 +15,12 @@ import (
 type Config struct {
 	// Homeserver url
 	Homeserver string
-	// Login is a localpart (honoroit - OK, @honoroit:example.com - wrong)
+	// Login is a localpart for password auth or full mxid for shared secret auth (honoroit - for password, @honoroit:example.com - for shared secret)
 	Login string
 	// Password for login/password auth only
 	Password string
+	// Shared secret for login/sharedsecret auth only
+	SharedSecret string
 
 	// JoinPermit is a callback function that tells
 	// if linkpearl should respond to the given "invite" event
@@ -45,14 +50,24 @@ type Config struct {
 
 // LoginAs for cryptohelper
 func (cfg *Config) LoginAs() *mautrix.ReqLogin {
-	return &mautrix.ReqLogin{
-		Type: mautrix.AuthTypePassword,
+	loginReq := mautrix.ReqLogin{
 		Identifier: mautrix.UserIdentifier{
 			Type: mautrix.IdentifierTypeUser,
 			User: cfg.Login,
 		},
-		Password:           cfg.Password,
 		StoreCredentials:   true,
 		StoreHomeserverURL: true,
 	}
+
+	if cfg.SharedSecret != "" {
+		loginReq.Type = mautrix.AuthTypeDevtureSharedSecret
+		mac := hmac.New(sha512.New, []byte(cfg.SharedSecret))
+		mac.Write([]byte(cfg.Login))
+		loginReq.Token = hex.EncodeToString(mac.Sum(nil))
+	} else {
+		loginReq.Type = mautrix.AuthTypePassword
+		loginReq.Password = cfg.Password
+	}
+
+	return &loginReq
 }
