@@ -38,12 +38,26 @@ func (b *Bot) SetSendmail(sendmail func(string, string, string) error) {
 	b.q.SetSendmail(sendmail)
 }
 
+func (b *Bot) shouldQueue(msg string) bool {
+	errors := strings.Split(msg, ";")
+	for _, err := range errors {
+		errParts := strings.Split(strings.TrimSpace(err), ":")
+		if len(errParts) < 2 {
+			continue
+		}
+		if strings.HasPrefix(strings.TrimSpace(errParts[1]), "4") {
+			return true
+		}
+	}
+	return false
+}
+
 // Sendmail tries to send email immediately, but if it gets 4xx error (greylisting),
 // the email will be added to the queue and retried several times after that
 func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) (bool, error) {
 	err := b.sendmail(from, to, data)
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "4") {
+		if b.shouldQueue(err.Error()) {
 			b.log.Info().Err(err).Str("id", eventID.String()).Str("from", from).Str("to", to).Msg("email has been added to the queue")
 			return true, b.q.Add(eventID.String(), from, to, data)
 		}
@@ -201,7 +215,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	for _, to := range recipients {
 		queued, err = b.Sendmail(evt.ID, meta.From, to, data)
 		if queued {
-			b.log.Error().Err(err).Msg("cannot send email")
+			b.log.Info().Err(err).Str("from", meta.From).Str("to", to).Msg("email has been queued")
 			b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg)
 			continue
 		}
