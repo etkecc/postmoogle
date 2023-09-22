@@ -3,7 +3,9 @@ package bot
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/raja/argon2pw"
 
@@ -50,6 +52,10 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
+	}
+
+	if name == commandSpamlist {
+		name = config.RoomSpamlist
 	}
 
 	value := cfg.Get(name)
@@ -137,4 +143,101 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		msg = "SMTP password has been set"
 	}
 	b.SendNotice(ctx, evt.RoomID, msg)
+}
+
+func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	if len(commandSlice) < 2 {
+		b.getOption(ctx, config.RoomSpamlist)
+		return
+	}
+	roomCfg, err := b.cfg.GetRoom(evt.RoomID)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot get room settings: %v", err)
+		return
+	}
+	spamlist := utils.StringSlice(roomCfg[config.RoomSpamlist])
+	for _, newItem := range commandSlice[1:] {
+		newItem = strings.TrimSpace(newItem)
+		if slices.Contains(spamlist, newItem) {
+			continue
+		}
+		spamlist = append(spamlist, newItem)
+	}
+
+	roomCfg.Set(config.RoomSpamlist, utils.SliceString(spamlist))
+	err = b.cfg.SetRoom(evt.RoomID, roomCfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot store room settings: %v", err)
+		return
+	}
+
+	b.SendNotice(ctx, evt.RoomID, "spamlist has been updated, kupo")
+}
+
+func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	if len(commandSlice) < 2 {
+		b.getOption(ctx, config.RoomSpamlist)
+		return
+	}
+	roomCfg, err := b.cfg.GetRoom(evt.RoomID)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot get room settings: %v", err)
+		return
+	}
+	toRemove := map[int]struct{}{}
+	spamlist := utils.StringSlice(roomCfg[config.RoomSpamlist])
+	for _, item := range commandSlice[1:] {
+		item = strings.TrimSpace(item)
+		idx := slices.Index(spamlist, item)
+		if idx < 0 {
+			continue
+		}
+		toRemove[idx] = struct{}{}
+	}
+	if len(toRemove) == 0 {
+		b.SendNotice(ctx, evt.RoomID, "nothing new, kupo.")
+		return
+	}
+
+	updatedSpamlist := []string{}
+	for i, item := range spamlist {
+		if _, ok := toRemove[i]; ok {
+			continue
+		}
+		updatedSpamlist = append(updatedSpamlist, item)
+	}
+
+	roomCfg.Set(config.RoomSpamlist, utils.SliceString(updatedSpamlist))
+	err = b.cfg.SetRoom(evt.RoomID, roomCfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot store room settings: %v", err)
+		return
+	}
+
+	b.SendNotice(ctx, evt.RoomID, "spamlist has been updated, kupo")
+}
+
+func (b *Bot) runSpamlistReset(ctx context.Context) {
+	evt := eventFromContext(ctx)
+	roomCfg, err := b.cfg.GetRoom(evt.RoomID)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot get room settings: %v", err)
+		return
+	}
+	spamlist := utils.StringSlice(roomCfg[config.RoomSpamlist])
+	if len(spamlist) == 0 {
+		b.SendNotice(ctx, evt.RoomID, "spamlist is empty, kupo.")
+		return
+	}
+
+	roomCfg.Set(config.RoomSpamlist, "")
+	err = b.cfg.SetRoom(evt.RoomID, roomCfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot store room settings: %v", err)
+		return
+	}
+
+	b.SendNotice(ctx, evt.RoomID, "spamlist has been reset, kupo.")
 }

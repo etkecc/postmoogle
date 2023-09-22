@@ -2,6 +2,7 @@ package utils
 
 import (
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -96,6 +97,20 @@ func SanitizeIntString(str string) string {
 	return strconv.Itoa(Int(str))
 }
 
+// SliceString converts slice into comma-separated string
+func SliceString(strs []string) string {
+	res := []string{}
+	for _, str := range strs {
+		str = strings.TrimSpace(str)
+		if str == "" {
+			continue
+		}
+		res = append(res, str)
+	}
+	sort.Strings(res)
+	return strings.Join(res, ",")
+}
+
 // StringSlice converts comma-separated string to slice
 func StringSlice(str string) []string {
 	if str == "" {
@@ -107,19 +122,15 @@ func StringSlice(str string) []string {
 		return []string{str}
 	}
 
-	return strings.Split(str, ",")
-}
-
-// SanitizeBoolString converts string to slice and back to string
-func SanitizeStringSlice(str string) string {
-	parts := StringSlice(str)
-	if len(parts) == 0 {
-		return str
-	}
-
+	parts := strings.Split(str, ",")
 	for i, part := range parts {
 		parts[i] = strings.TrimSpace(part)
 	}
 
-	return strings.Join(parts, ",")
+	return parts
+}
+
+// SanitizeBoolString converts string to slice and back to string
+func SanitizeStringSlice(str string) string {
+	return SliceString(StringSlice(str))
 }

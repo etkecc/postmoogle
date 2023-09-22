@@ -97,55 +97,88 @@ If you want to change them - check available options in the help message (`!pm h
 <details>
 <summary>Full list of available commands</summary>
 
-* **!pm help** - Show help message
-* **!pm stop** - Disable bridge for the room and clear all configuration
+> The following section is visible to all allowed users
+
+* **`!pm help`** - Show this help message
+* **`!pm stop`** - Disable bridge for the room and clear all configuration
+* **`!pm send`** - Send email
 
 ---
 
-* **!pm mailbox** - Get or set mailbox of the room
-* **!pm domain** - Get or set default domain of the room
-* **!pm owner** - Get or set owner of the room
-* **!pm password** - Get or set SMTP password of the room's mailbox
+#### mailbox ownership
+
+> The following section is visible to the mailbox owners only
+
+* **`!pm mailbox`** - Get or set mailbox of the room
+* **`!pm domain`** - Get or set default domain of the room
+* **`!pm owner`** - Get or set owner of the room
+* **`!pm password`** - Get or set SMTP password of the room's mailbox
 
 ---
 
-* **!pm nosend** - Get or set `nosend` of the room (`true` - disable email sending; `false` - enable email sending)
-* **!pm noreplies** - Get or set `noreplies` of the room (`true` - ignore matrix replies; `false` - parse matrix replies)
-* **!pm nosender** - Get or set `nosender` of the room (`true` - hide email sender; `false` - show email sender)
-* **!pm norecipient** - Get or set `norecipient` of the room (`true` - hide recipient; `false` - show recipient)
-* **!pm nocc** - Get or set `nocc` of the room (`true` - hide CC; `false` - show CC)
-* **!pm nosubject** - Get or set `nosubject` of the room (`true` - hide email subject; `false` - show email subject)
-* **!pm nohtml** - Get or set `nohtml` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)
-* **!pm nothreads** - Get or set `nothreads` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)
-* **!pm nofiles** - Get or set `nofiles` of the room (`true` - ignore email attachments; `false` - upload email attachments)
-* **!pm noinlines** - Get or set `noinlines` of the room (`true` - ignore inline attachments; `false` - upload inline attachments)
+#### mailbox options
+
+> The following section is visible to the mailbox owners only
+
+* **`!pm nosend`** - Get or set `nosend` of the room (`true` - disable email sending; `false` - enable email sending)
+* **`!pm noreplies`** - Get or set `noreplies` of the room (`true` - ignore matrix replies; `false` - parse matrix replies)
+* **`!pm nosender`** - Get or set `nosender` of the room (`true` - hide email sender; `false` - show email sender)
+* **`!pm norecipient`** - Get or set `norecipient` of the room (`true` - hide recipient; `false` - show recipient)
+* **`!pm nocc`** - Get or set `nocc` of the room (`true` - hide CC; `false` - show CC)
+* **`!pm nosubject`** - Get or set `nosubject` of the room (`true` - hide email subject; `false` - show email subject)
+* **`!pm nohtml`** - Get or set `nohtml` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)
+* **`!pm nothreads`** - Get or set `nothreads` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)
+* **`!pm nofiles`** - Get or set `nofiles` of the room (`true` - ignore email attachments; `false` - upload email attachments)
+* **`!pm noinlines`** - Get or set `noinlines` of the room (`true` - ignore inline attachments; `false` - upload inline attachments)
 
 ---
 
-* **!pm spamcheck:mx** - only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)
-* **!pm spamcheck:spf** - only accept email from senders which authorized to send it (those matching SPF records) (`true` - enable, `false` - disable)
-* **!pm spamcheck:dkim** - only accept correctly authorized emails (without DKIM signature at all or with valid DKIM signature) (`true` - enable, `false` - disable)
-* **!pm spamcheck:smtp** - only accept email from servers which seem prepared to receive it (those listening on an SMTP port) (`true` - enable, `false` - disable)
-* **!pm spamlist** - Get or set `spamlist` of the room (comma-separated list), eg: `spammer@example.com,*@spammer.org,noreply@*`
+#### mailbox security checks
+
+> The following section is visible to the mailbox owners only
+
+* **`!pm spamcheck:mx`** - only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)
+* **`!pm spamcheck:spf`** - only accept email from senders which authorized to send it (those matching SPF records) (`true` - enable, `false` - disable)
+* **`!pm spamcheck:dkim`** - only accept correctly authorized emails (without DKIM signature at all or with valid DKIM signature) (`true` - enable, `false` - disable)
+* **`!pm spamcheck:smtp`** - only accept email from servers which seem prepared to receive it (those listening on an SMTP port) (`true` - enable, `false` - disable)
 
 ---
 
-* **!pm adminroom** - Get or set admin room
-* **!pm dkim** - Get DKIM signature
-* **!pm catch-all** - Configure catch-all mailbox
-* **!pm queue:batch** - max amount of emails to process on each queue check
-* **!pm queue:retries** - max amount of tries per email in queue before removal
-* **!pm users** - Get or set allowed users patterns
-* **!pm mailboxes** - Show the list of all mailboxes
-* **!pm delete** &lt;mailbox&gt; - Delete specific mailbox
+#### mailbox anti-spam
+
+> The following section is visible to the mailbox owners only
+
+* **`!pm spam:list`** - Show comma-separated spamlist of the room, eg: `spammer@example.com,*@spammer.org,spam@*`
+* **`!pm spam:add`** - Mark an email address (or pattern) as spam
+* **`!pm spam:remove`** - Unmark an email address (or pattern) as spam
+* **`!pm spam:reset`** - Reset spamlist
 
 ---
 
-* **!pm greylist** - Set automatic greylisting duration in minutes (0 - disabled)
-* **!pm banlist** - Enable/disable banlist and show current values
-* **!pm banlist:add** - Ban an IP
-* **!pm banlist:remove** - Unban an IP
-* **!pm banlist:reset** - Reset banlist
+#### server options
+
+> The following section is visible to the bridge admins only
+
+* **`!pm adminroom`** - Get or set admin room
+* **`!pm users`** - Get or set allowed users
+* **`!pm dkim`** - Get DKIM signature
+* **`!pm catch-all`** - Get or set catch-all mailbox
+* **`!pm queue:batch`** - max amount of emails to process on each queue check
+* **`!pm queue:retries`** - max amount of tries per email in queue before removal
+* **`!pm mailboxes`** - Show the list of all mailboxes
+* **`!pm delete`** - Delete specific mailbox
+
+---
+
+#### server antispam
+
+> The following section is visible to the bridge admins only
+
+* **`!pm greylist`** - Set automatic greylisting duration in minutes (0 - disabled)
+* **`!pm banlist`** - Enable/disable banlist and show current values
+* **`!pm banlist:add`** - Ban an IP
+* **`!pm banlist:remove`** - Unban an IP
+* **`!pm banlist:reset`** - Reset banlist
 
 </details>
 

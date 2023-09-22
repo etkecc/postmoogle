@@ -16,20 +16,24 @@ import (
 )
 
 const (
-	commandHelp          = "help"
-	commandStop          = "stop"
-	commandSend          = "send"
-	commandDKIM          = "dkim"
-	commandCatchAll      = config.BotCatchAll
-	commandUsers         = config.BotUsers
-	commandQueueBatch    = config.BotQueueBatch
-	commandQueueRetries  = config.BotQueueRetries
-	commandDelete        = "delete"
-	commandBanlist       = "banlist"
-	commandBanlistAdd    = "banlist:add"
-	commandBanlistRemove = "banlist:remove"
-	commandBanlistReset  = "banlist:reset"
-	commandMailboxes     = "mailboxes"
+	commandHelp           = "help"
+	commandStop           = "stop"
+	commandSend           = "send"
+	commandDKIM           = "dkim"
+	commandCatchAll       = config.BotCatchAll
+	commandUsers          = config.BotUsers
+	commandQueueBatch     = config.BotQueueBatch
+	commandQueueRetries   = config.BotQueueRetries
+	commandSpamlist       = "spam:list"
+	commandSpamlistAdd    = "spam:add"
+	commandSpamlistRemove = "spam:remove"
+	commandSpamlistReset  = "spam:reset"
+	commandDelete         = "delete"
+	commandBanlist        = "banlist"
+	commandBanlistAdd     = "banlist:add"
+	commandBanlistRemove  = "banlist:remove"
+	commandBanlistReset   = "banlist:reset"
+	commandMailboxes      = "mailboxes"
 )
 
 type (
@@ -185,7 +189,7 @@ func (b *Bot) initCommands() commandList {
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
-		{allowed: b.allowOwner, description: "mailbox antispam"}, // delimiter
+		{allowed: b.allowOwner, description: "mailbox security checks"}, // delimiter
 		{
 			key:         config.RoomSpamcheckMX,
 			description: "only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)",
@@ -210,14 +214,27 @@ func (b *Bot) initCommands() commandList {
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},
+		{allowed: b.allowOwner, description: "mailbox anti-spam"}, // delimiter
 		{
-			key: config.RoomSpamlist,
-			description: fmt.Sprintf(
-				"Get or set `%s` of the room (comma-separated list), eg: `spammer@example.com,*@spammer.org,spam@*`",
-				config.RoomSpamlist,
-			),
-			sanitizer: utils.SanitizeStringSlice,
-			allowed:   b.allowOwner,
+			key:         commandSpamlist,
+			description: "Show comma-separated spamlist of the room, eg: `spammer@example.com,*@spammer.org,spam@*`",
+			sanitizer:   utils.SanitizeStringSlice,
+			allowed:     b.allowOwner,
+		},
+		{
+			key:         commandSpamlistAdd,
+			description: "Mark an email address (or pattern) as spam",
+			allowed:     b.allowOwner,
+		},
+		{
+			key:         commandSpamlistRemove,
+			description: "Unmark an email address (or pattern) as spam",
+			allowed:     b.allowOwner,
+		},
+		{
+			key:         commandSpamlistReset,
+			description: "Reset spamlist",
+			allowed:     b.allowOwner,
 		},
 		{allowed: b.allowAdmin, description: "server options"}, // delimiter
 		{
@@ -340,6 +357,12 @@ func (b *Bot) handle(ctx context.Context) {
 		b.runSend(ctx)
 	case commandDKIM:
 		b.runDKIM(ctx, commandSlice)
+	case commandSpamlistAdd:
+		b.runSpamlistAdd(ctx, commandSlice)
+	case commandSpamlistRemove:
+		b.runSpamlistRemove(ctx, commandSlice)
+	case commandSpamlistReset:
+		b.runSpamlistReset(ctx)
 	case config.BotAdminRoom:
 		b.runAdminRoom(ctx, commandSlice)
 	case commandUsers:
@@ -427,7 +450,12 @@ func (b *Bot) sendHelp(ctx context.Context) {
 		msg.WriteString(" ")
 		msg.WriteString(cmd.key)
 		msg.WriteString("`**")
-		value := cfg.Get(cmd.key)
+
+		name := cmd.key
+		if name == commandSpamlist {
+			name = config.RoomSpamlist
+		}
+		value := cfg.Get(name)
 		if cmd.sanitizer != nil {
 			switch value != "" {
 			case false:

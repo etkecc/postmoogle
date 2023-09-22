@@ -168,7 +168,7 @@ func (s Room) MigrateSpamlistSettings() {
 	for item := range uniq {
 		spamlist = append(spamlist, item)
 	}
-	s.Set(RoomSpamlist, strings.Join(spamlist, ","))
+	s.Set(RoomSpamlist, utils.SliceString(spamlist))
 }
 
 // ContentOptions converts room display settings to content options
