@@ -149,7 +149,7 @@ If you want to change them - check available options in the help message (`!pm h
 > The following section is visible to the mailbox owners only
 
 * **`!pm spam:list`** - Show comma-separated spamlist of the room, eg: `spammer@example.com,*@spammer.org,spam@*`
-* **`!pm spam:add`** - Mark an email address (or pattern) as spam
+* **`!pm spam:add`** - Mark an email address (or pattern) as spam (or you can react to the email with emoji: ⛔️,🛑, or 🚫)
 * **`!pm spam:remove`** - Unmark an email address (or pattern) as spam
 * **`!pm spam:reset`** - Reset spamlist
 

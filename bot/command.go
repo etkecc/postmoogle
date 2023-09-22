@@ -223,7 +223,7 @@ func (b *Bot) initCommands() commandList {
 		},
 		{
 			key:         commandSpamlistAdd,
-			description: "Mark an email address (or pattern) as spam",
+			description: "Mark an email address (or pattern) as spam (or you can react to the email with emoji: ⛔️,🛑, or 🚫)",
 			allowed:     b.allowOwner,
 		},
 		{

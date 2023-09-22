@@ -21,7 +21,14 @@ func (b *Bot) initSync() {
 		event.EventMessage,
 		func(_ mautrix.EventSource, evt *event.Event) {
 			go b.onMessage(evt)
-		})
+		},
+	)
+	b.lp.OnEventType(
+		event.EventReaction,
+		func(_ mautrix.EventSource, evt *event.Event) {
+			go b.onReaction(evt)
+		},
+	)
 }
 
 // joinPermit is called by linkpearl when processing "invite" events and deciding if rooms should be auto-joined or not
@@ -67,6 +74,20 @@ func (b *Bot) onMessage(evt *event.Event) {
 
 	ctx := newContext(evt)
 	b.handle(ctx)
+}
+
+func (b *Bot) onReaction(evt *event.Event) {
+	// ignore own messages
+	if evt.Sender == b.lp.GetClient().UserID {
+		return
+	}
+	// mautrix 0.15.x migration
+	if b.ignoreBefore >= evt.Timestamp {
+		return
+	}
+
+	ctx := newContext(evt)
+	b.handleReaction(ctx)
 }
 
 // onBotJoin handles the "bot joined the room" event
