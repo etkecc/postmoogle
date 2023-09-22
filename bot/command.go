@@ -424,6 +424,29 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	b.SendNotice(ctx, roomID, msg.String())
 }
 
+func (b *Bot) getHelpValue(cfg config.Room, cmd command) string {
+	name := cmd.key
+	if name == commandSpamlist {
+		name = config.RoomSpamlist
+	}
+
+	value := cfg.Get(name)
+	if cmd.sanitizer != nil {
+		switch value != "" {
+		case false:
+			return "(currently not set)"
+		case true:
+			txt := "(currently " + value
+			if cmd.key == config.RoomMailbox {
+				txt += " (" + utils.EmailsList(value, cfg.Domain()) + ")"
+			}
+			return txt + ")"
+		}
+	}
+
+	return ""
+}
+
 func (b *Bot) sendHelp(ctx context.Context) {
 	evt := eventFromContext(ctx)
 
@@ -451,27 +474,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 		msg.WriteString(cmd.key)
 		msg.WriteString("`**")
 
-		name := cmd.key
-		if name == commandSpamlist {
-			name = config.RoomSpamlist
-		}
-		value := cfg.Get(name)
-		if cmd.sanitizer != nil {
-			switch value != "" {
-			case false:
-				msg.WriteString("(currently not set)")
-			case true:
-				msg.WriteString("(currently `")
-				msg.WriteString(value)
-				if cmd.key == config.RoomMailbox {
-					msg.WriteString(" (")
-					msg.WriteString(utils.EmailsList(value, cfg.Domain()))
-					msg.WriteString(")")
-				}
-				msg.WriteString("`)")
-			}
-		}
-
+		msg.WriteString(b.getHelpValue(cfg, cmd))
 		msg.WriteString(" - ")
 
 		msg.WriteString(cmd.description)

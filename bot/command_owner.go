@@ -3,11 +3,11 @@ package bot
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/raja/argon2pw"
+	"golang.org/x/exp/slices"
 
 	"gitlab.com/etke.cc/postmoogle/bot/config"
 	"gitlab.com/etke.cc/postmoogle/utils"
