@@ -496,11 +496,32 @@ func (b *Bot) sendHelp(ctx context.Context) {
 	b.SendNotice(ctx, evt.RoomID, msg.String())
 }
 
-//nolint:gocognit // TODO
 func (b *Bot) runSend(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	if !b.allowSend(evt.Sender, evt.RoomID) {
+	to, subject, body, shouldSend := b.getSendDetails(ctx)
+	if !shouldSend {
 		return
+	}
+
+	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "failed to retrieve room settings: %v", err)
+		return
+	}
+
+	var htmlBody string
+	if !cfg.NoHTML() {
+		htmlBody = format.RenderMarkdown(body, true, true).FormattedBody
+	}
+
+	tos := strings.Split(to, ",")
+	b.runSendCommand(ctx, cfg, tos, subject, body, htmlBody)
+}
+
+func (b *Bot) getSendDetails(ctx context.Context) (string, string, string, bool) {
+	evt := eventFromContext(ctx)
+	if !b.allowSend(evt.Sender, evt.RoomID) {
+		return "", "", "", false
 	}
 	commandSlice := b.parseCommand(evt.Content.AsMessage().Body, false)
 	to, subject, body, err := utils.ParseSend(commandSlice)
@@ -515,35 +536,32 @@ func (b *Bot) runSend(ctx context.Context) {
 				"as you want.\n"+
 				"```",
 			b.prefix))
-		return
+		return "", "", "", false
 	}
 
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "failed to retrieve room settings: %v", err)
-		return
+		return "", "", "", false
 	}
 
 	mailbox := cfg.Mailbox()
 	if mailbox == "" {
 		b.SendNotice(ctx, evt.RoomID, "mailbox is not configured, kupo")
-		return
+		return "", "", "", false
 	}
 
-	var htmlBody string
-	if !cfg.NoHTML() {
-		htmlBody = format.RenderMarkdown(body, true, true).FormattedBody
+	signature := cfg.Signature()
+	if signature != "" {
+		body += "\n\n---\n" + signature
 	}
 
-	signature := format.RenderMarkdown(cfg.Signature(), true, true)
-	if signature.Body != "" {
-		body += "\n\n---\n" + signature.Body
-		if htmlBody != "" {
-			htmlBody += "<br><hr><br>" + signature.FormattedBody
-		}
-	}
+	return to, subject, body, true
+}
 
-	tos := strings.Split(to, ",")
+func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string, subject, body, htmlBody string) {
+	evt := eventFromContext(ctx)
+
 	// validate first
 	for _, to := range tos {
 		if !email.AddressValid(to) {
@@ -556,7 +574,7 @@ func (b *Bot) runSend(ctx context.Context) {
 	defer b.mu.Unlock(evt.RoomID.String())
 
 	domain := utils.SanitizeDomain(cfg.Domain())
-	from := mailbox + "@" + domain
+	from := cfg.Mailbox() + "@" + domain
 	ID := email.MessageID(evt.ID, domain)
 	for _, to := range tos {
 		recipients := []string{to}

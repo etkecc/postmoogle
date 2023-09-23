@@ -43,7 +43,16 @@ func (b *Bot) handleOption(ctx context.Context, cmd []string) {
 		b.getOption(ctx, cmd[0])
 		return
 	}
-	b.setOption(ctx, cmd[0], cmd[1])
+	switch cmd[0] {
+	case config.RoomActive:
+		return
+	case config.RoomMailbox:
+		b.setMailbox(ctx, cmd[1])
+	case config.RoomPassword:
+		b.setPassword(ctx)
+	default:
+		b.setOption(ctx, cmd[0], cmd[1])
+	}
 }
 
 func (b *Bot) getOption(ctx context.Context, name string) {
@@ -84,24 +93,12 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	b.SendNotice(ctx, evt.RoomID, msg)
 }
 
-//nolint:gocognit // TODO
-func (b *Bot) setOption(ctx context.Context, name, value string) {
-	cmd := b.commands.get(name)
-	if cmd != nil && cmd.sanitizer != nil {
-		value = cmd.sanitizer(value)
-	}
-
+func (b *Bot) setMailbox(ctx context.Context, value string) {
 	evt := eventFromContext(ctx)
-	// ignore request
-	if name == config.RoomActive {
+	existingID, ok := b.getMapping(value)
+	if (ok && existingID != "" && existingID != evt.RoomID) || b.isReserved(value) {
+		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, "")))
 		return
-	}
-	if name == config.RoomMailbox {
-		existingID, ok := b.getMapping(value)
-		if (ok && existingID != "" && existingID != evt.RoomID) || b.isReserved(value) {
-			b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, "")))
-			return
-		}
 	}
 
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
@@ -109,14 +106,62 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
 		return
 	}
+	old := cfg.Get(config.RoomMailbox)
+	cfg.Set(config.RoomMailbox, value)
+	cfg.Set(config.RoomOwner, evt.Sender.String())
+	if old != "" {
+		b.rooms.Delete(old)
+	}
+	active := b.ActivateMailbox(evt.Sender, evt.RoomID, value)
+	cfg.Set(config.RoomActive, strconv.FormatBool(active))
+	value = fmt.Sprintf("%s@%s", value, utils.SanitizeDomain(cfg.Domain()))
 
-	if name == config.RoomPassword {
-		value = b.parseCommand(evt.Content.AsMessage().Body, false)[1] // get original value, without forced lower case
-		value, err = argon2pw.GenerateSaltedHash(value)
-		if err != nil {
-			b.Error(ctx, evt.RoomID, "failed to hash password: %v", err)
-			return
-		}
+	err = b.cfg.SetRoom(evt.RoomID, cfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
+		return
+	}
+
+	msg := fmt.Sprintf("mailbox of this room set to `%s`", value)
+	b.SendNotice(ctx, evt.RoomID, msg)
+}
+
+func (b *Bot) setPassword(ctx context.Context) {
+	evt := eventFromContext(ctx)
+	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
+		return
+	}
+
+	value := b.parseCommand(evt.Content.AsMessage().Body, false)[1] // get original value, without forced lower case
+	value, err = argon2pw.GenerateSaltedHash(value)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "failed to hash password: %v", err)
+		return
+	}
+
+	cfg.Set(config.RoomPassword, value)
+	err = b.cfg.SetRoom(evt.RoomID, cfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
+		return
+	}
+
+	b.SendNotice(ctx, evt.RoomID, "SMTP password has been set")
+}
+
+func (b *Bot) setOption(ctx context.Context, name, value string) {
+	cmd := b.commands.get(name)
+	if cmd != nil && cmd.sanitizer != nil {
+		value = cmd.sanitizer(value)
+	}
+
+	evt := eventFromContext(ctx)
+	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
+		return
 	}
 
 	if name == config.RoomAutoreply ||
@@ -129,18 +174,12 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	}
 
 	old := cfg.Get(name)
-	cfg.Set(name, value)
-
-	if name == config.RoomMailbox {
-		cfg.Set(config.RoomOwner, evt.Sender.String())
-		if old != "" {
-			b.rooms.Delete(old)
-		}
-		active := b.ActivateMailbox(evt.Sender, evt.RoomID, value)
-		cfg.Set(config.RoomActive, strconv.FormatBool(active))
-		value = fmt.Sprintf("%s@%s", value, utils.SanitizeDomain(cfg.Domain()))
+	if old == value {
+		b.SendNotice(ctx, evt.RoomID, "nothing changed, kupo.")
+		return
 	}
 
+	cfg.Set(name, value)
 	err = b.cfg.SetRoom(evt.RoomID, cfg)
 	if err != nil {
 		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
@@ -148,9 +187,6 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	}
 
 	msg := fmt.Sprintf("`%s` of this room set to `%s`", name, value)
-	if name == config.RoomPassword {
-		msg = "SMTP password has been set"
-	}
 	b.SendNotice(ctx, evt.RoomID, msg)
 }
 
