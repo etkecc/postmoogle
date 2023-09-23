@@ -35,6 +35,7 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] SMTP server (you can use Postmoogle as general purpose SMTP server to send emails from your scripts or apps)
 - [x] Send a message to matrix room with special format to send a new email, even to multiple email addresses at once
 - [x] Reply to matrix thread sends reply into email thread
+- [x] Email signatures
 
 ## Configuration
 
@@ -120,6 +121,7 @@ If you want to change them - check available options in the help message (`!pm h
 
 > The following section is visible to the mailbox owners only
 
+* **`!pm signature`** - Get or set signature of the room (markdown supported)
 * **`!pm nosend`** - Get or set `nosend` of the room (`true` - disable email sending; `false` - enable email sending)
 * **`!pm noreplies`** - Get or set `noreplies` of the room (`true` - ignore matrix replies; `false` - parse matrix replies)
 * **`!pm nosender`** - Get or set `nosender` of the room (`true` - hide email sender; `false` - show email sender)

@@ -100,6 +100,12 @@ func (b *Bot) initCommands() commandList {
 		},
 		{allowed: b.allowOwner, description: "mailbox options"}, // delimiter
 		{
+			key:         config.RoomSignature,
+			description: "Get or set signature of the room (markdown supported)",
+			sanitizer:   func(s string) string { return s },
+			allowed:     b.allowOwner,
+		},
+		{
 			key: config.RoomNoSend,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - disable email sending; `false` - enable email sending)",
@@ -521,6 +527,14 @@ func (b *Bot) runSend(ctx context.Context) {
 	var htmlBody string
 	if !cfg.NoHTML() {
 		htmlBody = format.RenderMarkdown(body, true, true).FormattedBody
+	}
+
+	signature := format.RenderMarkdown(cfg.Signature(), true, true)
+	if signature.Body != "" {
+		body += "\n\n---\n" + signature.Body
+		if htmlBody != "" {
+			htmlBody += "<br><hr><br>" + signature.FormattedBody
+		}
 	}
 
 	tos := strings.Split(to, ",")

@@ -29,6 +29,7 @@ const (
 	RoomNoFiles       = "nofiles"
 	RoomNoInlines     = "noinlines"
 	RoomPassword      = "password"
+	RoomSignature     = "signature"
 	RoomSpamcheckDKIM = "spamcheck:dkim"
 	RoomSpamcheckSMTP = "spamcheck:smtp"
 	RoomSpamcheckSPF  = "spamcheck:spf"
@@ -64,6 +65,10 @@ func (s Room) Active() bool {
 
 func (s Room) Password() string {
 	return s.Get(RoomPassword)
+}
+
+func (s Room) Signature() string {
+	return s.Get(RoomSignature)
 }
 
 func (s Room) NoSend() bool {

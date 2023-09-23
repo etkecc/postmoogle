@@ -158,6 +158,8 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 }
 
 // SendEmailReply sends replies from matrix thread to email thread
+//
+//nolint:gocognit // TODO
 func (b *Bot) SendEmailReply(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	if !b.allowSend(evt.Sender, evt.RoomID) {
@@ -194,10 +196,17 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	if meta.Subject == "" {
 		meta.Subject = strings.SplitN(content.Body, "\n", 1)[0]
 	}
+	signature := format.RenderMarkdown(cfg.Signature(), true, true)
 	body := content.Body
+	if signature.Body != "" {
+		body += "\n\n---\n" + signature.Body
+	}
 	var htmlBody string
 	if !cfg.NoHTML() {
 		htmlBody = content.FormattedBody
+		if htmlBody != "" && signature.FormattedBody != "" {
+			htmlBody += "<br><hr><br>" + signature.FormattedBody
+		}
 	}
 
 	meta.MessageID = email.MessageID(evt.ID, meta.FromDomain)

@@ -84,7 +84,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	b.SendNotice(ctx, evt.RoomID, msg)
 }
 
-//nolint:gocognit
+//nolint:gocognit // TODO
 func (b *Bot) setOption(ctx context.Context, name, value string) {
 	cmd := b.commands.get(name)
 	if cmd != nil && cmd.sanitizer != nil {
@@ -117,6 +117,14 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 			b.Error(ctx, evt.RoomID, "failed to hash password: %v", err)
 			return
 		}
+	}
+
+	if name == config.RoomSignature {
+		value = strings.Join(b.parseCommand(evt.Content.AsMessage().Body, false)[1:], " ")
+	}
+
+	if value == "reset" {
+		value = ""
 	}
 
 	old := cfg.Get(name)
