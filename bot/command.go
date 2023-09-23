@@ -100,6 +100,12 @@ func (b *Bot) initCommands() commandList {
 		},
 		{allowed: b.allowOwner, description: "mailbox options"}, // delimiter
 		{
+			key:         config.RoomAutoreply,
+			description: "Get or set autoreply of the room (markdown supported) that will be send for any new incoming email thread",
+			sanitizer:   func(s string) string { return s },
+			allowed:     b.allowOwner,
+		},
+		{
 			key:         config.RoomSignature,
 			description: "Get or set signature of the room (markdown supported)",
 			sanitizer:   func(s string) string { return s },

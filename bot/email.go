@@ -111,6 +111,8 @@ func (b *Bot) GetIFOptions(roomID id.RoomID) email.IncomingFilteringOptions {
 }
 
 // IncomingEmail sends incoming email to matrix room
+//
+//nolint:gocognit // TODO
 func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 	roomID, ok := b.GetMapping(email.Mailbox(true))
 	if !ok {
@@ -125,9 +127,11 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 	defer b.mu.Unlock(roomID.String())
 
 	var threadID id.EventID
+	newThread := true
 	if email.InReplyTo != "" || email.References != "" {
 		threadID = b.getThreadID(roomID, email.InReplyTo, email.References)
 		if threadID != "" {
+			newThread = false
 			b.setThreadID(roomID, email.MessageID, threadID)
 		}
 	}
@@ -138,6 +142,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 			return utils.UnwrapError(serr)
 		}
 		threadID = "" // unknown event edge case - remove existing thread ID to avoid complications
+		newThread = true
 	}
 	if threadID == "" {
 		threadID = eventID
@@ -154,7 +159,95 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 		b.sendFiles(ctx, roomID, email.Files, cfg.NoThreads(), threadID)
 	}
 
+	if newThread && cfg.Autoreply() != "" {
+		b.sendAutoreply(roomID, threadID)
+	}
+
 	return nil
+}
+
+//nolint:gocognit // TODO
+func (b *Bot) sendAutoreply(roomID id.RoomID, threadID id.EventID) {
+	cfg, err := b.cfg.GetRoom(roomID)
+	if err != nil {
+		return
+	}
+
+	text := cfg.Autoreply()
+	if text == "" {
+		return
+	}
+
+	evt := &event.Event{
+		ID:     threadID + "-autoreply",
+		RoomID: roomID,
+		Content: event.Content{
+			Parsed: &event.MessageEventContent{
+				RelatesTo: &event.RelatesTo{
+					Type:    event.RelThread,
+					EventID: threadID,
+				},
+			},
+		},
+	}
+
+	meta := b.getParentEmail(evt, cfg.Mailbox())
+
+	if meta.To == "" {
+		return
+	}
+
+	if meta.ThreadID == "" {
+		meta.ThreadID = threadID
+	}
+	if meta.Subject == "" {
+		meta.Subject = "Automatic response"
+	}
+	content := format.RenderMarkdown(text, true, true)
+	signature := format.RenderMarkdown(cfg.Signature(), true, true)
+	body := content.Body
+	if signature.Body != "" {
+		body += "\n\n---\n" + signature.Body
+	}
+	var htmlBody string
+	if !cfg.NoHTML() {
+		htmlBody = content.FormattedBody
+		if htmlBody != "" && signature.FormattedBody != "" {
+			htmlBody += "<br><hr><br>" + signature.FormattedBody
+		}
+	}
+
+	meta.MessageID = email.MessageID(evt.ID, meta.FromDomain)
+	meta.References = meta.References + " " + meta.MessageID
+	b.log.Info().Any("meta", meta).Msg("sending automatic reply")
+	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil, nil)
+	data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
+	if data == "" {
+		return
+	}
+
+	var queued bool
+	ctx := newContext(evt)
+	recipients := meta.Recipients
+	for _, to := range recipients {
+		queued, err = b.Sendmail(evt.ID, meta.From, to, data)
+		if queued {
+			b.log.Info().Err(err).Str("from", meta.From).Str("to", to).Msg("email has been queued")
+			b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg, "Autoreply has been sent (queued)")
+			continue
+		}
+
+		if err != nil {
+			b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
+			continue
+		}
+	}
+
+	b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg, "Autoreply has been sent")
+}
+
+func (b *Bot) canReply(sender id.UserID, roomID id.RoomID) bool {
+	return b.allowSend(sender, roomID) && b.allowReply(sender, roomID)
 }
 
 // SendEmailReply sends replies from matrix thread to email thread
@@ -162,10 +255,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 //nolint:gocognit // TODO
 func (b *Bot) SendEmailReply(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	if !b.allowSend(evt.Sender, evt.RoomID) {
-		return
-	}
-	if !b.allowReply(evt.Sender, evt.RoomID) {
+	if !b.canReply(evt.Sender, evt.RoomID) {
 		return
 	}
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
@@ -399,11 +489,14 @@ func (b *Bot) getParentEmail(evt *event.Event, newFromMailbox string) *parentEma
 
 // saveSentMetadata used to save metadata from !pm sent and thread reply events to a separate notice message
 // because that metadata is needed to determine email thread relations
-func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, recipients []string, eml *email.Email, cfg config.Room) {
+func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, recipients []string, eml *email.Email, cfg config.Room, textOverride ...string) {
 	addrs := strings.Join(recipients, ", ")
 	text := "Email has been sent to " + addrs
 	if queued {
 		text = "Email to " + addrs + " has been queued"
+	}
+	if len(textOverride) > 0 {
+		text = textOverride[0]
 	}
 
 	evt := eventFromContext(ctx)

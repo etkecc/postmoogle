@@ -14,27 +14,31 @@ type Room map[string]string
 
 // option keys
 const (
-	RoomActive        = ".active"
-	RoomOwner         = "owner"
-	RoomMailbox       = "mailbox"
-	RoomDomain        = "domain"
-	RoomNoSend        = "nosend"
-	RoomNoReplies     = "noreplies"
-	RoomNoCC          = "nocc"
-	RoomNoSender      = "nosender"
-	RoomNoRecipient   = "norecipient"
-	RoomNoSubject     = "nosubject"
-	RoomNoHTML        = "nohtml"
-	RoomNoThreads     = "nothreads"
-	RoomNoFiles       = "nofiles"
-	RoomNoInlines     = "noinlines"
-	RoomPassword      = "password"
-	RoomSignature     = "signature"
+	RoomActive    = ".active"
+	RoomOwner     = "owner"
+	RoomMailbox   = "mailbox"
+	RoomDomain    = "domain"
+	RoomPassword  = "password"
+	RoomSignature = "signature"
+	RoomAutoreply = "autoreply"
+
+	RoomNoCC        = "nocc"
+	RoomNoFiles     = "nofiles"
+	RoomNoHTML      = "nohtml"
+	RoomNoInlines   = "noinlines"
+	RoomNoRecipient = "norecipient"
+	RoomNoReplies   = "noreplies"
+	RoomNoSend      = "nosend"
+	RoomNoSender    = "nosender"
+	RoomNoSubject   = "nosubject"
+	RoomNoThreads   = "nothreads"
+
 	RoomSpamcheckDKIM = "spamcheck:dkim"
+	RoomSpamcheckMX   = "spamcheck:mx"
 	RoomSpamcheckSMTP = "spamcheck:smtp"
 	RoomSpamcheckSPF  = "spamcheck:spf"
-	RoomSpamcheckMX   = "spamcheck:mx"
-	RoomSpamlist      = "spamlist"
+
+	RoomSpamlist = "spamlist"
 )
 
 // Get option
@@ -69,6 +73,10 @@ func (s Room) Password() string {
 
 func (s Room) Signature() string {
 	return s.Get(RoomSignature)
+}
+
+func (s Room) Autoreply() string {
+	return s.Get(RoomAutoreply)
 }
 
 func (s Room) NoSend() bool {

@@ -119,7 +119,8 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		}
 	}
 
-	if name == config.RoomSignature {
+	if name == config.RoomAutoreply ||
+		name == config.RoomSignature {
 		value = strings.Join(b.parseCommand(evt.Content.AsMessage().Body, false)[1:], " ")
 	}
 
