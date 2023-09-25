@@ -21,6 +21,8 @@ const (
 	BotQueueBatch          = "queue:batch"
 	BotQueueRetries        = "queue:retries"
 	BotBanlistEnabled      = "banlist:enabled"
+	BotBanlistAuto         = "banlist:auto"
+	BotBanlistAuth         = "banlist:auth"
 	BotGreylist            = "greylist"
 	BotMautrix015Migration = "mautrix015migration"
 )
@@ -70,6 +72,16 @@ func (s Bot) AdminRoom() id.RoomID {
 // BanlistEnabled option
 func (s Bot) BanlistEnabled() bool {
 	return utils.Bool(s.Get(BotBanlistEnabled))
+}
+
+// BanlistAuto option
+func (s Bot) BanlistAuto() bool {
+	return utils.Bool(s.Get(BotBanlistAuto))
+}
+
+// BanlistAuth option
+func (s Bot) BanlistAuth() bool {
+	return utils.Bool(s.Get(BotBanlistAuth))
 }
 
 // Greylist option (duration in minutes)

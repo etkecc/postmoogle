@@ -136,15 +136,59 @@ func (b *Bot) IsTrusted(addr net.Addr) bool {
 	return false
 }
 
-// Ban an address
-func (b *Bot) Ban(addr net.Addr) {
+// Ban an address automatically
+func (b *Bot) BanAuto(addr net.Addr) {
+	if !b.cfg.GetBot().BanlistEnabled() {
+		return
+	}
+
+	if !b.cfg.GetBot().BanlistAuto() {
+		return
+	}
+
+	if b.IsTrusted(addr) {
+		return
+	}
+	b.log.Debug().Str("addr", addr.String()).Msg("attempting to automatically ban")
+	banlist := b.cfg.GetBanlist()
+	banlist.Add(addr)
+	err := b.cfg.SetBanlist(banlist)
+	if err != nil {
+		b.log.Error().Err(err).Str("addr", addr.String()).Msg("cannot update banlist")
+	}
+}
+
+// Ban an address for incorrect auth automatically
+func (b *Bot) BanAuth(addr net.Addr) {
+	if !b.cfg.GetBot().BanlistEnabled() {
+		return
+	}
+
+	if !b.cfg.GetBot().BanlistAuth() {
+		return
+	}
+
+	if b.IsTrusted(addr) {
+		return
+	}
+	b.log.Debug().Str("addr", addr.String()).Msg("attempting to automatically ban")
+	banlist := b.cfg.GetBanlist()
+	banlist.Add(addr)
+	err := b.cfg.SetBanlist(banlist)
+	if err != nil {
+		b.log.Error().Err(err).Str("addr", addr.String()).Msg("cannot update banlist")
+	}
+}
+
+// Ban an address manually
+func (b *Bot) BanManually(addr net.Addr) {
 	if !b.cfg.GetBot().BanlistEnabled() {
 		return
 	}
 	if b.IsTrusted(addr) {
 		return
 	}
-	b.log.Debug().Str("addr", addr.String()).Msg("attempting to ban")
+	b.log.Debug().Str("addr", addr.String()).Msg("attempting to manually ban")
 	banlist := b.cfg.GetBanlist()
 	banlist.Add(addr)
 	err := b.cfg.SetBanlist(banlist)

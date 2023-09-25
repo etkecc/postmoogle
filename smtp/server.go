@@ -41,14 +41,14 @@ func (m *mailServer) Login(state *smtp.ConnectionState, username, password strin
 
 	if !email.AddressValid(username) {
 		m.log.Debug().Str("address", username).Msg("address is invalid")
-		m.bot.Ban(state.RemoteAddr)
+		m.bot.BanAuth(state.RemoteAddr)
 		return nil, ErrBanned
 	}
 
 	roomID, allow := m.bot.AllowAuth(username, password)
 	if !allow {
 		m.log.Debug().Str("username", username).Msg("username or password is invalid")
-		m.bot.Ban(state.RemoteAddr)
+		m.bot.BanAuth(state.RemoteAddr)
 		return nil, ErrBanned
 	}
 
@@ -77,7 +77,7 @@ func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, 
 		getRoomID:    m.bot.GetMapping,
 		getFilters:   m.bot.GetIFOptions,
 		receiveEmail: m.ReceiveEmail,
-		ban:          m.bot.Ban,
+		ban:          m.bot.BanAuto,
 		greylisted:   m.bot.IsGreylisted,
 		trusted:      m.bot.IsTrusted,
 		log:          m.log,

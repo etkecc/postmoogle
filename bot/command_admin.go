@@ -328,6 +328,60 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 	b.SendNotice(ctx, evt.RoomID, "banlist has been updated")
 }
 
+func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	cfg := b.cfg.GetBot()
+	if len(commandSlice) < 2 {
+		var msg strings.Builder
+		msg.WriteString("Currently: `")
+		msg.WriteString(cfg.Get(config.BotBanlistAuth))
+		msg.WriteString("`\n\n")
+
+		if !cfg.BanlistAuth() {
+			msg.WriteString("To enable automatic banning for invalid credentials, send `")
+			msg.WriteString(b.prefix)
+			msg.WriteString(" banlist:auth true` (banlist itself must be enabled!)\n\n")
+		}
+
+		b.SendNotice(ctx, evt.RoomID, msg.String())
+		return
+	}
+	value := utils.SanitizeBoolString(commandSlice[1])
+	cfg.Set(config.BotBanlistAuth, value)
+	err := b.cfg.SetBot(cfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+	}
+	b.SendNotice(ctx, evt.RoomID, "auth banning has been updated")
+}
+
+func (b *Bot) runBanlistAuto(ctx context.Context, commandSlice []string) {
+	evt := eventFromContext(ctx)
+	cfg := b.cfg.GetBot()
+	if len(commandSlice) < 2 {
+		var msg strings.Builder
+		msg.WriteString("Currently: `")
+		msg.WriteString(cfg.Get(config.BotBanlistAuto))
+		msg.WriteString("`\n\n")
+
+		if !cfg.BanlistAuto() {
+			msg.WriteString("To enable automatic banning for invalid emails, send `")
+			msg.WriteString(b.prefix)
+			msg.WriteString(" banlist:auto true` (banlist itself must be enabled!)\n\n")
+		}
+
+		b.SendNotice(ctx, evt.RoomID, msg.String())
+		return
+	}
+	value := utils.SanitizeBoolString(commandSlice[1])
+	cfg.Set(config.BotBanlistAuto, value)
+	err := b.cfg.SetBot(cfg)
+	if err != nil {
+		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+	}
+	b.SendNotice(ctx, evt.RoomID, "auto banning has been updated")
+}
+
 func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
 	if len(commandSlice) < 2 {

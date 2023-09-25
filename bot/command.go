@@ -30,6 +30,8 @@ const (
 	commandSpamlistReset  = "spam:reset"
 	commandDelete         = "delete"
 	commandBanlist        = "banlist"
+	commandBanlistAuto    = "banlist:auto"
+	commandBanlistAuth    = "banlist:auth"
 	commandBanlistAdd     = "banlist:add"
 	commandBanlistRemove  = "banlist:remove"
 	commandBanlistReset   = "banlist:reset"
@@ -303,6 +305,16 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowAdmin,
 		},
 		{
+			key:         commandBanlistAuth,
+			description: "Enable/disable automatic banning of IP addresses when they try to auth with invalid credentials",
+			allowed:     b.allowAdmin,
+		},
+		{
+			key:         commandBanlistAuto,
+			description: "Enable/disable automatic banning of IP addresses when they try to send invalid emails",
+			allowed:     b.allowAdmin,
+		},
+		{
 			key:         commandBanlistAdd,
 			description: "Ban an IP",
 			allowed:     b.allowAdmin,
@@ -387,6 +399,10 @@ func (b *Bot) handle(ctx context.Context) {
 		b.runGreylist(ctx, commandSlice)
 	case commandBanlist:
 		b.runBanlist(ctx, commandSlice)
+	case commandBanlistAuth:
+		b.runBanlistAuth(ctx, commandSlice)
+	case commandBanlistAuto:
+		b.runBanlistAuto(ctx, commandSlice)
 	case commandBanlistAdd:
 		b.runBanlistAdd(ctx, commandSlice)
 	case commandBanlistRemove:

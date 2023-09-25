@@ -64,7 +64,8 @@ type matrixbot interface {
 	IsGreylisted(net.Addr) bool
 	IsBanned(net.Addr) bool
 	IsTrusted(net.Addr) bool
-	Ban(net.Addr)
+	BanAuto(net.Addr)
+	BanAuth(net.Addr)
 	GetMapping(string) (id.RoomID, bool)
 	GetIFOptions(id.RoomID) email.IncomingFilteringOptions
 	IncomingEmail(context.Context, *email.Email) error
