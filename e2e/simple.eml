@@ -3,7 +3,7 @@ Content-Type: multipart/alternative; boundary="Apple-Mail=_E091454E-BCFA-43B4-99
 Subject: MIME test 1
 Date: Sat, 13 Oct 2012 15:33:07 -0700
 Message-Id: <4E2E5A48-1A2C-4450-8663-D41B451DA93A@makita.skynet>
-To: test@localhost
+To: test+sub@localhost
 Mime-Version: 1.0 (Apple Message framework v1283)
 X-Mailer: Apple Mail (2.1283)
 

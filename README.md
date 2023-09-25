@@ -18,6 +18,7 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms
 - [x] Receive attachments
+- [x] Subaddressing support
 - [x] Catch-all mailbox
 - [x] Map email threads to matrix threads
 - [x] Multi-domain support

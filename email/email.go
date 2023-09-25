@@ -107,15 +107,21 @@ func (e *Email) Mailbox(incoming bool) string {
 	return utils.Mailbox(e.From)
 }
 
-// Content converts the email object to a Matrix event content
-func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Content {
-	var text strings.Builder
+func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, options *ContentOptions) {
 	if options.Sender {
 		text.WriteString(e.From)
 	}
 	if options.Recipient {
+		mailbox, sub, host := utils.EmailParts(e.To)
 		text.WriteString(" ➡️ ")
-		text.WriteString(e.To)
+		text.WriteString(mailbox)
+		text.WriteString("@")
+		text.WriteString(host)
+		if sub != "" {
+			text.WriteString(" (")
+			text.WriteString(sub)
+			text.WriteString(")")
+		}
 	}
 	if options.CC && len(e.CC) > 0 {
 		text.WriteString("\ncc: ")
@@ -129,6 +135,14 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 		text.WriteString(e.Subject)
 		text.WriteString("\n\n")
 	}
+}
+
+// Content converts the email object to a Matrix event content
+func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Content {
+	var text strings.Builder
+
+	e.contentHeader(threadID, &text, options)
+
 	if e.HTML != "" && options.HTML {
 		text.WriteString(format.HTMLToMarkdown(e.HTML))
 	} else {
