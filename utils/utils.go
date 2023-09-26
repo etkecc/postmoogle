@@ -134,3 +134,23 @@ func StringSlice(str string) []string {
 func SanitizeStringSlice(str string) string {
 	return SliceString(StringSlice(str))
 }
+
+// MapKeys returns sorted keys of the map
+func MapKeys[V any](data map[string]V) []string {
+	keys := make([]string, 0, len(data))
+	for k := range data {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// Chunks divides slice by chunks with specified size
+func Chunks[T any](slice []T, chunkSize int) [][]T {
+	chunks := make([][]T, 0, (len(slice)+chunkSize-1)/chunkSize)
+
+	for chunkSize < len(slice) {
+		slice, chunks = slice[chunkSize:], append(chunks, slice[0:chunkSize:chunkSize])
+	}
+	return append(chunks, slice)
+}

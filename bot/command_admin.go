@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"gitlab.com/etke.cc/go/secgen"
 	"maunium.net/go/mautrix/id"
@@ -302,9 +303,7 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 			msg.WriteString(cfg.Get(config.BotBanlistEnabled))
 			msg.WriteString("`, total: ")
 			msg.WriteString(strconv.Itoa(size))
-			msg.WriteString(" hosts (`")
-			msg.WriteString(strings.Join(banlist.Slice(), "`, `"))
-			msg.WriteString("`)\n\n")
+			msg.WriteString("\n\n")
 		}
 		if !cfg.BanlistEnabled() {
 			msg.WriteString("To enable banlist, send `")
@@ -314,9 +313,11 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 		msg.WriteString("To ban somebody: `")
 		msg.WriteString(b.prefix)
 		msg.WriteString(" banlist:add IP1 IP2 IP3...`")
-		msg.WriteString("where each ip is IPv4 or IPv6\n")
+		msg.WriteString("where each ip is IPv4 or IPv6\n\n")
+		msg.WriteString("You can find current banlist values below:\n")
 
 		b.SendNotice(ctx, evt.RoomID, msg.String())
+		b.addBanlistTimeline(ctx)
 		return
 	}
 	value := utils.SanitizeBoolString(commandSlice[1])
@@ -442,6 +443,38 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 	}
 
 	b.SendNotice(ctx, evt.RoomID, "banlist has been updated, kupo")
+}
+
+func (b *Bot) addBanlistTimeline(ctx context.Context) {
+	evt := eventFromContext(ctx)
+	banlist := b.cfg.GetBanlist()
+	timeline := map[string][]string{}
+	for ip, ts := range banlist {
+		key := "???"
+		date, _ := time.ParseInLocation(time.RFC1123Z, ts, time.UTC) //nolint:errcheck // stored in that format
+		if !date.IsZero() {
+			key = date.Truncate(24 * time.Hour).Format(time.DateOnly)
+		}
+		if _, ok := timeline[key]; !ok {
+			timeline[key] = []string{}
+		}
+		timeline[key] = append(timeline[key], ip)
+	}
+	keys := utils.MapKeys(timeline)
+
+	for _, chunk := range utils.Chunks(keys, 7) {
+		var txt strings.Builder
+		for _, day := range chunk {
+			data := timeline[day]
+			sort.Strings(data)
+			txt.WriteString("* `")
+			txt.WriteString(day)
+			txt.WriteString("` `")
+			txt.WriteString(strings.Join(data, "`, `"))
+			txt.WriteString("`\n")
+		}
+		b.SendNotice(ctx, evt.RoomID, txt.String())
+	}
 }
 
 func (b *Bot) runBanlistReset(ctx context.Context) {
