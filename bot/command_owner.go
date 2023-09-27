@@ -17,13 +17,13 @@ func (b *Bot) runStop(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
+		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return
 	}
 
 	mailbox := cfg.Get(config.RoomMailbox)
 	if mailbox == "" {
-		b.SendNotice(ctx, evt.RoomID, "that room is not configured yet")
+		b.lp.SendNotice(evt.RoomID, "that room is not configured yet", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 		return
 	}
 
@@ -31,11 +31,11 @@ func (b *Bot) runStop(ctx context.Context) {
 
 	err = b.cfg.SetRoom(evt.RoomID, config.Room{})
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
+		b.Error(ctx, "cannot update settings: %v", err)
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, "mailbox has been disabled")
+	b.lp.SendNotice(evt.RoomID, "mailbox has been disabled", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 }
 
 func (b *Bot) handleOption(ctx context.Context, cmd []string) {
@@ -59,7 +59,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 	evt := eventFromContext(ctx)
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
+		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return
 	}
 
@@ -72,7 +72,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		msg := fmt.Sprintf("`%s` is not set, kupo.\n"+
 			"To set it, send a `%s %s VALUE` command.",
 			name, b.prefix, name)
-		b.SendNotice(ctx, evt.RoomID, msg)
+		b.lp.SendNotice(evt.RoomID, msg, utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 		return
 	}
 
@@ -90,20 +90,20 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 			"or just set a new one with `%s %s NEW_PASSWORD`.",
 			b.prefix, name)
 	}
-	b.SendNotice(ctx, evt.RoomID, msg)
+	b.lp.SendNotice(evt.RoomID, msg, utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 }
 
 func (b *Bot) setMailbox(ctx context.Context, value string) {
 	evt := eventFromContext(ctx)
 	existingID, ok := b.getMapping(value)
 	if (ok && existingID != "" && existingID != evt.RoomID) || b.isReserved(value) {
-		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, "")))
+		b.lp.SendNotice(evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, "")))
 		return
 	}
 
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
+		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return
 	}
 	old := cfg.Get(config.RoomMailbox)
@@ -118,37 +118,37 @@ func (b *Bot) setMailbox(ctx context.Context, value string) {
 
 	err = b.cfg.SetRoom(evt.RoomID, cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
+		b.Error(ctx, "cannot update settings: %v", err)
 		return
 	}
 
 	msg := fmt.Sprintf("mailbox of this room set to `%s`", value)
-	b.SendNotice(ctx, evt.RoomID, msg)
+	b.lp.SendNotice(evt.RoomID, msg, utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 }
 
 func (b *Bot) setPassword(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
+		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return
 	}
 
 	value := b.parseCommand(evt.Content.AsMessage().Body, false)[1] // get original value, without forced lower case
 	value, err = argon2pw.GenerateSaltedHash(value)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "failed to hash password: %v", err)
+		b.Error(ctx, "failed to hash password: %v", err)
 		return
 	}
 
 	cfg.Set(config.RoomPassword, value)
 	err = b.cfg.SetRoom(evt.RoomID, cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
+		b.Error(ctx, "cannot update settings: %v", err)
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, "SMTP password has been set")
+	b.lp.SendNotice(evt.RoomID, "SMTP password has been set", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
@@ -160,7 +160,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	evt := eventFromContext(ctx)
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "failed to retrieve settings: %v", err)
+		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return
 	}
 
@@ -175,19 +175,19 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 
 	old := cfg.Get(name)
 	if old == value {
-		b.SendNotice(ctx, evt.RoomID, "nothing changed, kupo.")
+		b.lp.SendNotice(evt.RoomID, "nothing changed, kupo.", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 		return
 	}
 
 	cfg.Set(name, value)
 	err = b.cfg.SetRoom(evt.RoomID, cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
+		b.Error(ctx, "cannot update settings: %v", err)
 		return
 	}
 
 	msg := fmt.Sprintf("`%s` of this room set to `%s`", name, value)
-	b.SendNotice(ctx, evt.RoomID, msg)
+	b.lp.SendNotice(evt.RoomID, msg, utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 }
 
 func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
@@ -196,12 +196,12 @@ func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
 		b.getOption(ctx, config.RoomSpamlist)
 		return
 	}
-	roomCfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot get room settings: %v", err)
+		b.Error(ctx, "cannot get room settings: %v", err)
 		return
 	}
-	spamlist := utils.StringSlice(roomCfg[config.RoomSpamlist])
+	spamlist := utils.StringSlice(cfg[config.RoomSpamlist])
 	for _, newItem := range commandSlice[1:] {
 		newItem = strings.TrimSpace(newItem)
 		if slices.Contains(spamlist, newItem) {
@@ -210,14 +210,14 @@ func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
 		spamlist = append(spamlist, newItem)
 	}
 
-	roomCfg.Set(config.RoomSpamlist, utils.SliceString(spamlist))
-	err = b.cfg.SetRoom(evt.RoomID, roomCfg)
+	cfg.Set(config.RoomSpamlist, utils.SliceString(spamlist))
+	err = b.cfg.SetRoom(evt.RoomID, cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot store room settings: %v", err)
+		b.Error(ctx, "cannot store room settings: %v", err)
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, "spamlist has been updated, kupo")
+	b.lp.SendNotice(evt.RoomID, "spamlist has been updated, kupo", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 }
 
 func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
@@ -226,13 +226,13 @@ func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
 		b.getOption(ctx, config.RoomSpamlist)
 		return
 	}
-	roomCfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot get room settings: %v", err)
+		b.Error(ctx, "cannot get room settings: %v", err)
 		return
 	}
 	toRemove := map[int]struct{}{}
-	spamlist := utils.StringSlice(roomCfg[config.RoomSpamlist])
+	spamlist := utils.StringSlice(cfg[config.RoomSpamlist])
 	for _, item := range commandSlice[1:] {
 		item = strings.TrimSpace(item)
 		idx := slices.Index(spamlist, item)
@@ -242,7 +242,7 @@ func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
 		toRemove[idx] = struct{}{}
 	}
 	if len(toRemove) == 0 {
-		b.SendNotice(ctx, evt.RoomID, "nothing new, kupo.")
+		b.lp.SendNotice(evt.RoomID, "nothing new, kupo.", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 		return
 	}
 
@@ -254,35 +254,35 @@ func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
 		updatedSpamlist = append(updatedSpamlist, item)
 	}
 
-	roomCfg.Set(config.RoomSpamlist, utils.SliceString(updatedSpamlist))
-	err = b.cfg.SetRoom(evt.RoomID, roomCfg)
+	cfg.Set(config.RoomSpamlist, utils.SliceString(updatedSpamlist))
+	err = b.cfg.SetRoom(evt.RoomID, cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot store room settings: %v", err)
+		b.Error(ctx, "cannot store room settings: %v", err)
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, "spamlist has been updated, kupo")
+	b.lp.SendNotice(evt.RoomID, "spamlist has been updated, kupo", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 }
 
 func (b *Bot) runSpamlistReset(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	roomCfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot get room settings: %v", err)
+		b.Error(ctx, "cannot get room settings: %v", err)
 		return
 	}
-	spamlist := utils.StringSlice(roomCfg[config.RoomSpamlist])
+	spamlist := utils.StringSlice(cfg[config.RoomSpamlist])
 	if len(spamlist) == 0 {
-		b.SendNotice(ctx, evt.RoomID, "spamlist is empty, kupo.")
+		b.lp.SendNotice(evt.RoomID, "spamlist is empty, kupo.", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 		return
 	}
 
-	roomCfg.Set(config.RoomSpamlist, "")
-	err = b.cfg.SetRoom(evt.RoomID, roomCfg)
+	cfg.Set(config.RoomSpamlist, "")
+	err = b.cfg.SetRoom(evt.RoomID, cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot store room settings: %v", err)
+		b.Error(ctx, "cannot store room settings: %v", err)
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, "spamlist has been reset, kupo.")
+	b.lp.SendNotice(evt.RoomID, "spamlist has been reset, kupo.", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 }

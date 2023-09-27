@@ -41,7 +41,6 @@ func main() {
 
 	cfg := config.New()
 	initLog(cfg)
-	utils.SetLogger(&log)
 	utils.SetDomains(cfg.Domains)
 
 	log.Info().Msg("#############################")

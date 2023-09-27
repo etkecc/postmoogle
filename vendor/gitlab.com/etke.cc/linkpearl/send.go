@@ -1,8 +1,6 @@
 package linkpearl
 
 import (
-	"fmt"
-
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
@@ -16,24 +14,22 @@ func (l *Linkpearl) Send(roomID id.RoomID, content interface{}) (id.EventID, err
 	l.log.Debug().Str("roomID", roomID.String()).Any("content", content).Msg("sending event")
 	resp, err := l.api.SendMessageEvent(roomID, event.EventMessage, content)
 	if err != nil {
-		return "", err
+		return "", UnwrapError(err)
 	}
 	return resp.EventID, nil
 }
 
-// SendNotice to a room with optional thread relation
-func (l *Linkpearl) SendNotice(roomID id.RoomID, threadID id.EventID, message string, args ...interface{}) {
-	content := format.RenderMarkdown(fmt.Sprintf(message, args...), true, true)
-	if threadID != "" {
-		content.RelatesTo = &event.RelatesTo{
-			Type:    event.RelThread,
-			EventID: threadID,
-		}
+// SendNotice to a room with optional relations, markdown supported
+func (l *Linkpearl) SendNotice(roomID id.RoomID, message string, relates ...*event.RelatesTo) {
+	content := format.RenderMarkdown(message, true, true)
+	content.MsgType = event.MsgNotice
+	if len(relates) > 0 {
+		content.RelatesTo = relates[0]
 	}
 
 	_, err := l.Send(roomID, &content)
 	if err != nil {
-		l.log.Error().Err(err).Str("roomID", roomID.String()).Msg("cannot send a notice int the room")
+		l.log.Error().Err(UnwrapError(err)).Str("roomID", roomID.String()).Msg("cannot send a notice int the room")
 	}
 }
 
@@ -41,6 +37,7 @@ func (l *Linkpearl) SendNotice(roomID id.RoomID, threadID id.EventID, message st
 func (l *Linkpearl) SendFile(roomID id.RoomID, req *mautrix.ReqUploadMedia, msgtype event.MessageType, relation *event.RelatesTo) error {
 	resp, err := l.GetClient().UploadMedia(*req)
 	if err != nil {
+		err = UnwrapError(err)
 		l.log.Error().Err(err).Str("file", req.FileName).Msg("cannot upload file")
 		return err
 	}
@@ -52,6 +49,7 @@ func (l *Linkpearl) SendFile(roomID id.RoomID, req *mautrix.ReqUploadMedia, msgt
 			RelatesTo: relation,
 		},
 	})
+	err = UnwrapError(err)
 	if err != nil {
 		l.log.Error().Err(err).Str("file", req.FileName).Msg("cannot send uploaded file")
 	}

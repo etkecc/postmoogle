@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
@@ -120,7 +121,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 	}
 	cfg, err := b.cfg.GetRoom(roomID)
 	if err != nil {
-		b.Error(ctx, roomID, "cannot get settings: %v", err)
+		b.Error(ctx, "cannot get settings: %v", err)
 	}
 
 	b.mu.Lock(roomID.String())
@@ -139,7 +140,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 	eventID, serr := b.lp.Send(roomID, content)
 	if serr != nil {
 		if !strings.Contains(serr.Error(), "M_UNKNOWN") { // 	if it's not an unknown event event error
-			return utils.UnwrapError(serr)
+			return serr
 		}
 		threadID = "" // unknown event edge case - remove existing thread ID to avoid complications
 		newThread = true
@@ -238,7 +239,7 @@ func (b *Bot) sendAutoreply(roomID id.RoomID, threadID id.EventID) {
 		}
 
 		if err != nil {
-			b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
+			b.Error(ctx, "cannot send email: %v", err)
 			continue
 		}
 	}
@@ -260,12 +261,12 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	}
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot retrieve room settings: %v", err)
+		b.Error(ctx, "cannot retrieve room settings: %v", err)
 		return
 	}
 	mailbox := cfg.Mailbox()
 	if mailbox == "" {
-		b.Error(ctx, evt.RoomID, "mailbox is not configured, kupo")
+		b.Error(ctx, "mailbox is not configured, kupo")
 		return
 	}
 
@@ -275,7 +276,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	meta := b.getParentEmail(evt, mailbox)
 
 	if meta.To == "" {
-		b.Error(ctx, evt.RoomID, "cannot find parent email and continue the thread. Please, start a new email thread")
+		b.Error(ctx, "cannot find parent email and continue the thread. Please, start a new email thread")
 		return
 	}
 
@@ -305,7 +306,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil, nil)
 	data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 	if data == "" {
-		b.SendError(ctx, evt.RoomID, "email body is empty")
+		b.lp.SendNotice(evt.RoomID, "email body is empty", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 		return
 	}
 
@@ -320,7 +321,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		}
 
 		if err != nil {
-			b.Error(ctx, evt.RoomID, "cannot send email: %v", err)
+			b.Error(ctx, "cannot send email: %v", err)
 			continue
 		}
 	}
@@ -419,7 +420,7 @@ func (e *parentEmail) calculateRecipients(from string, forwardedFrom []string) {
 
 func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 	content := evt.Content.AsMessage()
-	threadID := utils.EventParent(evt.ID, content)
+	threadID := linkpearl.EventParent(evt.ID, content)
 	b.log.Debug().Str("eventID", evt.ID.String()).Str("threadID", threadID.String()).Msg("looking up for the parent event within thread")
 	if threadID == evt.ID {
 		b.log.Debug().Str("eventID", evt.ID.String()).Msg("event is the thread itself")
@@ -435,7 +436,7 @@ func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 		b.log.Error().Err(err).Msg("cannot get parent event")
 		return threadID, nil
 	}
-	utils.ParseContent(parentEvt, parentEvt.Type)
+	linkpearl.ParseContent(parentEvt, parentEvt.Type, b.log)
 
 	if !b.lp.GetMachine().StateStore.IsEncrypted(evt.RoomID) {
 		return threadID, parentEvt
@@ -461,12 +462,12 @@ func (b *Bot) getParentEmail(evt *event.Event, newFromMailbox string) *parentEma
 		return parent
 	}
 
-	parent.From = utils.EventField[string](&parentEvt.Content, eventFromKey)
-	parent.To = utils.EventField[string](&parentEvt.Content, eventToKey)
-	parent.CC = utils.EventField[string](&parentEvt.Content, eventCcKey)
-	parent.RcptTo = utils.EventField[string](&parentEvt.Content, eventRcptToKey)
-	parent.InReplyTo = utils.EventField[string](&parentEvt.Content, eventMessageIDkey)
-	parent.References = utils.EventField[string](&parentEvt.Content, eventReferencesKey)
+	parent.From = linkpearl.EventField[string](&parentEvt.Content, eventFromKey)
+	parent.To = linkpearl.EventField[string](&parentEvt.Content, eventToKey)
+	parent.CC = linkpearl.EventField[string](&parentEvt.Content, eventCcKey)
+	parent.RcptTo = linkpearl.EventField[string](&parentEvt.Content, eventRcptToKey)
+	parent.InReplyTo = linkpearl.EventField[string](&parentEvt.Content, eventMessageIDkey)
+	parent.References = linkpearl.EventField[string](&parentEvt.Content, eventReferencesKey)
 	senderEmail := parent.fixtofrom(newFromMailbox, b.domains)
 	parent.calculateRecipients(senderEmail, b.mbxc.Forwarded)
 	parent.MessageID = email.MessageID(parentEvt.ID, parent.FromDomain)
@@ -477,7 +478,7 @@ func (b *Bot) getParentEmail(evt *event.Event, newFromMailbox string) *parentEma
 		parent.References = " " + parent.MessageID
 	}
 
-	parent.Subject = utils.EventField[string](&parentEvt.Content, eventSubjectKey)
+	parent.Subject = linkpearl.EventField[string](&parentEvt.Content, eventSubjectKey)
 	if parent.Subject != "" {
 		parent.Subject = "Re: " + parent.Subject
 	} else {
@@ -504,16 +505,17 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 	notice := format.RenderMarkdown(text, true, true)
 	msgContent, ok := content.Parsed.(*event.MessageEventContent)
 	if !ok {
-		b.Error(ctx, evt.RoomID, "cannot parse message")
+		b.Error(ctx, "cannot parse message")
 		return
 	}
 	msgContent.MsgType = event.MsgNotice
 	msgContent.Body = notice.Body
 	msgContent.FormattedBody = notice.FormattedBody
+	msgContent.RelatesTo = utils.RelatesTo(!cfg.NoThreads(), evt.ID)
 	content.Parsed = msgContent
 	msgID, err := b.lp.Send(evt.RoomID, content)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot send notice: %v", err)
+		b.Error(ctx, "cannot send notice: %v", err)
 		return
 	}
 	domain := utils.SanitizeDomain(cfg.Domain())
@@ -527,7 +529,7 @@ func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.Fi
 		req := file.Convert()
 		err := b.lp.SendFile(roomID, req, file.MsgType, utils.RelatesTo(!noThreads, parentID))
 		if err != nil {
-			b.Error(ctx, roomID, "cannot upload file %s: %v", req.FileName, err)
+			b.Error(ctx, "cannot upload file %s: %v", req.FileName, err)
 		}
 	}
 }

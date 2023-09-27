@@ -32,7 +32,7 @@ func (m *Manager) GetBot() Bot {
 	var config Bot
 	config, err = m.lp.GetAccountData(acBotKey)
 	if err != nil {
-		m.log.Error().Err(utils.UnwrapError(err)).Msg("cannot get bot settings")
+		m.log.Error().Err(err).Msg("cannot get bot settings")
 	}
 	if config == nil {
 		config = make(Bot, 0)
@@ -44,7 +44,7 @@ func (m *Manager) GetBot() Bot {
 
 // SetBot config
 func (m *Manager) SetBot(cfg Bot) error {
-	return utils.UnwrapError(m.lp.SetAccountData(acBotKey, cfg))
+	return m.lp.SetAccountData(acBotKey, cfg)
 }
 
 // GetRoom config
@@ -54,12 +54,12 @@ func (m *Manager) GetRoom(roomID id.RoomID) (Room, error) {
 		config = make(Room, 0)
 	}
 
-	return config, utils.UnwrapError(err)
+	return config, err
 }
 
 // SetRoom config
 func (m *Manager) SetRoom(roomID id.RoomID, cfg Room) error {
-	return utils.UnwrapError(m.lp.SetRoomAccountData(roomID, acRoomKey, cfg))
+	return m.lp.SetRoomAccountData(roomID, acRoomKey, cfg)
 }
 
 // GetBanlist config
@@ -72,7 +72,7 @@ func (m *Manager) GetBanlist() List {
 	defer m.mu.Unlock("banlist")
 	config, err := m.lp.GetAccountData(acBanlistKey)
 	if err != nil {
-		m.log.Error().Err(utils.UnwrapError(err)).Msg("cannot get banlist")
+		m.log.Error().Err(err).Msg("cannot get banlist")
 	}
 	if config == nil {
 		config = make(List, 0)
@@ -93,14 +93,14 @@ func (m *Manager) SetBanlist(cfg List) error {
 		cfg = make(List, 0)
 	}
 
-	return utils.UnwrapError(m.lp.SetAccountData(acBanlistKey, cfg))
+	return m.lp.SetAccountData(acBanlistKey, cfg)
 }
 
 // GetGreylist config
 func (m *Manager) GetGreylist() List {
 	config, err := m.lp.GetAccountData(acGreylistKey)
 	if err != nil {
-		m.log.Error().Err(utils.UnwrapError(err)).Msg("cannot get banlist")
+		m.log.Error().Err(err).Msg("cannot get banlist")
 	}
 	if config == nil {
 		config = make(List, 0)
@@ -112,5 +112,5 @@ func (m *Manager) GetGreylist() List {
 
 // SetGreylist config
 func (m *Manager) SetGreylist(cfg List) error {
-	return utils.UnwrapError(m.lp.SetAccountData(acGreylistKey, cfg))
+	return m.lp.SetAccountData(acGreylistKey, cfg)
 }

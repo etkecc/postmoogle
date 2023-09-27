@@ -5,19 +5,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/rs/zerolog"
 )
 
-var (
-	log     *zerolog.Logger
-	domains []string
-)
-
-// SetLogger for utils
-func SetLogger(loggerInstance *zerolog.Logger) {
-	log = loggerInstance
-}
+var domains []string
 
 // SetDomains for later use
 func SetDomains(slice []string) {

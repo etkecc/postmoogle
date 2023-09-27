@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
@@ -341,7 +342,7 @@ func (b *Bot) handle(ctx context.Context) {
 
 	content := evt.Content.AsMessage()
 	if content == nil {
-		b.Error(ctx, evt.RoomID, "cannot read message")
+		b.Error(ctx, "cannot read message")
 		return
 	}
 	// ignore notices
@@ -351,7 +352,7 @@ func (b *Bot) handle(ctx context.Context) {
 	message := strings.TrimSpace(content.Body)
 	commandSlice := b.parseCommand(message, true)
 	if commandSlice == nil {
-		if utils.EventParent("", content) != "" {
+		if linkpearl.EventParent("", content) != "" {
 			b.SendEmailReply(ctx)
 		}
 		return
@@ -368,7 +369,7 @@ func (b *Bot) handle(ctx context.Context) {
 	defer b.lp.GetClient().UserTyping(evt.RoomID, false, 30*time.Second) //nolint:errcheck
 
 	if !cmd.allowed(evt.Sender, evt.RoomID) {
-		b.SendNotice(ctx, evt.RoomID, "not allowed to do that, kupo")
+		b.lp.SendNotice(evt.RoomID, "not allowed to do that, kupo")
 		return
 	}
 
@@ -433,7 +434,7 @@ func (b *Bot) parseCommand(message string, toLower bool) []string {
 	return strings.Split(strings.TrimSpace(message), " ")
 }
 
-func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
+func (b *Bot) sendIntroduction(roomID id.RoomID) {
 	var msg strings.Builder
 	msg.WriteString("Hello, kupo!\n\n")
 
@@ -449,7 +450,7 @@ func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	msg.WriteString(utils.EmailsList("SOME_INBOX", ""))
 	msg.WriteString("` and have them appear in this room.")
 
-	b.SendNotice(ctx, roomID, msg.String())
+	b.lp.SendNotice(roomID, msg.String())
 }
 
 func (b *Bot) getHelpValue(cfg config.Room, cmd command) string {
@@ -509,7 +510,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 		msg.WriteString("\n")
 	}
 
-	b.SendNotice(ctx, evt.RoomID, msg.String())
+	b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 }
 
 func (b *Bot) runSend(ctx context.Context) {
@@ -521,7 +522,7 @@ func (b *Bot) runSend(ctx context.Context) {
 
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "failed to retrieve room settings: %v", err)
+		b.Error(ctx, "failed to retrieve room settings: %v", err)
 		return
 	}
 
@@ -539,10 +540,17 @@ func (b *Bot) getSendDetails(ctx context.Context) (string, string, string, bool)
 	if !b.allowSend(evt.Sender, evt.RoomID) {
 		return "", "", "", false
 	}
+
+	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	if err != nil {
+		b.Error(ctx, "failed to retrieve room settings: %v", err)
+		return "", "", "", false
+	}
+
 	commandSlice := b.parseCommand(evt.Content.AsMessage().Body, false)
 	to, subject, body, err := utils.ParseSend(commandSlice)
 	if err == utils.ErrInvalidArgs {
-		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf(
+		b.lp.SendNotice(evt.RoomID, fmt.Sprintf(
 			"Usage:\n"+
 				"```\n"+
 				"%s send someone@example.com\n"+
@@ -551,19 +559,15 @@ func (b *Bot) getSendDetails(ctx context.Context) (string, string, string, bool)
 				"on as many lines\n"+
 				"as you want.\n"+
 				"```",
-			b.prefix))
-		return "", "", "", false
-	}
-
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
-	if err != nil {
-		b.Error(ctx, evt.RoomID, "failed to retrieve room settings: %v", err)
+			b.prefix),
+			utils.RelatesTo(!cfg.NoThreads(), evt.ID),
+		)
 		return "", "", "", false
 	}
 
 	mailbox := cfg.Mailbox()
 	if mailbox == "" {
-		b.SendNotice(ctx, evt.RoomID, "mailbox is not configured, kupo")
+		b.lp.SendNotice(evt.RoomID, "mailbox is not configured, kupo", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 		return "", "", "", false
 	}
 
@@ -581,7 +585,7 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 	// validate first
 	for _, to := range tos {
 		if !email.AddressValid(to) {
-			b.Error(ctx, evt.RoomID, "email address is not valid")
+			b.Error(ctx, "email address is not valid")
 			return
 		}
 	}
@@ -597,22 +601,22 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 		eml := email.New(ID, "", " "+ID, subject, from, to, to, "", body, htmlBody, nil, nil)
 		data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 		if data == "" {
-			b.SendError(ctx, evt.RoomID, "email body is empty")
+			b.lp.SendNotice(evt.RoomID, "email body is empty", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 			return
 		}
 		queued, err := b.Sendmail(evt.ID, from, to, data)
 		if queued {
-			b.log.Error().Err(err).Msg("cannot send email")
+			b.log.Warn().Err(err).Msg("email has been queued")
 			b.saveSentMetadata(ctx, queued, evt.ID, recipients, eml, cfg)
 			continue
 		}
 		if err != nil {
-			b.Error(ctx, evt.RoomID, "cannot send email to %s: %v", to, err)
+			b.Error(ctx, "cannot send email to %s: %v", to, err)
 			continue
 		}
 		b.saveSentMetadata(ctx, false, evt.ID, recipients, eml, cfg)
 	}
 	if len(tos) > 1 {
-		b.SendNotice(ctx, evt.RoomID, "All emails were sent.")
+		b.lp.SendNotice(evt.RoomID, "All emails were sent.", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
 	}
 }

@@ -48,7 +48,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 	sort.Strings(slice)
 
 	if len(slice) == 0 {
-		b.SendNotice(ctx, evt.RoomID, "No mailboxes are managed by the bot so far, kupo!")
+		b.lp.SendNotice(evt.RoomID, "No mailboxes are managed by the bot so far, kupo!", utils.RelatesTo(true, evt.ID))
 		return
 	}
 
@@ -63,20 +63,20 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		msg.WriteString("\n")
 	}
 
-	b.SendNotice(ctx, evt.RoomID, msg.String())
+	b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) runDelete(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
 	if len(commandSlice) < 2 {
-		b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Usage: `%s delete MAILBOX`", b.prefix))
+		b.lp.SendNotice(evt.RoomID, fmt.Sprintf("Usage: `%s delete MAILBOX`", b.prefix), utils.RelatesTo(true, evt.ID))
 		return
 	}
 	mailbox := utils.Mailbox(commandSlice[1])
 
 	v, ok := b.rooms.Load(mailbox)
 	if v == nil || !ok {
-		b.SendError(ctx, evt.RoomID, "mailbox does not exists, kupo")
+		b.lp.SendNotice(evt.RoomID, "mailbox does not exists, kupo", utils.RelatesTo(true, evt.ID))
 		return
 	}
 	roomID := v.(id.RoomID)
@@ -84,11 +84,11 @@ func (b *Bot) runDelete(ctx context.Context, commandSlice []string) {
 	b.rooms.Delete(mailbox)
 	err := b.cfg.SetRoom(roomID, config.Room{})
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot update settings: %v", err)
+		b.Error(ctx, "cannot update settings: %v", err)
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, "mailbox has been deleted")
+	b.lp.SendNotice(evt.RoomID, "mailbox has been deleted", utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
@@ -108,19 +108,19 @@ func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 		msg.WriteString("where each pattern is like `@someone:example.com`, ")
 		msg.WriteString("`@bot.*:example.com`, `@*:another.com`, or `@*:*`\n")
 
-		b.SendNotice(ctx, evt.RoomID, msg.String())
+		b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(true, evt.ID))
 		return
 	}
 
 	_, homeserver, err := b.lp.GetClient().UserID.Parse()
 	if err != nil {
-		b.SendError(ctx, evt.RoomID, fmt.Sprintf("invalid userID: %v", err))
+		b.lp.SendNotice(evt.RoomID, fmt.Sprintf("invalid userID: %v", err), utils.RelatesTo(true, evt.ID))
 	}
 
 	patterns := commandSlice[1:]
 	allowedUsers, err := parseMXIDpatterns(patterns, "@*:"+homeserver)
 	if err != nil {
-		b.SendError(ctx, evt.RoomID, fmt.Sprintf("invalid patterns: %v", err))
+		b.lp.SendNotice(evt.RoomID, fmt.Sprintf("invalid patterns: %v", err), utils.RelatesTo(true, evt.ID))
 		return
 	}
 
@@ -128,10 +128,10 @@ func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 
 	err = b.cfg.SetBot(cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+		b.Error(ctx, "cannot set bot config: %v", err)
 	}
 	b.allowedUsers = allowedUsers
-	b.SendNotice(ctx, evt.RoomID, "allowed users updated")
+	b.lp.SendNotice(evt.RoomID, "allowed users updated", utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
@@ -148,25 +148,27 @@ func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 		var derr error
 		signature, private, derr = secgen.DKIM()
 		if derr != nil {
-			b.Error(ctx, evt.RoomID, "cannot generate DKIM signature: %v", derr)
+			b.Error(ctx, "cannot generate DKIM signature: %v", derr)
 			return
 		}
 		cfg.Set(config.BotDKIMSignature, signature)
 		cfg.Set(config.BotDKIMPrivateKey, private)
 		err := b.cfg.SetBot(cfg)
 		if err != nil {
-			b.Error(ctx, evt.RoomID, "cannot save bot options: %v", err)
+			b.Error(ctx, "cannot save bot options: %v", err)
 			return
 		}
 	}
 
-	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf(
+	b.lp.SendNotice(evt.RoomID, fmt.Sprintf(
 		"DKIM signature is: `%s`.\n"+
 			"You need to add it to DNS records of all domains added to postmoogle (if not already):\n"+
 			"Add new DNS record with type = `TXT`, key (subdomain/from): `postmoogle._domainkey` and value (to):\n ```\n%s\n```\n"+
 			"Without that record other email servers may reject your emails as spam, kupo.\n"+
 			"To reset the signature, send `%s dkim reset`",
-		signature, signature, b.prefix))
+		signature, signature, b.prefix),
+		utils.RelatesTo(true, evt.ID),
+	)
 }
 
 func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
@@ -189,25 +191,25 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 		msg.WriteString(" catch-all MAILBOX`")
 		msg.WriteString("where mailbox is valid and existing mailbox name\n")
 
-		b.SendNotice(ctx, evt.RoomID, msg.String())
+		b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(true, evt.ID))
 		return
 	}
 
 	mailbox := utils.Mailbox(commandSlice[1])
 	_, ok := b.GetMapping(mailbox)
 	if !ok {
-		b.SendError(ctx, evt.RoomID, "mailbox does not exist, kupo.")
+		b.lp.SendNotice(evt.RoomID, "mailbox does not exist, kupo.", utils.RelatesTo(true, evt.ID))
 		return
 	}
 
 	cfg.Set(config.BotCatchAll, mailbox)
 	err := b.cfg.SetBot(cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot save bot options: %v", err)
+		b.Error(ctx, "cannot save bot options: %v", err)
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, "")))
+	b.lp.SendNotice(evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, "")), utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
@@ -227,7 +229,7 @@ func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
 		msg.WriteString(" adminroom ROOM_ID`")
 		msg.WriteString("where ROOM_ID is valid and existing matrix room id\n")
 
-		b.SendNotice(ctx, evt.RoomID, msg.String())
+		b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(true, evt.ID))
 		return
 	}
 
@@ -235,13 +237,13 @@ func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
 	cfg.Set(config.BotAdminRoom, roomID)
 	err := b.cfg.SetBot(cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot save bot options: %v", err)
+		b.Error(ctx, "cannot save bot options: %v", err)
 		return
 	}
 
 	b.adminRooms = append([]id.RoomID{id.RoomID(roomID)}, b.adminRooms...) // make it the first room in list on the fly
 
-	b.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Admin Room is set to: `%s`.", roomID))
+	b.lp.SendNotice(evt.RoomID, fmt.Sprintf("Admin Room is set to: `%s`.", roomID), utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) printGreylist(ctx context.Context, roomID id.RoomID) {
@@ -272,7 +274,7 @@ func (b *Bot) printGreylist(ctx context.Context, roomID id.RoomID) {
 		msg.WriteString("where `MIN` is duration in minutes for automatic greylisting\n")
 	}
 
-	b.SendNotice(ctx, roomID, msg.String())
+	b.lp.SendNotice(roomID, msg.String(), utils.RelatesTo(true, eventFromContext(ctx).ID))
 }
 
 func (b *Bot) runGreylist(ctx context.Context, commandSlice []string) {
@@ -286,9 +288,9 @@ func (b *Bot) runGreylist(ctx context.Context, commandSlice []string) {
 	cfg.Set(config.BotGreylist, value)
 	err := b.cfg.SetBot(cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+		b.Error(ctx, "cannot set bot config: %v", err)
 	}
-	b.SendNotice(ctx, evt.RoomID, "greylist duration has been updated")
+	b.lp.SendNotice(evt.RoomID, "greylist duration has been updated", utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
@@ -316,7 +318,7 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 		msg.WriteString("where each ip is IPv4 or IPv6\n\n")
 		msg.WriteString("You can find current banlist values below:\n")
 
-		b.SendNotice(ctx, evt.RoomID, msg.String())
+		b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(true, evt.ID))
 		b.addBanlistTimeline(ctx)
 		return
 	}
@@ -324,9 +326,9 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 	cfg.Set(config.BotBanlistEnabled, value)
 	err := b.cfg.SetBot(cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+		b.Error(ctx, "cannot set bot config: %v", err)
 	}
-	b.SendNotice(ctx, evt.RoomID, "banlist has been updated")
+	b.lp.SendNotice(evt.RoomID, "banlist has been updated", utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) {
@@ -344,16 +346,16 @@ func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) {
 			msg.WriteString(" banlist:auth true` (banlist itself must be enabled!)\n\n")
 		}
 
-		b.SendNotice(ctx, evt.RoomID, msg.String())
+		b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(true, evt.ID))
 		return
 	}
 	value := utils.SanitizeBoolString(commandSlice[1])
 	cfg.Set(config.BotBanlistAuth, value)
 	err := b.cfg.SetBot(cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+		b.Error(ctx, "cannot set bot config: %v", err)
 	}
-	b.SendNotice(ctx, evt.RoomID, "auth banning has been updated")
+	b.lp.SendNotice(evt.RoomID, "auth banning has been updated", utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) runBanlistAuto(ctx context.Context, commandSlice []string) {
@@ -371,16 +373,16 @@ func (b *Bot) runBanlistAuto(ctx context.Context, commandSlice []string) {
 			msg.WriteString(" banlist:auto true` (banlist itself must be enabled!)\n\n")
 		}
 
-		b.SendNotice(ctx, evt.RoomID, msg.String())
+		b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(true, evt.ID))
 		return
 	}
 	value := utils.SanitizeBoolString(commandSlice[1])
 	cfg.Set(config.BotBanlistAuto, value)
 	err := b.cfg.SetBot(cfg)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot set bot config: %v", err)
+		b.Error(ctx, "cannot set bot config: %v", err)
 	}
-	b.SendNotice(ctx, evt.RoomID, "auto banning has been updated")
+	b.lp.SendNotice(evt.RoomID, "auto banning has been updated", utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
@@ -390,7 +392,7 @@ func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
 		return
 	}
 	if !b.cfg.GetBot().BanlistEnabled() {
-		b.SendNotice(ctx, evt.RoomID, "banlist is disabled, you have to enable it first, kupo")
+		b.lp.SendNotice(evt.RoomID, "banlist is disabled, you have to enable it first, kupo", utils.RelatesTo(true, evt.ID))
 		return
 	}
 	banlist := b.cfg.GetBanlist()
@@ -399,7 +401,7 @@ func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
 	for _, ip := range ips {
 		addr, err := net.ResolveIPAddr("ip", ip)
 		if err != nil {
-			b.Error(ctx, evt.RoomID, "cannot add %s to banlist: %v", ip, err)
+			b.Error(ctx, "cannot add %s to banlist: %v", ip, err)
 			return
 		}
 		banlist.Add(addr)
@@ -407,11 +409,11 @@ func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
 
 	err := b.cfg.SetBanlist(banlist)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot set banlist: %v", err)
+		b.Error(ctx, "cannot set banlist: %v", err)
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, "banlist has been updated, kupo")
+	b.lp.SendNotice(evt.RoomID, "banlist has been updated, kupo", utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
@@ -421,7 +423,7 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 		return
 	}
 	if !b.cfg.GetBot().BanlistEnabled() {
-		b.SendNotice(ctx, evt.RoomID, "banlist is disabled, you have to enable it first, kupo")
+		b.lp.SendNotice(evt.RoomID, "banlist is disabled, you have to enable it first, kupo", utils.RelatesTo(true, evt.ID))
 		return
 	}
 	banlist := b.cfg.GetBanlist()
@@ -430,7 +432,7 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 	for _, ip := range ips {
 		addr, err := net.ResolveIPAddr("ip", ip)
 		if err != nil {
-			b.Error(ctx, evt.RoomID, "cannot remove %s from banlist: %v", ip, err)
+			b.Error(ctx, "cannot remove %s from banlist: %v", ip, err)
 			return
 		}
 		banlist.Remove(addr)
@@ -438,11 +440,11 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 
 	err := b.cfg.SetBanlist(banlist)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot set banlist: %v", err)
+		b.Error(ctx, "cannot set banlist: %v", err)
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, "banlist has been updated, kupo")
+	b.lp.SendNotice(evt.RoomID, "banlist has been updated, kupo", utils.RelatesTo(true, evt.ID))
 }
 
 func (b *Bot) addBanlistTimeline(ctx context.Context) {
@@ -473,22 +475,22 @@ func (b *Bot) addBanlistTimeline(ctx context.Context) {
 			txt.WriteString(strings.Join(data, "`, `"))
 			txt.WriteString("`\n")
 		}
-		b.SendNotice(ctx, evt.RoomID, txt.String())
+		b.lp.SendNotice(evt.RoomID, txt.String(), utils.RelatesTo(true, evt.ID))
 	}
 }
 
 func (b *Bot) runBanlistReset(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	if !b.cfg.GetBot().BanlistEnabled() {
-		b.SendNotice(ctx, evt.RoomID, "banlist is disabled, you have to enable it first, kupo")
+		b.lp.SendNotice(evt.RoomID, "banlist is disabled, you have to enable it first, kupo", utils.RelatesTo(true, evt.ID))
 		return
 	}
 
 	err := b.cfg.SetBanlist(config.List{})
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot set banlist: %v", err)
+		b.Error(ctx, "cannot set banlist: %v", err)
 		return
 	}
 
-	b.SendNotice(ctx, evt.RoomID, "banlist has been reset, kupo")
+	b.lp.SendNotice(evt.RoomID, "banlist has been reset, kupo", utils.RelatesTo(true, evt.ID))
 }

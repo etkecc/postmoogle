@@ -6,11 +6,9 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/getsentry/sentry-go"
 	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/event"
-	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
 	"gitlab.com/etke.cc/postmoogle/bot/config"
@@ -93,28 +91,21 @@ func New(
 }
 
 // Error message to the log and matrix room
-func (b *Bot) Error(ctx context.Context, roomID id.RoomID, message string, args ...interface{}) {
+func (b *Bot) Error(ctx context.Context, message string, args ...interface{}) {
+	evt := eventFromContext(ctx)
 	err := fmt.Errorf(message, args...)
-	b.log.Error().Err(err).Msg("something is wrong")
-
-	if roomID != "" {
-		b.SendError(ctx, roomID, err.Error())
+	b.log.Error().Err(err).Msg(err.Error())
+	if evt == nil {
+		return
 	}
-}
 
-// SendError sends an error message to the matrix room
-func (b *Bot) SendError(ctx context.Context, roomID id.RoomID, message string) {
-	b.SendNotice(ctx, roomID, "ERROR: "+message)
-}
-
-// SendNotice sends a notice message to the matrix room
-func (b *Bot) SendNotice(ctx context.Context, roomID id.RoomID, message string) {
-	parsed := format.RenderMarkdown(message, true, true)
-	parsed.MsgType = event.MsgNotice
-	_, err := b.lp.Send(roomID, &event.Content{Parsed: &parsed})
-	if err != nil {
-		sentry.GetHubFromContext(ctx).CaptureException(err)
+	var noThreads bool
+	cfg, cerr := b.cfg.GetRoom(evt.RoomID)
+	if cerr == nil {
+		noThreads = cfg.NoThreads()
 	}
+
+	b.lp.SendNotice(evt.RoomID, "ERROR: "+err.Error(), utils.RelatesTo(!noThreads, evt.ID))
 }
 
 // Start performs matrix /sync

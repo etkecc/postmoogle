@@ -24,7 +24,7 @@ func (l *Linkpearl) GetAccountData(name string) (map[string]string, error) {
 			l.acc.Add(name, data)
 			return data, nil
 		}
-		return data, err
+		return data, UnwrapError(err)
 	}
 	data = l.decryptAccountData(data)
 
@@ -37,7 +37,7 @@ func (l *Linkpearl) SetAccountData(name string, data map[string]string) error {
 	l.acc.Add(name, data)
 
 	data = l.encryptAccountData(data)
-	return l.GetClient().SetAccountData(name, data)
+	return UnwrapError(l.GetClient().SetAccountData(name, data))
 }
 
 // GetRoomAccountData of the room (from cache and API, with encryption support)
@@ -59,7 +59,7 @@ func (l *Linkpearl) GetRoomAccountData(roomID id.RoomID, name string) (map[strin
 			l.acc.Add(key, data)
 			return data, nil
 		}
-		return data, err
+		return data, UnwrapError(err)
 	}
 	data = l.decryptAccountData(data)
 
@@ -73,7 +73,7 @@ func (l *Linkpearl) SetRoomAccountData(roomID id.RoomID, name string, data map[s
 	l.acc.Add(key, data)
 
 	data = l.encryptAccountData(data)
-	return l.GetClient().SetRoomAccountData(roomID, name, data)
+	return UnwrapError(l.GetClient().SetRoomAccountData(roomID, name, data))
 }
 
 func (l *Linkpearl) encryptAccountData(data map[string]string) map[string]string {

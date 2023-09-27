@@ -3,9 +3,8 @@ package bot
 import (
 	"context"
 
+	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/event"
-
-	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
 var supportedReactions = map[string]string{
@@ -26,18 +25,18 @@ func (b *Bot) handleReaction(ctx context.Context) {
 	srcID := content.GetRelatesTo().EventID
 	srcEvt, err := b.lp.GetClient().GetEvent(evt.RoomID, srcID)
 	if err != nil {
-		b.Error(ctx, evt.RoomID, "cannot find event %s: %v", srcID, err)
+		b.Error(ctx, "cannot find event %s: %v", srcID, err)
 		return
 	}
-	utils.ParseContent(evt, event.EventMessage)
+	linkpearl.ParseContent(evt, event.EventMessage, b.log)
 
 	switch action {
 	case commandSpamlistAdd:
-		sender := utils.EventField[string](&srcEvt.Content, eventFromKey)
+		sender := linkpearl.EventField[string](&srcEvt.Content, eventFromKey)
 		if sender == "" {
-			b.Error(ctx, evt.RoomID, "cannot get sender of the email")
+			b.Error(ctx, "cannot get sender of the email")
 			return
 		}
-		b.runSpamlistAdd(ctx, []string{commandSpamlistAdd, utils.EventField[string](&srcEvt.Content, eventFromKey)})
+		b.runSpamlistAdd(ctx, []string{commandSpamlistAdd, linkpearl.EventField[string](&srcEvt.Content, eventFromKey)})
 	}
 }
