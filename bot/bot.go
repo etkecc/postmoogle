@@ -93,6 +93,11 @@ func New(
 // Error message to the log and matrix room
 func (b *Bot) Error(ctx context.Context, message string, args ...interface{}) {
 	evt := eventFromContext(ctx)
+	threadID := threadIDFromContext(ctx)
+	if threadID == "" {
+		threadID = linkpearl.EventParent(evt.ID, evt.Content.AsMessage())
+	}
+
 	err := fmt.Errorf(message, args...)
 	b.log.Error().Err(err).Msg(err.Error())
 	if evt == nil {
@@ -105,7 +110,7 @@ func (b *Bot) Error(ctx context.Context, message string, args ...interface{}) {
 		noThreads = cfg.NoThreads()
 	}
 
-	b.lp.SendNotice(evt.RoomID, "ERROR: "+err.Error(), utils.RelatesTo(!noThreads, evt.ID))
+	b.lp.SendNotice(evt.RoomID, "ERROR: "+err.Error(), utils.RelatesTo(!noThreads, threadID))
 }
 
 // Start performs matrix /sync

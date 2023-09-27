@@ -133,6 +133,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 		threadID = b.getThreadID(roomID, email.InReplyTo, email.References)
 		if threadID != "" {
 			newThread = false
+			ctx = threadIDToContext(ctx, threadID)
 			b.setThreadID(roomID, email.MessageID, threadID)
 		}
 	}
@@ -147,6 +148,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 	}
 	if threadID == "" {
 		threadID = eventID
+		ctx = threadIDToContext(ctx, threadID)
 	}
 
 	b.setThreadID(roomID, email.MessageID, threadID)
@@ -176,6 +178,12 @@ func (b *Bot) sendAutoreply(roomID id.RoomID, threadID id.EventID) {
 
 	text := cfg.Autoreply()
 	if text == "" {
+		return
+	}
+
+	threadEvt, err := b.lp.GetClient().GetEvent(roomID, threadID)
+	if err != nil {
+		b.log.Error().Err(err).Msg("cannot get thread event for autoreply")
 		return
 	}
 
@@ -228,7 +236,7 @@ func (b *Bot) sendAutoreply(roomID id.RoomID, threadID id.EventID) {
 	}
 
 	var queued bool
-	ctx := newContext(evt)
+	ctx := newContext(threadEvt)
 	recipients := meta.Recipients
 	for _, to := range recipients {
 		queued, err = b.Sendmail(evt.ID, meta.From, to, data)
@@ -282,6 +290,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 
 	if meta.ThreadID == "" {
 		meta.ThreadID = b.getThreadID(evt.RoomID, meta.InReplyTo, meta.References)
+		ctx = threadIDToContext(ctx, meta.ThreadID)
 	}
 	content := evt.Content.AsMessage()
 	if meta.Subject == "" {
@@ -306,7 +315,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil, nil)
 	data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 	if data == "" {
-		b.lp.SendNotice(evt.RoomID, "email body is empty", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+		b.lp.SendNotice(evt.RoomID, "email body is empty", utils.RelatesTo(!cfg.NoThreads(), meta.ThreadID))
 		return
 	}
 
@@ -511,7 +520,7 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 	msgContent.MsgType = event.MsgNotice
 	msgContent.Body = notice.Body
 	msgContent.FormattedBody = notice.FormattedBody
-	msgContent.RelatesTo = utils.RelatesTo(!cfg.NoThreads(), evt.ID)
+	msgContent.RelatesTo = utils.RelatesTo(!cfg.NoThreads(), threadID)
 	content.Parsed = msgContent
 	msgID, err := b.lp.Send(evt.RoomID, content)
 	if err != nil {

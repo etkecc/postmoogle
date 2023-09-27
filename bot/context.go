@@ -5,12 +5,14 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"maunium.net/go/mautrix/event"
+	"maunium.net/go/mautrix/id"
 )
 
 type ctxkey int
 
 const (
-	ctxEvent ctxkey = iota
+	ctxEvent    ctxkey = iota
+	ctxThreadID ctxkey = iota
 )
 
 func newContext(evt *event.Event) context.Context {
@@ -48,4 +50,22 @@ func eventToContext(ctx context.Context, evt *event.Event) context.Context {
 	})
 
 	return ctx
+}
+
+func threadIDToContext(ctx context.Context, threadID id.EventID) context.Context {
+	return context.WithValue(ctx, ctxThreadID, threadID)
+}
+
+func threadIDFromContext(ctx context.Context) id.EventID {
+	v := ctx.Value(ctxThreadID)
+	if v == nil {
+		return ""
+	}
+
+	threadID, ok := v.(id.EventID)
+	if !ok {
+		return ""
+	}
+
+	return threadID
 }
