@@ -183,6 +183,7 @@ If you want to change them - check available options in the help message (`!pm h
 * **`!pm banlist`** - Enable/disable banlist and show current values
 * **`!pm banlist:auth`** - Enable/disable automatic banning for invalid auth credentials
 * **`!pm banlist:auto`** - Enable/disable automatic banning for invalid emails
+* **`!pm banlist:totals`** - List banlist totals only
 * **`!pm banlist:add`** - Ban an IP
 * **`!pm banlist:remove`** - Unban an IP
 * **`!pm banlist:reset`** - Reset banlist

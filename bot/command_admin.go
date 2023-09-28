@@ -347,7 +347,6 @@ func (b *Bot) runBanlistTotals(ctx context.Context) {
 	msg.WriteString("You can find daily totals below:\n")
 	b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(true, evt.ID))
 	b.addBanlistTimeline(ctx, true)
-	return
 }
 
 func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) {
