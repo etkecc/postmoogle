@@ -518,7 +518,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 		msg.WriteString("\n")
 	}
 
-	b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+	b.lp.SendNotice(evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) runSend(ctx context.Context) {
@@ -568,14 +568,14 @@ func (b *Bot) getSendDetails(ctx context.Context) (string, string, string, bool)
 				"as you want.\n"+
 				"```",
 			b.prefix),
-			utils.RelatesTo(!cfg.NoThreads(), evt.ID),
+			linkpearl.RelatesTo(evt.ID, cfg.NoThreads()),
 		)
 		return "", "", "", false
 	}
 
 	mailbox := cfg.Mailbox()
 	if mailbox == "" {
-		b.lp.SendNotice(evt.RoomID, "mailbox is not configured, kupo", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+		b.lp.SendNotice(evt.RoomID, "mailbox is not configured, kupo", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return "", "", "", false
 	}
 
@@ -609,7 +609,7 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 		eml := email.New(ID, "", " "+ID, subject, from, to, to, "", body, htmlBody, nil, nil)
 		data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 		if data == "" {
-			b.lp.SendNotice(evt.RoomID, "email body is empty", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+			b.lp.SendNotice(evt.RoomID, "email body is empty", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 			return
 		}
 		queued, err := b.Sendmail(evt.ID, from, to, data)
@@ -625,6 +625,6 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 		b.saveSentMetadata(ctx, false, evt.ID, recipients, eml, cfg)
 	}
 	if len(tos) > 1 {
-		b.lp.SendNotice(evt.RoomID, "All emails were sent.", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+		b.lp.SendNotice(evt.RoomID, "All emails were sent.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 	}
 }

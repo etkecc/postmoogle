@@ -112,7 +112,7 @@ func (b *Bot) Error(ctx context.Context, message string, args ...interface{}) {
 
 	var relatesTo *event.RelatesTo
 	if threadID != "" {
-		relatesTo = utils.RelatesTo(!noThreads, threadID)
+		relatesTo = linkpearl.RelatesTo(threadID, noThreads)
 	}
 
 	b.lp.SendNotice(evt.RoomID, "ERROR: "+err.Error(), relatesTo)

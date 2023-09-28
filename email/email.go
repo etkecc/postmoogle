@@ -8,6 +8,7 @@ import (
 
 	"github.com/emersion/go-msgauth/dkim"
 	"github.com/jhillyerd/enmime"
+	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
@@ -150,7 +151,7 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 	}
 
 	parsed := format.RenderMarkdown(text.String(), true, true)
-	parsed.RelatesTo = utils.RelatesTo(options.Threads, threadID)
+	parsed.RelatesTo = linkpearl.RelatesTo(threadID, !options.Threads)
 
 	var cc string
 	if len(e.CC) > 0 {

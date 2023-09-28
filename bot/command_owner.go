@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/raja/argon2pw"
+	"gitlab.com/etke.cc/linkpearl"
 	"golang.org/x/exp/slices"
 
 	"gitlab.com/etke.cc/postmoogle/bot/config"
@@ -23,7 +24,7 @@ func (b *Bot) runStop(ctx context.Context) {
 
 	mailbox := cfg.Get(config.RoomMailbox)
 	if mailbox == "" {
-		b.lp.SendNotice(evt.RoomID, "that room is not configured yet", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+		b.lp.SendNotice(evt.RoomID, "that room is not configured yet", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return
 	}
 
@@ -35,7 +36,7 @@ func (b *Bot) runStop(ctx context.Context) {
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "mailbox has been disabled", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+	b.lp.SendNotice(evt.RoomID, "mailbox has been disabled", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) handleOption(ctx context.Context, cmd []string) {
@@ -72,7 +73,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		msg := fmt.Sprintf("`%s` is not set, kupo.\n"+
 			"To set it, send a `%s %s VALUE` command.",
 			name, b.prefix, name)
-		b.lp.SendNotice(evt.RoomID, msg, utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+		b.lp.SendNotice(evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return
 	}
 
@@ -90,7 +91,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 			"or just set a new one with `%s %s NEW_PASSWORD`.",
 			b.prefix, name)
 	}
-	b.lp.SendNotice(evt.RoomID, msg, utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+	b.lp.SendNotice(evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) setMailbox(ctx context.Context, value string) {
@@ -123,7 +124,7 @@ func (b *Bot) setMailbox(ctx context.Context, value string) {
 	}
 
 	msg := fmt.Sprintf("mailbox of this room set to `%s`", value)
-	b.lp.SendNotice(evt.RoomID, msg, utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+	b.lp.SendNotice(evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) setPassword(ctx context.Context) {
@@ -148,7 +149,7 @@ func (b *Bot) setPassword(ctx context.Context) {
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "SMTP password has been set", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+	b.lp.SendNotice(evt.RoomID, "SMTP password has been set", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
@@ -175,7 +176,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 
 	old := cfg.Get(name)
 	if old == value {
-		b.lp.SendNotice(evt.RoomID, "nothing changed, kupo.", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+		b.lp.SendNotice(evt.RoomID, "nothing changed, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return
 	}
 
@@ -187,7 +188,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	}
 
 	msg := fmt.Sprintf("`%s` of this room set to `%s`", name, value)
-	b.lp.SendNotice(evt.RoomID, msg, utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+	b.lp.SendNotice(evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
@@ -222,7 +223,7 @@ func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
 		threadID = evt.ID
 	}
 
-	b.lp.SendNotice(evt.RoomID, "spamlist has been updated, kupo", utils.RelatesTo(!cfg.NoThreads(), threadID))
+	b.lp.SendNotice(evt.RoomID, "spamlist has been updated, kupo", linkpearl.RelatesTo(threadID, cfg.NoThreads()))
 }
 
 func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
@@ -247,7 +248,7 @@ func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
 		toRemove[idx] = struct{}{}
 	}
 	if len(toRemove) == 0 {
-		b.lp.SendNotice(evt.RoomID, "nothing new, kupo.", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+		b.lp.SendNotice(evt.RoomID, "nothing new, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return
 	}
 
@@ -266,7 +267,7 @@ func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "spamlist has been updated, kupo", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+	b.lp.SendNotice(evt.RoomID, "spamlist has been updated, kupo", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) runSpamlistReset(ctx context.Context) {
@@ -278,7 +279,7 @@ func (b *Bot) runSpamlistReset(ctx context.Context) {
 	}
 	spamlist := utils.StringSlice(cfg[config.RoomSpamlist])
 	if len(spamlist) == 0 {
-		b.lp.SendNotice(evt.RoomID, "spamlist is empty, kupo.", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+		b.lp.SendNotice(evt.RoomID, "spamlist is empty, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return
 	}
 
@@ -289,5 +290,5 @@ func (b *Bot) runSpamlistReset(ctx context.Context) {
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "spamlist has been reset, kupo.", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+	b.lp.SendNotice(evt.RoomID, "spamlist has been reset, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }

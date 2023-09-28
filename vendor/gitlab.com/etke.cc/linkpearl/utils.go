@@ -7,6 +7,35 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
+// RelatesTo returns relation object of a matrix event (either threads with reply-to fallback or plain reply-to)
+func RelatesTo(parentID id.EventID, noThreads ...bool) *event.RelatesTo {
+	if parentID == "" {
+		return nil
+	}
+
+	var nothreads bool
+	if len(noThreads) > 0 {
+		nothreads = noThreads[0]
+	}
+
+	if nothreads {
+		return &event.RelatesTo{
+			InReplyTo: &event.InReplyTo{
+				EventID: parentID,
+			},
+		}
+	}
+
+	return &event.RelatesTo{
+		Type:    event.RelThread,
+		EventID: parentID,
+		InReplyTo: &event.InReplyTo{
+			EventID: parentID,
+		},
+		IsFallingBack: true,
+	}
+}
+
 // EventParent returns parent event ID (either from thread or from reply-to relation)
 func EventParent(currentID id.EventID, content *event.MessageEventContent) id.EventID {
 	if content == nil {

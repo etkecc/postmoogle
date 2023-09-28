@@ -315,7 +315,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	eml := email.New(meta.MessageID, meta.InReplyTo, meta.References, meta.Subject, meta.From, meta.To, meta.RcptTo, meta.CC, body, htmlBody, nil, nil)
 	data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
 	if data == "" {
-		b.lp.SendNotice(evt.RoomID, "email body is empty", utils.RelatesTo(!cfg.NoThreads(), meta.ThreadID))
+		b.lp.SendNotice(evt.RoomID, "email body is empty", linkpearl.RelatesTo(meta.ThreadID, cfg.NoThreads()))
 		return
 	}
 
@@ -520,7 +520,7 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 	msgContent.MsgType = event.MsgNotice
 	msgContent.Body = notice.Body
 	msgContent.FormattedBody = notice.FormattedBody
-	msgContent.RelatesTo = utils.RelatesTo(!cfg.NoThreads(), threadID)
+	msgContent.RelatesTo = linkpearl.RelatesTo(threadID, cfg.NoThreads())
 	content.Parsed = msgContent
 	msgID, err := b.lp.Send(evt.RoomID, content)
 	if err != nil {
@@ -536,7 +536,7 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.File, noThreads bool, parentID id.EventID) {
 	for _, file := range files {
 		req := file.Convert()
-		err := b.lp.SendFile(roomID, req, file.MsgType, utils.RelatesTo(!noThreads, parentID))
+		err := b.lp.SendFile(roomID, req, file.MsgType, linkpearl.RelatesTo(parentID, noThreads))
 		if err != nil {
 			b.Error(ctx, "cannot upload file %s: %v", req.FileName, err)
 		}
