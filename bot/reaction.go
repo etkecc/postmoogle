@@ -28,6 +28,8 @@ func (b *Bot) handleReaction(ctx context.Context) {
 		b.Error(ctx, "cannot find event %s: %v", srcID, err)
 		return
 	}
+	threadID := linkpearl.EventParent(srcID, srcEvt.Content.AsMessage())
+	ctx = threadIDToContext(ctx, threadID)
 	linkpearl.ParseContent(evt, event.EventMessage, b.log)
 
 	switch action {

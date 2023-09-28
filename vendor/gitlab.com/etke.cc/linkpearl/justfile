@@ -21,6 +21,6 @@ vuln:
 
 # run unit tests
 test:
-    @go test ${BUILDFLAGS} -coverprofile=cover.out ./...
+    @go test -coverprofile=cover.out ./...
     @go tool cover -func=cover.out
     -@rm -f cover.out

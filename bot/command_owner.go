@@ -217,7 +217,12 @@ func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "spamlist has been updated, kupo", utils.RelatesTo(!cfg.NoThreads(), evt.ID))
+	threadID := threadIDFromContext(ctx)
+	if threadID == "" {
+		threadID = evt.ID
+	}
+
+	b.lp.SendNotice(evt.RoomID, "spamlist has been updated, kupo", utils.RelatesTo(!cfg.NoThreads(), threadID))
 }
 
 func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {

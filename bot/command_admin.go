@@ -319,7 +319,7 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 		msg.WriteString("You can find current banlist values below:\n")
 
 		b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(true, evt.ID))
-		b.addBanlistTimeline(ctx)
+		b.addBanlistTimeline(ctx, false)
 		return
 	}
 	value := utils.SanitizeBoolString(commandSlice[1])
@@ -329,6 +329,25 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 		b.Error(ctx, "cannot set bot config: %v", err)
 	}
 	b.lp.SendNotice(evt.RoomID, "banlist has been updated", utils.RelatesTo(true, evt.ID))
+}
+
+func (b *Bot) runBanlistTotals(ctx context.Context) {
+	evt := eventFromContext(ctx)
+	banlist := b.cfg.GetBanlist()
+	var msg strings.Builder
+	size := len(banlist)
+	if size == 0 {
+		b.lp.SendNotice(evt.RoomID, "banlist is empty, kupo.", utils.RelatesTo(true, evt.ID))
+		return
+	}
+
+	msg.WriteString("Total: ")
+	msg.WriteString(strconv.Itoa(size))
+	msg.WriteString(" hosts banned\n\n")
+	msg.WriteString("You can find daily totals below:\n")
+	b.lp.SendNotice(evt.RoomID, msg.String(), utils.RelatesTo(true, evt.ID))
+	b.addBanlistTimeline(ctx, true)
+	return
 }
 
 func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) {
@@ -447,7 +466,7 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 	b.lp.SendNotice(evt.RoomID, "banlist has been updated, kupo", utils.RelatesTo(true, evt.ID))
 }
 
-func (b *Bot) addBanlistTimeline(ctx context.Context) {
+func (b *Bot) addBanlistTimeline(ctx context.Context, onlyTotals bool) {
 	evt := eventFromContext(ctx)
 	banlist := b.cfg.GetBanlist()
 	timeline := map[string][]string{}
@@ -471,6 +490,12 @@ func (b *Bot) addBanlistTimeline(ctx context.Context) {
 			sort.Strings(data)
 			txt.WriteString("* `")
 			txt.WriteString(day)
+			if onlyTotals {
+				txt.WriteString("` ")
+				txt.WriteString(strconv.Itoa(len(data)))
+				txt.WriteString(" hosts banned\n")
+				continue
+			}
 			txt.WriteString("` `")
 			txt.WriteString(strings.Join(data, "`, `"))
 			txt.WriteString("`\n")

@@ -31,6 +31,7 @@ const (
 	commandSpamlistReset  = "spam:reset"
 	commandDelete         = "delete"
 	commandBanlist        = "banlist"
+	commandBanlistTotals  = "banlist:totals"
 	commandBanlistAuto    = "banlist:auto"
 	commandBanlistAuth    = "banlist:auth"
 	commandBanlistAdd     = "banlist:add"
@@ -316,6 +317,11 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowAdmin,
 		},
 		{
+			key:         commandBanlistTotals,
+			description: "List banlist totals only",
+			allowed:     b.allowAdmin,
+		},
+		{
 			key:         commandBanlistAdd,
 			description: "Ban an IP",
 			allowed:     b.allowAdmin,
@@ -404,6 +410,8 @@ func (b *Bot) handle(ctx context.Context) {
 		b.runBanlistAuth(ctx, commandSlice)
 	case commandBanlistAuto:
 		b.runBanlistAuto(ctx, commandSlice)
+	case commandBanlistTotals:
+		b.runBanlistTotals(ctx)
 	case commandBanlistAdd:
 		b.runBanlistAdd(ctx, commandSlice)
 	case commandBanlistRemove:

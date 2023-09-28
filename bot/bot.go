@@ -110,7 +110,12 @@ func (b *Bot) Error(ctx context.Context, message string, args ...interface{}) {
 		noThreads = cfg.NoThreads()
 	}
 
-	b.lp.SendNotice(evt.RoomID, "ERROR: "+err.Error(), utils.RelatesTo(!noThreads, threadID))
+	var relatesTo *event.RelatesTo
+	if threadID != "" {
+		relatesTo = utils.RelatesTo(!noThreads, threadID)
+	}
+
+	b.lp.SendNotice(evt.RoomID, "ERROR: "+err.Error(), relatesTo)
 }
 
 // Start performs matrix /sync
