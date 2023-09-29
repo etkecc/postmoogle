@@ -445,7 +445,7 @@ func (b *Bot) getParentEvent(evt *event.Event) (id.EventID, *event.Event) {
 		b.log.Error().Err(err).Msg("cannot get parent event")
 		return threadID, nil
 	}
-	linkpearl.ParseContent(parentEvt, parentEvt.Type, b.log)
+	linkpearl.ParseContent(parentEvt, b.log)
 
 	if !b.lp.GetMachine().StateStore.IsEncrypted(evt.RoomID) {
 		return threadID, parentEvt

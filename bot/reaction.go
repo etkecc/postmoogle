@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"gitlab.com/etke.cc/linkpearl"
-	"maunium.net/go/mautrix/event"
 )
 
 var supportedReactions = map[string]string{
@@ -28,9 +27,16 @@ func (b *Bot) handleReaction(ctx context.Context) {
 		b.Error(ctx, "cannot find event %s: %v", srcID, err)
 		return
 	}
+	linkpearl.ParseContent(srcEvt, b.log)
+	if b.lp.GetMachine().StateStore.IsEncrypted(evt.RoomID) {
+		decrypted, derr := b.lp.GetClient().Crypto.Decrypt(srcEvt)
+		if derr == nil {
+			srcEvt = decrypted
+		}
+	}
 	threadID := linkpearl.EventParent(srcID, srcEvt.Content.AsMessage())
 	ctx = threadIDToContext(ctx, threadID)
-	linkpearl.ParseContent(evt, event.EventMessage, b.log)
+	linkpearl.ParseContent(evt, b.log)
 
 	switch action {
 	case commandSpamlistAdd:

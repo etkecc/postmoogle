@@ -7,6 +7,17 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
+// EventRelatesTo uses evt as source for EventParent() and RelatesTo()
+func EventRelatesTo(evt *event.Event) *event.RelatesTo {
+	ParseContent(evt, nil)
+	relatable, ok := evt.Content.Parsed.(event.Relatable)
+	if !ok {
+		return nil
+	}
+
+	return RelatesTo(EventParent(evt.ID, relatable))
+}
+
 // RelatesTo returns relation object of a matrix event (either threads with reply-to fallback or plain reply-to)
 func RelatesTo(parentID id.EventID, noThreads ...bool) *event.RelatesTo {
 	if parentID == "" {
@@ -36,34 +47,58 @@ func RelatesTo(parentID id.EventID, noThreads ...bool) *event.RelatesTo {
 	}
 }
 
-// EventParent returns parent event ID (either from thread or from reply-to relation)
-func EventParent(currentID id.EventID, content *event.MessageEventContent) id.EventID {
-	if content == nil {
-		return currentID
+// GetParent is nil-safe version of evt.Content.AsMessage().RelatesTo.(GetThreadParent()|GetReplyTo())
+func GetParent(evt *event.Event) id.EventID {
+	ParseContent(evt, nil)
+	content, ok := evt.Content.Parsed.(event.Relatable)
+	if !ok {
+		return ""
 	}
 
-	relation := content.OptionalGetRelatesTo()
+	relation := content.GetRelatesTo()
 	if relation == nil {
-		return currentID
+		return ""
 	}
 
-	threadParent := relation.GetThreadParent()
-	if threadParent != "" {
-		return threadParent
+	if parentID := relation.GetThreadParent(); parentID != "" {
+		return parentID
+	}
+	if parentID := relation.GetReplyTo(); parentID != "" {
+		return parentID
 	}
 
-	replyParent := relation.GetReplyTo()
-	if replyParent != "" {
-		return replyParent
+	return ""
+}
+
+// EventParent returns parent event ID (either from thread or from reply-to relation), like GetRelatesTo(), but with content and default return value
+func EventParent(currentID id.EventID, content event.Relatable) id.EventID {
+	if parentID := GetParent(&event.Event{Content: event.Content{Parsed: content}}); parentID != "" {
+		return parentID
 	}
 
 	return currentID
 }
 
+// EventContains checks if raw event content contains specified field with specified values
+func EventContains[T comparable](evt *event.Event, field string, value T) bool {
+	if evt.Content.Raw == nil {
+		return false
+	}
+	if EventField[T](&evt.Content, field) != value {
+		return false
+	}
+
+	return true
+}
+
 // EventField returns field value from raw event content
-func EventField[T any](content *event.Content, field string) T {
+func EventField[T comparable](content *event.Content, field string) T {
 	var zero T
-	raw := content.Raw[field]
+	raw, ok := content.Raw[field]
+	if !ok {
+		return zero
+	}
+
 	if raw == nil {
 		return zero
 	}
@@ -76,12 +111,13 @@ func EventField[T any](content *event.Content, field string) T {
 	return v
 }
 
-func ParseContent(evt *event.Event, eventType event.Type, log *zerolog.Logger) {
+// ParseContent parses event content according to evt.Type
+func ParseContent(evt *event.Event, log *zerolog.Logger) {
 	if evt.Content.Parsed != nil {
 		return
 	}
-	perr := evt.Content.ParseRaw(eventType)
-	if perr != nil {
+	perr := evt.Content.ParseRaw(evt.Type)
+	if perr != nil && log != nil {
 		log.Error().Err(perr).Msg("cannot parse event content")
 	}
 }
