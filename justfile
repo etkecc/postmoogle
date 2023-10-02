@@ -1,6 +1,14 @@
-CI_REGISTRY_IMAGE := env_var_or_default("CI_REGISTRY_IMAGE", "registry.gitlab.com/etke.cc/postmoogle")
-REGISTRY_IMAGE := env_var_or_default("REGISTRY_IMAGE", "registry.etke.cc/etke.cc/postmoogle")
-CI_COMMIT_TAG := if env_var_or_default("CI_COMMIT_TAG", "main") == "main" { "latest" } else { env_var_or_default("CI_COMMIT_TAG", "latest") }
+tag := if env_var_or_default("CI_COMMIT_TAG", "main") == "main" { "latest" } else { env_var_or_default("CI_COMMIT_TAG", "latest") }
+repo := replace(replace_regex(env_var_or_default("CI_REGISTRY_IMAGE",`git remote get-url origin`), ".*@|.git", ""), ":", "/")
+project := file_name(repo)
+gitlab_image := "registry." + repo + ":" + tag
+etke_image := replace(gitlab_image, "gitlab.com", "etke.cc")
+
+try:
+    @echo {{ project }}
+    @echo {{ repo }}
+    @echo {{ gitlab_image }}
+    @echo {{ etke_image }}
 
 # show help by default
 default:
@@ -33,7 +41,7 @@ run:
 
 # build app
 build:
-    go build -v -o postmoogle ./cmd
+    go build -v -o {{ project }} ./cmd
 
 # docker login
 login:
@@ -42,4 +50,4 @@ login:
 # docker build
 docker:
     docker buildx create --use
-    docker buildx build --platform linux/arm64/v8,linux/amd64 --push -t {{ CI_REGISTRY_IMAGE }}:{{ CI_COMMIT_TAG }} -t {{ REGISTRY_IMAGE }}:{{ CI_COMMIT_TAG }} .
+    docker buildx build --platform linux/arm64/v8,linux/amd64 --push -t {{ gitlab_image }} -t {{ etke_image }} .
