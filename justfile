@@ -22,7 +22,7 @@ update:
     go mod vendor
 
 # run linter
-lint:
+lint: try
     golangci-lint run ./...
 
 # automatically fix liter issues
@@ -30,7 +30,7 @@ lintfix:
     golangci-lint run --fix ./...
 
 # run unit tests
-test:
+test: try
     @go test -cover -coverprofile=cover.out -coverpkg=./... -covermode=set ./...
     @go tool cover -func=cover.out
     -@rm -f cover.out
@@ -44,10 +44,10 @@ build:
     go build -v -o {{ project }} ./cmd
 
 # docker login
-login:
+login: try
     @docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
 
 # docker build
-docker:
+docker: try
     docker buildx create --use
     docker buildx build --pull --platform linux/arm64/v8,linux/amd64 --push -t {{ gitlab_image }} -t {{ etke_image }} .
