@@ -1,5 +1,5 @@
 tag := if env_var_or_default("CI_COMMIT_TAG", "main") == "main" { "latest" } else { env_var_or_default("CI_COMMIT_TAG", "latest") }
-repo := replace(replace_regex(env_var_or_default("CI_REGISTRY_IMAGE",`git remote get-url origin`), ".*@|.git", ""), ":", "/")
+repo := replace(replace_regex(env_var_or_default("CI_REGISTRY_IMAGE", `git remote get-url origin`), ".*@|.git", ""), ":", "/")
 project := file_name(repo)
 gitlab_image := "registry." + repo + ":" + tag
 etke_image := replace(gitlab_image, "gitlab.com", "etke.cc")
@@ -31,7 +31,7 @@ lintfix:
 
 # run unit tests
 test:
-    @go test -coverprofile=cover.out ./...
+    @go test -cover -coverprofile=cover.out -coverpkg=./... -covermode=set ./...
     @go tool cover -func=cover.out
     -@rm -f cover.out
 
@@ -50,4 +50,4 @@ login:
 # docker build
 docker:
     docker buildx create --use
-    docker buildx build --platform linux/arm64/v8,linux/amd64 --push -t {{ gitlab_image }} -t {{ etke_image }} .
+    docker buildx build --pull --platform linux/arm64/v8,linux/amd64 --push -t {{ gitlab_image }} -t {{ etke_image }} .
