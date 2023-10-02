@@ -20,6 +20,16 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
+// GraylistCode SMTP code
+const GraylistCode = 451
+
+var (
+	// ErrInvalidEmail for invalid emails :)
+	ErrInvalidEmail = errors.New("please, provide valid email address")
+	// GraylistEnhancedCode is GraylistCode in enhanced code notation
+	GraylistEnhancedCode = smtp.EnhancedCode{4, 5, 1}
+)
+
 // incomingSession represents an SMTP-submission session receiving emails from remote servers
 type incomingSession struct {
 	log          *zerolog.Logger
@@ -32,7 +42,7 @@ type incomingSession struct {
 	domains      []string
 	roomID       id.RoomID
 
-	ctx  context.Context
+	ctx  context.Context //nolint:containedctx // that's session
 	addr net.Addr
 	tos  []string
 	from string
@@ -89,13 +99,13 @@ func (s *incomingSession) getAddr(envelope *enmime.Envelope) net.Addr {
 		return s.addr
 	}
 
-	host, portString, _ := net.SplitHostPort(addrHeader) //nolint:errcheck
+	host, portString, _ := net.SplitHostPort(addrHeader) //nolint:errcheck // it is real addr
 	if host == "" {
 		return s.addr
 	}
 
 	var port int
-	port, _ = strconv.Atoi(portString) //nolint:errcheck
+	port, _ = strconv.Atoi(portString) //nolint:errcheck // it's a real addr
 
 	realAddr := &net.TCPAddr{IP: net.ParseIP(host), Port: port}
 	s.log.Info().Str("addr", realAddr.String()).Msg("real address")
@@ -115,7 +125,7 @@ func (s *incomingSession) Data(r io.Reader) error {
 		return err
 	}
 	addr := s.getAddr(envelope)
-	reader.Seek(0, io.SeekStart) //nolint:errcheck
+	reader.Seek(0, io.SeekStart) //nolint:errcheck // becase we're sure that's ok
 	validations := s.getFilters(s.roomID)
 	if !validateIncoming(s.from, s.tos[0], addr, s.log, validations) {
 		s.ban(addr)
@@ -123,8 +133,8 @@ func (s *incomingSession) Data(r io.Reader) error {
 	}
 	if s.greylisted(addr) {
 		return &smtp.SMTPError{
-			Code:         451,
-			EnhancedCode: smtp.EnhancedCode{4, 5, 1},
+			Code:         GraylistCode,
+			EnhancedCode: GraylistEnhancedCode,
 			Message:      "You have been greylisted, try again a bit later.",
 		}
 	}
@@ -164,16 +174,16 @@ type outgoingSession struct {
 	domains   []string
 	getRoomID func(string) (id.RoomID, bool)
 
-	ctx      context.Context
+	ctx      context.Context //nolint:containedctx // that's session
 	tos      []string
 	from     string
 	fromRoom id.RoomID
 }
 
-func (s *outgoingSession) Mail(from string, opts smtp.MailOptions) error {
+func (s *outgoingSession) Mail(from string, _ smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
 	if !email.AddressValid(from) {
-		return errors.New("please, provide email address")
+		return ErrInvalidEmail
 	}
 	hostname := utils.Hostname(from)
 	var domainok bool
@@ -234,7 +244,7 @@ func validateIncoming(from, to string, senderAddr net.Addr, log *zerolog.Logger,
 	case *net.TCPAddr:
 		sender = netaddr.IP
 	default:
-		host, _, _ := net.SplitHostPort(senderAddr.String()) // nolint:errcheck
+		host, _, _ := net.SplitHostPort(senderAddr.String()) //nolint:errcheck // interface constraints
 		sender = net.ParseIP(host)
 	}
 

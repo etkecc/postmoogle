@@ -15,14 +15,12 @@ import (
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
 
-// account data keys
 const (
+	// account data keys
 	acMessagePrefix   = "cc.etke.postmoogle.message"
 	acLastEventPrefix = "cc.etke.postmoogle.last"
-)
 
-// event keys
-const (
+	// event keys
 	eventMessageIDkey  = "cc.etke.postmoogle.messageID"
 	eventReferencesKey = "cc.etke.postmoogle.references"
 	eventInReplyToKey  = "cc.etke.postmoogle.inReplyTo"
@@ -33,6 +31,8 @@ const (
 	eventCcKey         = "cc.etke.postmoogle.cc"
 )
 
+var ErrNoRoom = errors.New("room not found")
+
 // SetSendmail sets mail sending func to the bot
 func (b *Bot) SetSendmail(sendmail func(string, string, string) error) {
 	b.sendmail = sendmail
@@ -40,8 +40,8 @@ func (b *Bot) SetSendmail(sendmail func(string, string, string) error) {
 }
 
 func (b *Bot) shouldQueue(msg string) bool {
-	errors := strings.Split(msg, ";")
-	for _, err := range errors {
+	errs := strings.Split(msg, ";")
+	for _, err := range errs {
 		errParts := strings.Split(strings.TrimSpace(err), ":")
 		if len(errParts) < 2 {
 			continue
@@ -114,10 +114,10 @@ func (b *Bot) GetIFOptions(roomID id.RoomID) email.IncomingFilteringOptions {
 // IncomingEmail sends incoming email to matrix room
 //
 //nolint:gocognit // TODO
-func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
-	roomID, ok := b.GetMapping(email.Mailbox(true))
+func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
+	roomID, ok := b.GetMapping(eml.Mailbox(true))
 	if !ok {
-		return errors.New("room not found")
+		return ErrNoRoom
 	}
 	cfg, err := b.cfg.GetRoom(roomID)
 	if err != nil {
@@ -129,18 +129,18 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 
 	var threadID id.EventID
 	newThread := true
-	if email.InReplyTo != "" || email.References != "" {
-		threadID = b.getThreadID(roomID, email.InReplyTo, email.References)
+	if eml.InReplyTo != "" || eml.References != "" {
+		threadID = b.getThreadID(roomID, eml.InReplyTo, eml.References)
 		if threadID != "" {
 			newThread = false
 			ctx = threadIDToContext(ctx, threadID)
-			b.setThreadID(roomID, email.MessageID, threadID)
+			b.setThreadID(roomID, eml.MessageID, threadID)
 		}
 	}
-	content := email.Content(threadID, cfg.ContentOptions())
+	content := eml.Content(threadID, cfg.ContentOptions())
 	eventID, serr := b.lp.Send(roomID, content)
 	if serr != nil {
-		if !strings.Contains(serr.Error(), "M_UNKNOWN") { // 	if it's not an unknown event event error
+		if !strings.Contains(serr.Error(), "M_UNKNOWN") { // if it's not an unknown event error
 			return serr
 		}
 		threadID = "" // unknown event edge case - remove existing thread ID to avoid complications
@@ -151,15 +151,15 @@ func (b *Bot) IncomingEmail(ctx context.Context, email *email.Email) error {
 		ctx = threadIDToContext(ctx, threadID)
 	}
 
-	b.setThreadID(roomID, email.MessageID, threadID)
+	b.setThreadID(roomID, eml.MessageID, threadID)
 	b.setLastEventID(roomID, threadID, eventID)
 
 	if !cfg.NoInlines() {
-		b.sendFiles(ctx, roomID, email.InlineFiles, cfg.NoThreads(), threadID)
+		b.sendFiles(ctx, roomID, eml.InlineFiles, cfg.NoThreads(), threadID)
 	}
 
 	if !cfg.NoFiles() {
-		b.sendFiles(ctx, roomID, email.Files, cfg.NoThreads(), threadID)
+		b.sendFiles(ctx, roomID, eml.Files, cfg.NoThreads(), threadID)
 	}
 
 	if newThread && cfg.Autoreply() != "" {
@@ -255,8 +255,9 @@ func (b *Bot) sendAutoreply(roomID id.RoomID, threadID id.EventID) {
 	b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg, "Autoreply has been sent")
 }
 
-func (b *Bot) canReply(sender id.UserID, roomID id.RoomID) bool {
-	return b.allowSend(sender, roomID) && b.allowReply(sender, roomID)
+func (b *Bot) canReply(ctx context.Context) bool {
+	evt := eventFromContext(ctx)
+	return b.allowSend(evt.Sender, evt.RoomID) && b.allowReply(evt.Sender, evt.RoomID)
 }
 
 // SendEmailReply sends replies from matrix thread to email thread
@@ -264,7 +265,7 @@ func (b *Bot) canReply(sender id.UserID, roomID id.RoomID) bool {
 //nolint:gocognit // TODO
 func (b *Bot) SendEmailReply(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	if !b.canReply(evt.Sender, evt.RoomID) {
+	if !b.canReply(ctx) {
 		return
 	}
 	cfg, err := b.cfg.GetRoom(evt.RoomID)
@@ -543,7 +544,7 @@ func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.Fi
 	}
 }
 
-func (b *Bot) getThreadID(roomID id.RoomID, messageID string, references string) id.EventID {
+func (b *Bot) getThreadID(roomID id.RoomID, messageID, references string) id.EventID {
 	refs := []string{messageID}
 	if references != "" {
 		refs = append(refs, strings.Split(references, " ")...)
@@ -592,7 +593,7 @@ func (b *Bot) getLastEventID(roomID id.RoomID, threadID id.EventID) id.EventID {
 	return threadID
 }
 
-func (b *Bot) setLastEventID(roomID id.RoomID, threadID id.EventID, eventID id.EventID) {
+func (b *Bot) setLastEventID(roomID id.RoomID, threadID, eventID id.EventID) {
 	key := acLastEventPrefix + "." + threadID.String()
 	err := b.lp.SetRoomAccountData(roomID, key, map[string]string{"eventID": eventID.String()})
 	if err != nil {

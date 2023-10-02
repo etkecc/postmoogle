@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -372,7 +373,7 @@ func (b *Bot) handle(ctx context.Context) {
 	if err != nil {
 		b.log.Error().Err(err).Msg("cannot send typing notification")
 	}
-	defer b.lp.GetClient().UserTyping(evt.RoomID, false, 30*time.Second) //nolint:errcheck
+	defer b.lp.GetClient().UserTyping(evt.RoomID, false, 30*time.Second) //nolint:errcheck // we don't care
 
 	if !cmd.allowed(evt.Sender, evt.RoomID) {
 		b.lp.SendNotice(evt.RoomID, "not allowed to do that, kupo")
@@ -413,9 +414,9 @@ func (b *Bot) handle(ctx context.Context) {
 	case commandBanlistTotals:
 		b.runBanlistTotals(ctx)
 	case commandBanlistAdd:
-		b.runBanlistAdd(ctx, commandSlice)
+		b.runBanlistChange(ctx, "add", commandSlice)
 	case commandBanlistRemove:
-		b.runBanlistRemove(ctx, commandSlice)
+		b.runBanlistChange(ctx, "remove", commandSlice)
 	case commandBanlistReset:
 		b.runBanlistReset(ctx)
 	case commandMailboxes:
@@ -543,7 +544,7 @@ func (b *Bot) runSend(ctx context.Context) {
 	b.runSendCommand(ctx, cfg, tos, subject, body, htmlBody)
 }
 
-func (b *Bot) getSendDetails(ctx context.Context) (string, string, string, bool) {
+func (b *Bot) getSendDetails(ctx context.Context) (to, subject, body string, ok bool) {
 	evt := eventFromContext(ctx)
 	if !b.allowSend(evt.Sender, evt.RoomID) {
 		return "", "", "", false
@@ -556,8 +557,8 @@ func (b *Bot) getSendDetails(ctx context.Context) (string, string, string, bool)
 	}
 
 	commandSlice := b.parseCommand(evt.Content.AsMessage().Body, false)
-	to, subject, body, err := utils.ParseSend(commandSlice)
-	if err == utils.ErrInvalidArgs {
+	to, subject, body, err = utils.ParseSend(commandSlice)
+	if errors.Is(err, utils.ErrInvalidArgs) {
 		b.lp.SendNotice(evt.RoomID, fmt.Sprintf(
 			"Usage:\n"+
 				"```\n"+

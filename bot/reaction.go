@@ -38,8 +38,7 @@ func (b *Bot) handleReaction(ctx context.Context) {
 	ctx = threadIDToContext(ctx, threadID)
 	linkpearl.ParseContent(evt, b.log)
 
-	switch action {
-	case commandSpamlistAdd:
+	if action == commandSpamlistAdd {
 		sender := linkpearl.EventField[string](&srcEvt.Content, eventFromKey)
 		if sender == "" {
 			b.Error(ctx, "cannot get sender of the email")

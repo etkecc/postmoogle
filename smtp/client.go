@@ -11,7 +11,7 @@ import (
 )
 
 type MailSender interface {
-	Send(from string, to string, data string) error
+	Send(from, to, data string) error
 }
 
 // SMTP client
@@ -28,7 +28,7 @@ func newClient(cfg *RelayConfig, log *zerolog.Logger) *Client {
 }
 
 // Send email
-func (c Client) Send(from string, to string, data string) error {
+func (c Client) Send(from, to, data string) error {
 	c.log.Debug().Str("from", from).Str("to", to).Msg("sending email")
 
 	var conn *smtp.Client
@@ -67,7 +67,7 @@ func (c Client) Send(from string, to string, data string) error {
 }
 
 // createDirectClient connects directly to the provided smtp host
-func (c *Client) createDirectClient(from string, to string) (*smtp.Client, error) {
+func (c *Client) createDirectClient(from, to string) (*smtp.Client, error) {
 	localname := strings.SplitN(from, "@", 2)[1]
 	target := c.config.Host + ":" + c.config.Port
 	conn, err := smtp.Dial(target)
@@ -81,8 +81,8 @@ func (c *Client) createDirectClient(from string, to string) (*smtp.Client, error
 	}
 
 	if ok, _ := conn.Extension("STARTTLS"); ok {
-		config := &tls.Config{ServerName: c.config.Host}
-		conn.StartTLS(config) //nolint:errcheck // if it doesn't work - we can't do anything anyway
+		config := &tls.Config{ServerName: c.config.Host} //nolint:gosec // it's smtp, even that is too strict sometimes
+		conn.StartTLS(config)                            //nolint:errcheck // if it doesn't work - we can't do anything anyway
 	}
 
 	if c.config.Usename != "" {

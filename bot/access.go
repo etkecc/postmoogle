@@ -32,7 +32,7 @@ func (b *Bot) allowUsers(actorID id.UserID) bool {
 	return true
 }
 
-func (b *Bot) allowAnyone(actorID id.UserID, targetRoomID id.RoomID) bool {
+func (b *Bot) allowAnyone(_ id.UserID, _ id.RoomID) bool {
 	return true
 }
 
@@ -54,7 +54,7 @@ func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
 	return owner == actorID.String()
 }
 
-func (b *Bot) allowAdmin(actorID id.UserID, targetRoomID id.RoomID) bool {
+func (b *Bot) allowAdmin(actorID id.UserID, _ id.RoomID) bool {
 	return mxidwc.Match(actorID.String(), b.allowedAdmins)
 }
 

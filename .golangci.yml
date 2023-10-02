@@ -4,77 +4,123 @@ run:
   issues-exit-code: 1
   tests: true
   build-tags: []
-  skip-dirs: []
+  skip-dirs:
+    - mocks
   skip-dirs-use-default: true
   skip-files: []
   modules-download-mode: readonly
-  allow-parallel-runners: false
 
 output:
   format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
-  uniq-by-line: true
-  path-prefix: ""
   sort-results: true
 
 linters-settings:
+  decorder:
+    dec-order:
+      - const
+      - var
+      - type
+      - func
+  dogsled:
+    max-blank-identifiers: 3
   errcheck:
+    check-type-assertions: true
     check-blank: true
+  errchkjson:
+    report-no-exported: true
+  exhaustive:
+    check:
+      - switch
+      - map
+    default-signifies-exhaustive: true
   gocognit:
     min-complexity: 15
   nestif:
-    min-complexity: 4
+    min-complexity: 5
   gocritic:
     enabled-tags:
+      - diagnostic
+      - style
       - performance
+  gofmt:
+    simplify: true
+    rewrite-rules:
+      - pattern: 'interface{}'
+        replacement: 'any'
+      - pattern: 'a[b:len(a)]'
+        replacement: 'a[b:]'
   gofumpt:
-    lang-version: "1.18"
-  gosimple:
-    go: "1.18"
-    checks: [ "all" ]
+    extra-rules: true
   govet:
     check-shadowing: true
-    enable:
-      - atomicalign
-      - shadow
+  grouper:
+    const-require-single-const: true
+    import-require-single-import: true
+    var-require-single-var: true
   misspell:
     locale: US
-  staticcheck:
-    go: "1.18"
-    checks: [ "all" ]
-  stylecheck:
-    go: "1.18"
+  usestdlibvars:
+    time-month: true
+    time-layout: true
+    crypto-hash: true
+    default-rpc-path: true
+    os-dev-null: true
+    sql-isolation-level: true
+    tls-signature-scheme: true
+    constant-kind: true
   unparam:
     check-exported: true
-  unused:
-    go: "1.18"
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(gitlab.com/etke.cc/postmoogle)
-    section-separators:
-      - newLine
 linters:
   disable-all: false
   enable:
-    - megacheck
-    - govet
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - containedctx
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
     - errcheck
-    - gci
+    - errchkjson
+    - errname
+    - errorlint
+    - execinquery
+    - exhaustive
+    - exportloopref
+    - forcetypeassert
+    - gochecknoinits
     - gocognit
-    - nestif
-      # - gocritic # ref: https://github.com/golangci/golangci-lint/issues/2649#issue-1170906525
+    - gocritic
+    - gocyclo
+    - goerr113
+    - gofmt
     - gofumpt
     - goimports
+    - gosec
     - gosimple
+    - gosmopolitan
     - govet
+    - ineffassign
+    - makezero
+    - mirror
     - misspell
+    - nestif
+    - nolintlint
+    - prealloc
+    - predeclared
+    - revive
+    - sqlclosecheck
     - staticcheck
-    - stylecheck
+    - unconvert
     - unparam
     - unused
+    - usestdlibvars
+    - wastedassign
   fast: false
 
 

@@ -11,24 +11,24 @@ type validatorLoggerWrapper struct {
 	log *zerolog.Logger
 }
 
-func (l validatorLoggerWrapper) Info(msg string, args ...interface{}) {
+func (l validatorLoggerWrapper) Info(msg string, args ...any) {
 	l.log.Info().Msgf(msg, args...)
 }
 
-func (l validatorLoggerWrapper) Error(msg string, args ...interface{}) {
+func (l validatorLoggerWrapper) Error(msg string, args ...any) {
 	l.log.Error().Msgf(msg, args...)
 }
 
 // loggerWrapper is a wrapper around any logger to implement smtp.Logger interface
 type loggerWrapper struct {
-	log func(string, ...interface{})
+	log func(string, ...any)
 }
 
-func (l loggerWrapper) Printf(format string, v ...interface{}) {
+func (l loggerWrapper) Printf(format string, v ...any) {
 	l.log(format, v...)
 }
 
-func (l loggerWrapper) Println(v ...interface{}) {
+func (l loggerWrapper) Println(v ...any) {
 	msg := strings.Repeat("%v ", len(v))
 	l.log(msg, v...)
 }

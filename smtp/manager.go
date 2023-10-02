@@ -90,7 +90,7 @@ func NewManager(cfg *Config) *Manager {
 	}
 
 	s := smtp.NewServer(mailsrv)
-	s.ErrorLog = loggerWrapper{func(s string, i ...interface{}) { cfg.Logger.Error().Msgf(s, i...) }}
+	s.ErrorLog = loggerWrapper{func(s string, i ...any) { cfg.Logger.Error().Msgf(s, i...) }}
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = cfg.MaxSize * 1024 * 1024
@@ -209,7 +209,7 @@ func (m *Manager) loadTLSConfig() bool {
 		return false
 	}
 
-	m.tls.Config = &tls.Config{Certificates: certificates}
+	m.tls.Config = &tls.Config{Certificates: certificates} //nolint:gosec // it's email, even that config is too strict sometimes
 	m.smtp.TLSConfig = m.tls.Config
 	return true
 }

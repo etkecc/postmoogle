@@ -91,14 +91,14 @@ func New(
 }
 
 // Error message to the log and matrix room
-func (b *Bot) Error(ctx context.Context, message string, args ...interface{}) {
+func (b *Bot) Error(ctx context.Context, message string, args ...any) {
 	evt := eventFromContext(ctx)
 	threadID := threadIDFromContext(ctx)
 	if threadID == "" {
 		threadID = linkpearl.EventParent(evt.ID, evt.Content.AsMessage())
 	}
 
-	err := fmt.Errorf(message, args...)
+	err := fmt.Errorf(message, args...) //nolint:goerr113 // we have to
 	b.log.Error().Err(err).Msg(err.Error())
 	if evt == nil {
 		return

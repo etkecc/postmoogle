@@ -111,7 +111,6 @@ func initMatrix(cfg *config.Config) {
 		Logger:            log,
 	})
 	if err != nil {
-		// nolint // Fatal = panic, not os.Exit()
 		log.Fatal().Err(err).Msg("cannot initialize matrix bot")
 	}
 

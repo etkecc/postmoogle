@@ -21,7 +21,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	mailboxes := map[string]config.Room{}
 	slice := []string{}
-	b.rooms.Range(func(key any, value any) bool {
+	b.rooms.Range(func(key, value any) bool {
 		if key == nil {
 			return true
 		}
@@ -37,12 +37,12 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		if !ok {
 			return true
 		}
-		config, err := b.cfg.GetRoom(roomID)
+		cfg, err := b.cfg.GetRoom(roomID)
 		if err != nil {
 			b.log.Error().Err(err).Msg("cannot retrieve settings")
 		}
 
-		mailboxes[mailbox] = config
+		mailboxes[mailbox] = cfg
 		slice = append(slice, mailbox)
 		return true
 	})
@@ -80,7 +80,10 @@ func (b *Bot) runDelete(ctx context.Context, commandSlice []string) {
 		b.lp.SendNotice(evt.RoomID, "mailbox does not exists, kupo", linkpearl.RelatesTo(evt.ID))
 		return
 	}
-	roomID := v.(id.RoomID)
+	roomID, ok := v.(id.RoomID)
+	if !ok {
+		return
+	}
 
 	b.rooms.Delete(mailbox)
 	err := b.cfg.SetRoom(roomID, config.Room{})
@@ -350,7 +353,7 @@ func (b *Bot) runBanlistTotals(ctx context.Context) {
 	b.addBanlistTimeline(ctx, true)
 }
 
-func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) {
+func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) { //nolint:dupl // not in that case
 	evt := eventFromContext(ctx)
 	cfg := b.cfg.GetBot()
 	if len(commandSlice) < 2 {
@@ -377,7 +380,7 @@ func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) {
 	b.lp.SendNotice(evt.RoomID, "auth banning has been updated", linkpearl.RelatesTo(evt.ID))
 }
 
-func (b *Bot) runBanlistAuto(ctx context.Context, commandSlice []string) {
+func (b *Bot) runBanlistAuto(ctx context.Context, commandSlice []string) { //nolint:dupl // not in that case
 	evt := eventFromContext(ctx)
 	cfg := b.cfg.GetBot()
 	if len(commandSlice) < 2 {
@@ -404,7 +407,7 @@ func (b *Bot) runBanlistAuto(ctx context.Context, commandSlice []string) {
 	b.lp.SendNotice(evt.RoomID, "auto banning has been updated", linkpearl.RelatesTo(evt.ID))
 }
 
-func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
+func (b *Bot) runBanlistChange(ctx context.Context, mode string, commandSlice []string) {
 	evt := eventFromContext(ctx)
 	if len(commandSlice) < 2 {
 		b.runBanlist(ctx, commandSlice)
@@ -416,36 +419,12 @@ func (b *Bot) runBanlistAdd(ctx context.Context, commandSlice []string) {
 	}
 	banlist := b.cfg.GetBanlist()
 
-	ips := commandSlice[1:]
-	for _, ip := range ips {
-		addr, err := net.ResolveIPAddr("ip", ip)
-		if err != nil {
-			b.Error(ctx, "cannot add %s to banlist: %v", ip, err)
-			return
-		}
-		banlist.Add(addr)
+	var action func(net.Addr)
+	if mode == "remove" {
+		action = banlist.Remove
+	} else {
+		action = banlist.Add
 	}
-
-	err := b.cfg.SetBanlist(banlist)
-	if err != nil {
-		b.Error(ctx, "cannot set banlist: %v", err)
-		return
-	}
-
-	b.lp.SendNotice(evt.RoomID, "banlist has been updated, kupo", linkpearl.RelatesTo(evt.ID))
-}
-
-func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
-	evt := eventFromContext(ctx)
-	if len(commandSlice) < 2 {
-		b.runBanlist(ctx, commandSlice)
-		return
-	}
-	if !b.cfg.GetBot().BanlistEnabled() {
-		b.lp.SendNotice(evt.RoomID, "banlist is disabled, you have to enable it first, kupo", linkpearl.RelatesTo(evt.ID))
-		return
-	}
-	banlist := b.cfg.GetBanlist()
 
 	ips := commandSlice[1:]
 	for _, ip := range ips {
@@ -454,7 +433,7 @@ func (b *Bot) runBanlistRemove(ctx context.Context, commandSlice []string) {
 			b.Error(ctx, "cannot remove %s from banlist: %v", ip, err)
 			return
 		}
-		banlist.Remove(addr)
+		action(addr)
 	}
 
 	err := b.cfg.SetBanlist(banlist)

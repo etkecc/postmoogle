@@ -10,7 +10,7 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
-var styleRegex = regexp.MustCompile("<style((.|\n|\r)*?)<\\/style>")
+var styleRegex = regexp.MustCompile("<style((.|\n|\r)*?)</style>")
 
 // AddressValid checks if email address is valid
 func AddressValid(email string) bool {

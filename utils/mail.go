@@ -25,8 +25,7 @@ func Hostname(email string) string {
 }
 
 // EmailParts parses email address into mailbox, subaddress, and hostname
-func EmailParts(email string) (string, string, string) {
-	var mailbox, hostname string
+func EmailParts(email string) (mailbox, sub, hostname string) {
 	address, err := emailaddress.Parse(email)
 	if err == nil {
 		mailbox = address.LocalPart
@@ -44,7 +43,6 @@ func EmailParts(email string) (string, string, string) {
 		}
 	}
 
-	var sub string
 	idx := strings.Index(mailbox, "+")
 	if idx != -1 {
 		sub = strings.ReplaceAll(mailbox[idx:], "+", "")
@@ -54,7 +52,7 @@ func EmailParts(email string) (string, string, string) {
 }
 
 // EmailsList returns human-readable list of mailbox's emails for all available domains
-func EmailsList(mailbox string, domain string) string {
+func EmailsList(mailbox, domain string) string {
 	var msg strings.Builder
 	domain = SanitizeDomain(domain)
 	msg.WriteString(mailbox)

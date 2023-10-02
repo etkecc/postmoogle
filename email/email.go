@@ -159,7 +159,7 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 	}
 
 	content := event.Content{
-		Raw: map[string]interface{}{
+		Raw: map[string]any{
 			options.MessageIDKey:  e.MessageID,
 			options.InReplyToKey:  e.InReplyTo,
 			options.ReferencesKey: e.References,
@@ -231,7 +231,10 @@ func (e *Email) sign(domain, privkey string, data strings.Builder) string {
 	if err != nil {
 		return data.String()
 	}
-	signer := parsedkey.(crypto.Signer)
+	signer, ok := parsedkey.(crypto.Signer)
+	if !ok {
+		return data.String()
+	}
 
 	options := &dkim.SignOptions{
 		Domain:   domain,
