@@ -81,7 +81,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		value = utils.EmailsList(value, cfg.Domain())
 	}
 
-	msg := fmt.Sprintf("`%s` of this room is `%s`\n"+
+	msg := fmt.Sprintf("`%s` of this room is:\n```\n%s\n```\n"+
 		"To set it to a new value, send a `%s %s VALUE` command.",
 		name, value, b.prefix, name)
 	if name == config.RoomPassword {
@@ -187,7 +187,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		return
 	}
 
-	msg := fmt.Sprintf("`%s` of this room set to `%s`", name, value)
+	msg := fmt.Sprintf("`%s` of this room set to:\n```\n%s\n```", name, value)
 	b.lp.SendNotice(evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
