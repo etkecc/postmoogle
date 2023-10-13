@@ -18,6 +18,7 @@ type ContentOptions struct {
 	Subject   bool
 	HTML      bool
 	Threads   bool
+	Threadify bool
 
 	// Keys
 	MessageIDKey  string

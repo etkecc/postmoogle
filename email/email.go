@@ -132,8 +132,15 @@ func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, option
 		text.WriteString("\n\n")
 	}
 	if options.Subject && threadID == "" {
-		text.WriteString("# ")
-		text.WriteString(e.Subject)
+		if options.Threadify {
+			text.WriteString("**")
+			text.WriteString(e.Subject)
+			text.WriteString("**")
+		} else {
+			text.WriteString("# ")
+			text.WriteString(e.Subject)
+
+		}
 		text.WriteString("\n\n")
 	}
 }
@@ -144,10 +151,12 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 
 	e.contentHeader(threadID, &text, options)
 
-	if e.HTML != "" && options.HTML {
-		text.WriteString(format.HTMLToMarkdown(e.HTML))
-	} else {
-		text.WriteString(e.Text)
+	if threadID != "" || (threadID == "" && !options.Threadify) {
+		if e.HTML != "" && options.HTML {
+			text.WriteString(format.HTMLToMarkdown(e.HTML))
+		} else {
+			text.WriteString(e.Text)
+		}
 	}
 
 	parsed := format.RenderMarkdown(text.String(), true, true)
@@ -169,6 +178,28 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 			options.ToKey:         e.To,
 			options.CcKey:         cc,
 		},
+		Parsed: &parsed,
+	}
+	return &content
+}
+
+// ContentBody converts the email object to a Matrix event content that contains email body only
+// NOTE: returns nil if threadify is disabled
+func (e *Email) ContentBody(threadID id.EventID, options *ContentOptions) *event.Content {
+	if !options.Threadify {
+		return nil
+	}
+	var text string
+	if e.HTML != "" && options.HTML {
+		text = format.HTMLToMarkdown(e.HTML)
+	} else {
+		text = e.Text
+	}
+
+	parsed := format.RenderMarkdown(text, true, true)
+	parsed.RelatesTo = linkpearl.RelatesTo(threadID, !options.Threads)
+
+	content := event.Content{
 		Parsed: &parsed,
 	}
 	return &content

@@ -117,6 +117,15 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowOwner,
 		},
 		{
+			key: config.RoomThreadify,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - send incoming email body in thread; `false` - send incoming email body as part of the message)",
+				config.RoomThreadify,
+			),
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
+		},
+		{
 			key: config.RoomNoSend,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - disable email sending; `false` - enable email sending)",

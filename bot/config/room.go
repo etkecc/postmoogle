@@ -22,6 +22,7 @@ const (
 	RoomSignature = "signature"
 	RoomAutoreply = "autoreply"
 
+	RoomThreadify   = "threadify"
 	RoomNoCC        = "nocc"
 	RoomNoFiles     = "nofiles"
 	RoomNoHTML      = "nohtml"
@@ -77,6 +78,10 @@ func (s Room) Signature() string {
 
 func (s Room) Autoreply() string {
 	return s.Get(RoomAutoreply)
+}
+
+func (s Room) Threadify() bool {
+	return utils.Bool(s.Get(RoomThreadify))
 }
 
 func (s Room) NoSend() bool {
@@ -193,6 +198,7 @@ func (s Room) ContentOptions() *email.ContentOptions {
 		Recipient: !s.NoRecipient(),
 		Subject:   !s.NoSubject(),
 		Threads:   !s.NoThreads(),
+		Threadify: s.Threadify(),
 
 		ToKey:         "cc.etke.postmoogle.to",
 		CcKey:         "cc.etke.postmoogle.cc",

@@ -154,6 +154,13 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 	b.setThreadID(roomID, eml.MessageID, threadID)
 	b.setLastEventID(roomID, threadID, eventID)
 
+	if newThread && cfg.Threadify() {
+		_, berr := b.lp.Send(roomID, eml.ContentBody(threadID, cfg.ContentOptions()))
+		if berr != nil {
+			return berr
+		}
+	}
+
 	if !cfg.NoInlines() {
 		b.sendFiles(ctx, roomID, eml.InlineFiles, cfg.NoThreads(), threadID)
 	}
