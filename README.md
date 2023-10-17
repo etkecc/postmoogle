@@ -83,7 +83,7 @@ You can find default values in [config/defaults.go](config/defaults.go)
 
 </details>
 
-### 2. DNS (optional)
+### 2. DNS (highly recommended)
 
 Follow the [docs/dns](docs/dns.md)
 
