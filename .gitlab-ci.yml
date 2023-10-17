@@ -1,28 +1,24 @@
 stages:
   - test
   - release
+default:
+  image: registry.gitlab.com/etke.cc/base/build
+variables:
+  PLATFORMS: linux/arm64/v8,linux/amd64
 
 lint:
   stage: test
-  image: registry.gitlab.com/etke.cc/base/build
   script:
     - just lint
 
 unit:
   stage: test
-  image: registry.gitlab.com/etke.cc/base/build
   script:
     - just test
 
 docker:
   stage: release
   only: ['main', 'tags']
-  services:
-    - docker:dind
-  image: docker
-  before_script:
-    - apk --no-cache add git just --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community
+  services: ['docker:dind']
   script:
     - just login docker
-  tags:
-    - docker
