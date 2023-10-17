@@ -19,7 +19,7 @@ docker:
   only: ['main', 'tags']
   services:
     - docker:dind
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/jdrouet/docker-with-buildx:latest
+  image: docker
   before_script:
     - apk --no-cache add git just --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community
   script:
