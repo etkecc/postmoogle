@@ -6,15 +6,15 @@ default:
 variables:
   PLATFORMS: linux/arm64/v8,linux/amd64
 
-lint:
+test:
   stage: test
   script:
     - just lint
-
-unit:
-  stage: test
-  script:
     - just test
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - /root/cache/
 
 docker:
   stage: release
