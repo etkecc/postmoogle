@@ -144,7 +144,7 @@ gitlab.com/etke.cc/go/trysmtp
 # gitlab.com/etke.cc/go/validator v1.0.6
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/validator
-# gitlab.com/etke.cc/linkpearl v0.0.0-20230929133006-84554ee97edb
+# gitlab.com/etke.cc/linkpearl v0.0.0-20231007103859-01907e2b75f2
 ## explicit; go 1.18
 gitlab.com/etke.cc/linkpearl
 # go.mau.fi/util v0.1.0

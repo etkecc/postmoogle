@@ -84,11 +84,7 @@ func EventContains[T comparable](evt *event.Event, field string, value T) bool {
 	if evt.Content.Raw == nil {
 		return false
 	}
-	if EventField[T](&evt.Content, field) != value {
-		return false
-	}
-
-	return true
+	return EventField[T](&evt.Content, field) == value
 }
 
 // EventField returns field value from raw event content

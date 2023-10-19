@@ -18,6 +18,8 @@ const (
 	DefaultMaxRetries = 10
 	// DefaultAccountDataCache size
 	DefaultAccountDataCache = 1000
+	// DefaultEventsLimit for methods like lp.Threads() and lp.FindEventBy()
+	DefaultEventsLimit = 1000
 )
 
 // Linkpearl object
@@ -29,9 +31,10 @@ type Linkpearl struct {
 	log zerolog.Logger
 	api *mautrix.Client
 
-	joinPermit func(*event.Event) bool
-	autoleave  bool
-	maxretries int
+	joinPermit  func(*event.Event) bool
+	autoleave   bool
+	maxretries  int
+	eventsLimit int
 }
 
 type ReqPresence struct {
@@ -45,6 +48,9 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.AccountDataCache == 0 {
 		cfg.AccountDataCache = DefaultAccountDataCache
+	}
+	if cfg.EventsLimit == 0 {
+		cfg.EventsLimit = DefaultEventsLimit
 	}
 	if cfg.JoinPermit == nil {
 		// By default, we approve all join requests
@@ -76,14 +82,15 @@ func New(cfg *Config) (*Linkpearl, error) {
 	}
 
 	lp := &Linkpearl{
-		db:         cfg.DB,
-		acc:        acc,
-		acr:        acr,
-		api:        api,
-		log:        cfg.Logger,
-		joinPermit: cfg.JoinPermit,
-		autoleave:  cfg.AutoLeave,
-		maxretries: cfg.MaxRetries,
+		db:          cfg.DB,
+		acc:         acc,
+		acr:         acr,
+		api:         api,
+		log:         cfg.Logger,
+		joinPermit:  cfg.JoinPermit,
+		autoleave:   cfg.AutoLeave,
+		maxretries:  cfg.MaxRetries,
+		eventsLimit: cfg.EventsLimit,
 	}
 
 	db, err := dbutil.NewWithDB(cfg.DB, cfg.Dialect)

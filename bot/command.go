@@ -608,8 +608,8 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 		}
 	}
 
-	b.mu.Lock(evt.RoomID.String())
-	defer b.mu.Unlock(evt.RoomID.String())
+	b.lock(evt.RoomID, evt.ID)
+	defer b.unlock(evt.RoomID, evt.ID)
 
 	domain := utils.SanitizeDomain(cfg.Domain())
 	from := cfg.Mailbox() + "@" + domain

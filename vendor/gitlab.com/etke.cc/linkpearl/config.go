@@ -39,6 +39,9 @@ type Config struct {
 	// MaxRetries for operations like auto join
 	MaxRetries int
 
+	// EventsLimit for methods like lp.Threads() or lp.FindEventBy()
+	EventsLimit int
+
 	// Logger
 	Logger zerolog.Logger
 

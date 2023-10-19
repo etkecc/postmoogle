@@ -43,24 +43,37 @@ func (l *Linkpearl) SendNotice(roomID id.RoomID, message string, relates ...*eve
 }
 
 // SendFile to a matrix room
-func (l *Linkpearl) SendFile(roomID id.RoomID, req *mautrix.ReqUploadMedia, msgtype event.MessageType, relation *event.RelatesTo) error {
+func (l *Linkpearl) SendFile(roomID id.RoomID, req *mautrix.ReqUploadMedia, msgtype event.MessageType, relates ...*event.RelatesTo) error {
+	var relation *event.RelatesTo
+	if len(relates) > 0 {
+		relation = relates[0]
+	}
+
 	resp, err := l.GetClient().UploadMedia(*req)
 	if err != nil {
 		err = UnwrapError(err)
 		l.log.Error().Err(err).Str("file", req.FileName).Msg("cannot upload file")
 		return err
 	}
-	_, err = l.Send(roomID, &event.Content{
-		Parsed: &event.MessageEventContent{
-			MsgType:   msgtype,
-			Body:      req.FileName,
-			URL:       resp.ContentURI.CUString(),
-			RelatesTo: relation,
-		},
-	})
+	content := &event.MessageEventContent{
+		MsgType:   msgtype,
+		Body:      req.FileName,
+		URL:       resp.ContentURI.CUString(),
+		RelatesTo: relation,
+	}
+
+	_, err = l.Send(roomID, content)
 	err = UnwrapError(err)
 	if err != nil {
-		l.log.Error().Err(err).Str("file", req.FileName).Msg("cannot send uploaded file")
+		l.log.Error().Err(err).Str("roomID", roomID.String()).Str("retries", "1/2").Msg("cannot send file into the room")
+		if relation != nil {
+			content.RelatesTo = nil
+			_, err = l.Send(roomID, &content)
+			err = UnwrapError(err)
+			if err != nil {
+				l.log.Error().Err(UnwrapError(err)).Str("roomID", roomID.String()).Str("retries", "2/2").Msg("cannot send file into the room even without relations")
+			}
+		}
 	}
 
 	return err

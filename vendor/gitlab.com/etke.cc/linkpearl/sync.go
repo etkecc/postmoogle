@@ -79,7 +79,7 @@ func (l *Linkpearl) tryJoin(roomID id.RoomID, retry int) {
 	err = UnwrapError(err)
 	if err != nil {
 		l.log.Error().Err(err).Str("roomID", roomID.String()).Msg("cannot join room")
-		if strings.HasPrefix(err.Error(), "403") { // no permission to join, no need to retry
+		if strings.HasPrefix(err.Error(), "403") || strings.HasPrefix(err.Error(), "M_FORBIDDEN") { // no permission to join, no need to retry
 			return
 		}
 		time.Sleep(5 * time.Second)

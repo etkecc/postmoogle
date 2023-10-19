@@ -56,15 +56,19 @@ func (b *Bot) shouldQueue(msg string) bool {
 // Sendmail tries to send email immediately, but if it gets 4xx error (greylisting),
 // the email will be added to the queue and retried several times after that
 func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) (bool, error) {
+	log := b.log.With().Str("from", from).Str("to", to).Str("eventID", eventID.String()).Logger()
+	log.Info().Msg("attempting to deliver email")
 	err := b.sendmail(from, to, data)
 	if err != nil {
 		if b.shouldQueue(err.Error()) {
-			b.log.Info().Err(err).Str("id", eventID.String()).Str("from", from).Str("to", to).Msg("email has been added to the queue")
+			log.Info().Err(err).Msg("email has been added to the queue")
 			return true, b.q.Add(eventID.String(), from, to, data)
 		}
+		log.Warn().Err(err).Msg("email delivery failed")
 		return false, err
 	}
 
+	log.Warn().Err(err).Msg("email delivery succeeded")
 	return false, nil
 }
 
@@ -286,8 +290,8 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		return
 	}
 
-	b.mu.Lock(evt.RoomID.String())
-	defer b.mu.Unlock(evt.RoomID.String())
+	b.lock(evt.RoomID, evt.ID)
+	defer b.unlock(evt.RoomID, evt.ID)
 
 	meta := b.getParentEmail(evt, mailbox)
 

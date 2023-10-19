@@ -29,40 +29,43 @@ func newClient(cfg *RelayConfig, log *zerolog.Logger) *Client {
 
 // Send email
 func (c Client) Send(from, to, data string) error {
-	c.log.Debug().Str("from", from).Str("to", to).Msg("sending email")
+	log := c.log.With().Str("from", from).Str("to", to).Logger()
+	log.Debug().Msg("sending email")
 
 	var conn *smtp.Client
 	var err error
 	if c.config.Host != "" {
+		log.Debug().Msg("creating relay client...")
 		conn, err = c.createDirectClient(from, to)
 	} else {
+		log.Debug().Msg("trying direct SMTP connection...")
 		conn, err = trysmtp.Connect(from, to)
 	}
 
 	if conn == nil {
-		c.log.Error().Err(err).Str("server_of", to).Msg("cannot connect to SMTP server")
+		log.Error().Err(err).Str("server_of", to).Msg("cannot connect to SMTP server")
 		return err
 	}
 	if err != nil {
-		c.log.Warn().Err(err).Str("server_of", to).Msg("connection to the SMTP server returned non-fatal error(-s)")
+		log.Warn().Err(err).Str("server_of", to).Msg("connection to the SMTP server returned non-fatal error(-s)")
 	}
 	defer conn.Close()
 
 	var w io.WriteCloser
 	w, err = conn.Data()
 	if err != nil {
-		c.log.Error().Err(err).Msg("cannot send DATA command")
+		log.Error().Err(err).Msg("cannot send DATA command")
 		return err
 	}
 	defer w.Close()
 	c.log.Debug().Str("DATA", data).Msg("sending command")
 	_, err = strings.NewReader(data).WriteTo(w)
 	if err != nil {
-		c.log.Error().Err(err).Msg("cannot write DATA")
+		log.Error().Err(err).Msg("cannot write DATA")
 		return err
 	}
 
-	c.log.Debug().Msg("email has been sent")
+	log.Debug().Msg("email has been sent")
 	return nil
 }
 
