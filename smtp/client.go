@@ -2,12 +2,13 @@ package smtp
 
 import (
 	"crypto/tls"
+	"fmt"
 	"io"
+	"net"
 	"net/smtp"
 	"strings"
 
 	"github.com/rs/zerolog"
-	"gitlab.com/etke.cc/go/trysmtp"
 )
 
 type MailSender interface {
@@ -19,6 +20,8 @@ type Client struct {
 	config *RelayConfig
 	log    *zerolog.Logger
 }
+
+var errNoSMTP = fmt.Errorf("cannot connect to any SMTP server")
 
 func newClient(cfg *RelayConfig, log *zerolog.Logger) *Client {
 	return &Client{
@@ -36,10 +39,10 @@ func (c Client) Send(from, to, data string) error {
 	var err error
 	if c.config.Host != "" {
 		log.Debug().Msg("creating relay client...")
-		conn, err = c.createDirectClient(from, to)
+		conn, err = c.createRelayClient(from, to)
 	} else {
 		log.Debug().Msg("trying direct SMTP connection...")
-		conn, err = trysmtp.Connect(from, to)
+		conn, err = c.createDirectClient(from, to)
 	}
 
 	if conn == nil {
@@ -58,7 +61,7 @@ func (c Client) Send(from, to, data string) error {
 		return err
 	}
 	defer w.Close()
-	c.log.Debug().Str("DATA", data).Msg("sending command")
+	log.Debug().Str("DATA", data).Msg("sending command")
 	_, err = strings.NewReader(data).WriteTo(w)
 	if err != nil {
 		log.Error().Err(err).Msg("cannot write DATA")
@@ -69,8 +72,8 @@ func (c Client) Send(from, to, data string) error {
 	return nil
 }
 
-// createDirectClient connects directly to the provided smtp host
-func (c *Client) createDirectClient(from, to string) (*smtp.Client, error) {
+// createRelayClientconnects directly to the provided smtp host
+func (c *Client) createRelayClient(from, to string) (*smtp.Client, error) {
 	localname := strings.SplitN(from, "@", 2)[1]
 	target := c.config.Host + ":" + c.config.Port
 	conn, err := smtp.Dial(target)
@@ -109,4 +112,77 @@ func (c *Client) createDirectClient(from, to string) (*smtp.Client, error) {
 	}
 
 	return conn, nil
+}
+
+func (c *Client) createDirectClient(from, to string) (*smtp.Client, error) {
+	localname := strings.SplitN(from, "@", 2)[1]
+	hostname := strings.SplitN(to, "@", 2)[1]
+	client, cerr := c.trySMTP(localname, hostname)
+	if client == nil {
+		c.log.Warn().Err(cerr).Str("from", from).Str("to", to).Msg("cannot create direct SMTP client")
+		return nil, cerr
+	}
+
+	err := client.Mail(from)
+	if err != nil {
+		c.log.Warn().Err(err).Str("from", from).Str("to", to).Msg("cannot send MAIL command")
+		client.Close()
+		return nil, err
+	}
+
+	err = client.Rcpt(to)
+	if err != nil {
+		c.log.Warn().Err(err).Str("from", from).Str("to", to).Msg("cannot send RCPT command")
+		client.Close()
+		return nil, err
+	}
+
+	return client, cerr
+}
+
+func (c *Client) trySMTP(localname, hostname string) (*smtp.Client, error) {
+	mxs, err := net.LookupMX(hostname)
+	if err != nil {
+		return nil, err
+	}
+
+	var client *smtp.Client
+	for _, mx := range mxs {
+		if mx.Host == "." {
+			continue // no records case
+		}
+		client = c.connect(localname, hostname, strings.TrimSuffix(mx.Host, "."))
+		if client != nil {
+			return client, nil
+		}
+	}
+
+	// If there are no MX records, according to https://datatracker.ietf.org/doc/html/rfc5321#section-5.1,
+	// we're supposed to try talking directly to the host.
+	client = c.connect(localname, hostname, hostname)
+	if client != nil {
+		return client, nil
+	}
+
+	return nil, errNoSMTP
+}
+
+func (c *Client) connect(localname, serverOf, mxhost string) *smtp.Client {
+	target := mxhost + ":25"
+	conn, err := smtp.Dial(target)
+	if err != nil {
+		c.log.Warn().Err(err).Str("target", serverOf).Str("host", mxhost).Msg("cannot dial SMTP server")
+		return nil
+	}
+	err = conn.Hello(localname)
+	if err != nil {
+		c.log.Warn().Err(err).Str("target", serverOf).Str("host", mxhost).Msg("cannot hello SMTP server")
+		return nil
+	}
+	if ok, _ := conn.Extension("STARTTLS"); ok {
+		config := &tls.Config{ServerName: mxhost} //nolint:gosec // it's smtp, even that is too strict sometimes
+		conn.StartTLS(config)                     //nolint:errcheck // if it doesn't work - we can't do anything anyway
+	}
+
+	return conn
 }

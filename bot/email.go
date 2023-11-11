@@ -40,16 +40,19 @@ func (b *Bot) SetSendmail(sendmail func(string, string, string) error) {
 }
 
 func (b *Bot) shouldQueue(msg string) bool {
-	errs := strings.Split(msg, ";")
-	for _, err := range errs {
-		errParts := strings.Split(strings.TrimSpace(err), ":")
-		if len(errParts) < 2 {
-			continue
-		}
-		if strings.HasPrefix(strings.TrimSpace(errParts[1]), "4") {
-			return true
-		}
+	msg = strings.TrimSpace(msg)
+	if strings.HasPrefix(msg, "4") { // any temporary issue (4xx SMTP code)
+		return true
 	}
+
+	if strings.Contains(msg, "450") || strings.Contains(msg, "451") { // greylisting
+		return true
+	}
+
+	if strings.Contains(msg, "greylisted") { // greylisting
+		return true
+	}
+
 	return false
 }
 

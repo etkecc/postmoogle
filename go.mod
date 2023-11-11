@@ -24,7 +24,6 @@ require (
 	gitlab.com/etke.cc/go/healthchecks v1.0.1
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
 	gitlab.com/etke.cc/go/secgen v1.1.1
-	gitlab.com/etke.cc/go/trysmtp v1.1.3
 	gitlab.com/etke.cc/go/validator v1.0.6
 	gitlab.com/etke.cc/linkpearl v0.0.0-20231007103859-01907e2b75f2
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
@@ -52,6 +51,7 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yuin/goldmark v1.5.6 // indirect
+	gitlab.com/etke.cc/go/trysmtp v1.1.3 // indirect
 	go.mau.fi/util v0.1.0 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
 	golang.org/x/net v0.15.0 // indirect
