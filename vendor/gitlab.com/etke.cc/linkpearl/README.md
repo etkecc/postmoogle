@@ -32,4 +32,5 @@ go lp.Start()
 * Zero configuration session restores
 * Zero configuration room and user account data encryption with AES GCM (both keys and values)
 * Zero configuration room and user account data caching
+* Threads support
 * All wrapped components exported

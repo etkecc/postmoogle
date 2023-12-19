@@ -3,9 +3,8 @@ default:
     @just --list --justfile {{ justfile() }}
 
 # update go deps
-update:
-    go get .
-    go get maunium.net/go/mautrix@latest
+update *flags:
+    go get {{flags}} .
     go mod tidy
 
 # run linter
@@ -16,11 +15,8 @@ lint:
 lintfix:
     golangci-lint run --fix ./...
 
-vuln:
-    govulncheck ./...
-
 # run unit tests
 test:
-    @go test -coverprofile=cover.out ./...
+    @go test -cover -coverprofile=cover.out -coverpkg=./... -covermode=set ./...
     @go tool cover -func=cover.out
     -@rm -f cover.out

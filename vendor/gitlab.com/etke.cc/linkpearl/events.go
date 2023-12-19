@@ -32,7 +32,35 @@ func (l *Linkpearl) Threads(roomID id.RoomID, fromToken ...string) (*RespThreads
 	return resp, UnwrapError(err)
 }
 
-// FindEventBy tries to find event by field and value
+// FindThreadBy tries to find thread message event by field and value
+func (l *Linkpearl) FindThreadBy(roomID id.RoomID, field, value string, fromToken ...string) *event.Event {
+	var from string
+	if len(fromToken) > 0 {
+		from = fromToken[0]
+	}
+
+	resp, err := l.Threads(roomID, from)
+	err = UnwrapError(err)
+	if err != nil {
+		l.log.Warn().Err(err).Str("roomID", roomID.String()).Msg("cannot get room threads")
+		return nil
+	}
+
+	for _, msg := range resp.Chunk {
+		evt, contains := l.eventContains(msg, field, value)
+		if contains {
+			return evt
+		}
+	}
+
+	if resp.NextBatch == "" { // nothing more
+		return nil
+	}
+
+	return l.FindThreadBy(roomID, field, value, resp.NextBatch)
+}
+
+// FindEventBy tries to find message event by field and value
 func (l *Linkpearl) FindEventBy(roomID id.RoomID, field, value string, fromToken ...string) *event.Event {
 	var from string
 	if len(fromToken) > 0 {
