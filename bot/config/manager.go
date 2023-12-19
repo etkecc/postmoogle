@@ -50,6 +50,9 @@ func (m *Manager) SetBot(cfg Bot) error {
 // GetRoom config
 func (m *Manager) GetRoom(roomID id.RoomID) (Room, error) {
 	config, err := m.lp.GetRoomAccountData(roomID, acRoomKey)
+	if err != nil {
+		m.log.Warn().Err(err).Str("room_id", roomID.String()).Msg("cannot get room settings")
+	}
 	if config == nil {
 		config = make(Room, 0)
 	}
