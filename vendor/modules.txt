@@ -69,7 +69,7 @@ github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.12
 ## explicit; go 1.9
 github.com/mattn/go-runewidth
-# github.com/mattn/go-sqlite3 v1.14.18
+# github.com/mattn/go-sqlite3 v1.14.19
 ## explicit; go 1.16
 github.com/mattn/go-sqlite3
 # github.com/mcnijman/go-emailaddress v1.1.0
