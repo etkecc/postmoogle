@@ -3,7 +3,9 @@ package bot
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 
 	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/event"
@@ -71,7 +73,7 @@ func (b *Bot) Sendmail(eventID id.EventID, from, to, data string) (bool, error) 
 		return false, err
 	}
 
-	log.Warn().Err(err).Msg("email delivery succeeded")
+	log.Info().Msg("email delivery succeeded")
 	return false, nil
 }
 
@@ -202,7 +204,7 @@ func (b *Bot) sendAutoreply(roomID id.RoomID, threadID id.EventID) {
 	}
 
 	evt := &event.Event{
-		ID:     threadID + "-autoreply",
+		ID:     id.EventID(fmt.Sprintf("%s-autoreply-%s", threadID, time.Now().UTC().Format("20060102T150405Z"))),
 		RoomID: roomID,
 		Content: event.Content{
 			Parsed: &event.MessageEventContent{
@@ -256,17 +258,17 @@ func (b *Bot) sendAutoreply(roomID id.RoomID, threadID id.EventID) {
 		queued, err = b.Sendmail(evt.ID, meta.From, to, data)
 		if queued {
 			b.log.Info().Err(err).Str("from", meta.From).Str("to", to).Msg("email has been queued")
-			b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg, "Autoreply has been sent (queued)")
+			b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg, "Autoreply has been sent to "+to+" (queued)")
 			continue
 		}
 
 		if err != nil {
-			b.Error(ctx, "cannot send email: %v", err)
+			b.Error(ctx, "cannot send email to %q: %v", to, err)
 			continue
 		}
-	}
 
-	b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg, "Autoreply has been sent")
+		b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg, "Autoreply has been sent to "+to)
+	}
 }
 
 func (b *Bot) canReply(ctx context.Context) bool {
@@ -345,12 +347,12 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		}
 
 		if err != nil {
-			b.Error(ctx, "cannot send email: %v", err)
+			b.Error(ctx, "cannot send email to %q: %v", to, err)
 			continue
 		}
-	}
 
-	b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg)
+		b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg)
+	}
 }
 
 type parentEmail struct {
@@ -420,7 +422,7 @@ func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) strin
 
 func (e *parentEmail) calculateRecipients(from string, forwardedFrom []string) {
 	recipients := map[string]struct{}{}
-	recipients[e.From] = struct{}{}
+	recipients[email.Address(e.From)] = struct{}{}
 
 	for _, addr := range strings.Split(email.Address(e.To), ",") {
 		recipients[addr] = struct{}{}
@@ -436,7 +438,7 @@ func (e *parentEmail) calculateRecipients(from string, forwardedFrom []string) {
 
 	rcpts := make([]string, 0, len(recipients))
 	for rcpt := range recipients {
-		rcpts = append(rcpts, rcpt)
+		rcpts = append(rcpts, email.Address(rcpt))
 	}
 
 	e.Recipients = rcpts
@@ -486,10 +488,10 @@ func (b *Bot) getParentEmail(evt *event.Event, newFromMailbox string) *parentEma
 		return parent
 	}
 
-	parent.From = linkpearl.EventField[string](&parentEvt.Content, eventFromKey)
-	parent.To = linkpearl.EventField[string](&parentEvt.Content, eventToKey)
-	parent.CC = linkpearl.EventField[string](&parentEvt.Content, eventCcKey)
-	parent.RcptTo = linkpearl.EventField[string](&parentEvt.Content, eventRcptToKey)
+	parent.From = email.Address(linkpearl.EventField[string](&parentEvt.Content, eventFromKey))
+	parent.To = email.Address(linkpearl.EventField[string](&parentEvt.Content, eventToKey))
+	parent.CC = email.Address(linkpearl.EventField[string](&parentEvt.Content, eventCcKey))
+	parent.RcptTo = email.Address(linkpearl.EventField[string](&parentEvt.Content, eventRcptToKey))
 	parent.InReplyTo = linkpearl.EventField[string](&parentEvt.Content, eventMessageIDkey)
 	parent.References = linkpearl.EventField[string](&parentEvt.Content, eventReferencesKey)
 	senderEmail := parent.fixtofrom(newFromMailbox, b.domains)

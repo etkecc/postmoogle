@@ -55,7 +55,7 @@ func (s *incomingSession) Mail(from string, opts smtp.MailOptions) error {
 		s.ban(s.addr)
 		return ErrBanned
 	}
-	s.from = from
+	s.from = email.Address(from)
 	s.log.Debug().Str("from", from).Any("options", opts).Msg("incoming mail")
 	return nil
 }

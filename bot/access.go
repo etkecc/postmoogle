@@ -22,14 +22,24 @@ func parseMXIDpatterns(patterns []string, defaultPattern string) ([]*regexp.Rege
 	return mxidwc.ParsePatterns(patterns)
 }
 
-func (b *Bot) allowUsers(actorID id.UserID) bool {
-	if len(b.allowedUsers) != 0 {
-		if !mxidwc.Match(actorID.String(), b.allowedUsers) {
-			return false
-		}
+func (b *Bot) allowUsers(actorID id.UserID, targetRoomID id.RoomID) bool {
+	// first, check if it's an allowed user
+	if mxidwc.Match(actorID.String(), b.allowedUsers) {
+		return true
 	}
 
-	return true
+	// second, check if it's an admin (admin may not fit the allowed users pattern)
+	if b.allowAdmin(actorID, targetRoomID) {
+		return true
+	}
+
+	// then, check if it's the owner (same as above)
+	cfg, err := b.cfg.GetRoom(targetRoomID)
+	if err == nil && cfg.Owner() == actorID.String() {
+		return true
+	}
+
+	return false
 }
 
 func (b *Bot) allowAnyone(_ id.UserID, _ id.RoomID) bool {
@@ -37,7 +47,7 @@ func (b *Bot) allowAnyone(_ id.UserID, _ id.RoomID) bool {
 }
 
 func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
-	if !b.allowUsers(actorID) {
+	if !b.allowUsers(actorID, targetRoomID) {
 		return false
 	}
 	cfg, err := b.cfg.GetRoom(targetRoomID)
@@ -59,7 +69,7 @@ func (b *Bot) allowAdmin(actorID id.UserID, _ id.RoomID) bool {
 }
 
 func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
-	if !b.allowUsers(actorID) {
+	if !b.allowUsers(actorID, targetRoomID) {
 		return false
 	}
 
@@ -73,7 +83,7 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 }
 
 func (b *Bot) allowReply(actorID id.UserID, targetRoomID id.RoomID) bool {
-	if !b.allowUsers(actorID) {
+	if !b.allowUsers(actorID, targetRoomID) {
 		return false
 	}
 
