@@ -61,7 +61,7 @@ func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
 		return true
 	}
 
-	return owner == actorID.String()
+	return owner == actorID.String() || b.allowAdmin(actorID, targetRoomID)
 }
 
 func (b *Bot) allowAdmin(actorID id.UserID, _ id.RoomID) bool {
