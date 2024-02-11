@@ -33,12 +33,12 @@ var (
 // incomingSession represents an SMTP-submission session receiving emails from remote servers
 type incomingSession struct {
 	log          *zerolog.Logger
-	getRoomID    func(string) (id.RoomID, bool)
-	getFilters   func(id.RoomID) email.IncomingFilteringOptions
+	getRoomID    func(context.Context, string) (id.RoomID, bool)
+	getFilters   func(context.Context, id.RoomID) email.IncomingFilteringOptions
 	receiveEmail func(context.Context, *email.Email) error
-	greylisted   func(net.Addr) bool
+	greylisted   func(context.Context, net.Addr) bool
 	trusted      func(net.Addr) bool
-	ban          func(net.Addr)
+	ban          func(context.Context, net.Addr)
 	domains      []string
 	roomID       id.RoomID
 
@@ -52,7 +52,7 @@ func (s *incomingSession) Mail(from string, opts smtp.MailOptions) error {
 	sentry.GetHubFromContext(s.ctx).Scope().SetTag("from", from)
 	if !email.AddressValid(from) {
 		s.log.Debug().Str("from", from).Msg("address is invalid")
-		s.ban(s.addr)
+		s.ban(s.ctx, s.addr)
 		return ErrBanned
 	}
 	s.from = email.Address(from)
@@ -77,7 +77,7 @@ func (s *incomingSession) Rcpt(to string) error {
 	}
 
 	var ok bool
-	s.roomID, ok = s.getRoomID(utils.Mailbox(to))
+	s.roomID, ok = s.getRoomID(s.ctx, utils.Mailbox(to))
 	if !ok {
 		s.log.Debug().Str("to", to).Msg("mapping not found")
 		return ErrNoUser
@@ -126,12 +126,12 @@ func (s *incomingSession) Data(r io.Reader) error {
 	}
 	addr := s.getAddr(envelope)
 	reader.Seek(0, io.SeekStart) //nolint:errcheck // becase we're sure that's ok
-	validations := s.getFilters(s.roomID)
+	validations := s.getFilters(s.ctx, s.roomID)
 	if !validateIncoming(s.from, s.tos[0], addr, s.log, validations) {
-		s.ban(addr)
+		s.ban(s.ctx, addr)
 		return ErrBanned
 	}
-	if s.greylisted(addr) {
+	if s.greylisted(s.ctx, addr) {
 		return &smtp.SMTPError{
 			Code:         GraylistCode,
 			EnhancedCode: GraylistEnhancedCode,
@@ -172,7 +172,7 @@ type outgoingSession struct {
 	sendmail  func(string, string, string) error
 	privkey   string
 	domains   []string
-	getRoomID func(string) (id.RoomID, bool)
+	getRoomID func(context.Context, string) (id.RoomID, bool)
 
 	ctx      context.Context //nolint:containedctx // that's session
 	tos      []string
@@ -198,7 +198,7 @@ func (s *outgoingSession) Mail(from string, _ smtp.MailOptions) error {
 		return ErrNoUser
 	}
 
-	roomID, ok := s.getRoomID(utils.Mailbox(from))
+	roomID, ok := s.getRoomID(s.ctx, utils.Mailbox(from))
 	if !ok {
 		s.log.Debug().Str("from", from).Msg("mapping not found")
 		return ErrNoUser

@@ -36,6 +36,7 @@ type Bot struct {
 	rooms                   sync.Map
 	proxies                 []string
 	sendmail                func(string, string, string) error
+	psd                     *utils.PSD
 	cfg                     *config.Manager
 	log                     *zerolog.Logger
 	lp                      *linkpearl.Linkpearl
@@ -50,6 +51,7 @@ func New(
 	lp *linkpearl.Linkpearl,
 	log *zerolog.Logger,
 	cfg *config.Manager,
+	psd *utils.PSD,
 	proxies []string,
 	prefix string,
 	domains []string,
@@ -63,13 +65,14 @@ func New(
 		adminRooms: []id.RoomID{},
 		proxies:    proxies,
 		mbxc:       mbxc,
+		psd:        psd,
 		cfg:        cfg,
 		log:        log,
 		lp:         lp,
 		mu:         utils.NewMutex(),
 		q:          q,
 	}
-	users, err := b.initBotUsers()
+	users, err := b.initBotUsers(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +108,7 @@ func (b *Bot) Error(ctx context.Context, message string, args ...any) {
 	}
 
 	var noThreads bool
-	cfg, cerr := b.cfg.GetRoom(evt.RoomID)
+	cfg, cerr := b.cfg.GetRoom(ctx, evt.RoomID)
 	if cerr == nil {
 		noThreads = cfg.NoThreads()
 	}
@@ -115,16 +118,17 @@ func (b *Bot) Error(ctx context.Context, message string, args ...any) {
 		relatesTo = linkpearl.RelatesTo(threadID, noThreads)
 	}
 
-	b.lp.SendNotice(evt.RoomID, "ERROR: "+err.Error(), relatesTo)
+	b.lp.SendNotice(ctx, evt.RoomID, "ERROR: "+err.Error(), relatesTo)
 }
 
 // Start performs matrix /sync
 func (b *Bot) Start(statusMsg string) error {
-	if err := b.migrateMautrix015(); err != nil {
+	ctx := context.Background()
+	if err := b.migrateMautrix015(ctx); err != nil {
 		return err
 	}
 
-	if err := b.syncRooms(); err != nil {
+	if err := b.syncRooms(ctx); err != nil {
 		return err
 	}
 
@@ -135,7 +139,8 @@ func (b *Bot) Start(statusMsg string) error {
 
 // Stop the bot
 func (b *Bot) Stop() {
-	err := b.lp.GetClient().SetPresence(event.PresenceOffline)
+	ctx := context.Background()
+	err := b.lp.GetClient().SetPresence(ctx, event.PresenceOffline)
 	if err != nil {
 		b.log.Error().Err(err).Msg("cannot set presence = offline")
 	}

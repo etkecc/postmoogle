@@ -1,6 +1,7 @@
 package linkpearl
 
 import (
+	"context"
 	"strconv"
 
 	"maunium.net/go/mautrix"
@@ -15,7 +16,7 @@ type RespThreads struct {
 }
 
 // Threads endpoint, ref: https://spec.matrix.org/v1.8/client-server-api/#get_matrixclientv1roomsroomidthreads
-func (l *Linkpearl) Threads(roomID id.RoomID, fromToken ...string) (*RespThreads, error) {
+func (l *Linkpearl) Threads(ctx context.Context, roomID id.RoomID, fromToken ...string) (*RespThreads, error) {
 	var from string
 	if len(fromToken) > 0 {
 		from = fromToken[0]
@@ -28,18 +29,18 @@ func (l *Linkpearl) Threads(roomID id.RoomID, fromToken ...string) (*RespThreads
 
 	var resp *RespThreads
 	urlPath := l.GetClient().BuildURLWithQuery(mautrix.ClientURLPath{"v1", "rooms", roomID, "threads"}, query)
-	_, err := l.GetClient().MakeRequest("GET", urlPath, nil, &resp)
+	_, err := l.GetClient().MakeRequest(ctx, "GET", urlPath, nil, &resp)
 	return resp, UnwrapError(err)
 }
 
 // FindThreadBy tries to find thread message event by field and value
-func (l *Linkpearl) FindThreadBy(roomID id.RoomID, field, value string, fromToken ...string) *event.Event {
+func (l *Linkpearl) FindThreadBy(ctx context.Context, roomID id.RoomID, field, value string, fromToken ...string) *event.Event {
 	var from string
 	if len(fromToken) > 0 {
 		from = fromToken[0]
 	}
 
-	resp, err := l.Threads(roomID, from)
+	resp, err := l.Threads(ctx, roomID, from)
 	err = UnwrapError(err)
 	if err != nil {
 		l.log.Warn().Err(err).Str("roomID", roomID.String()).Msg("cannot get room threads")
@@ -47,7 +48,7 @@ func (l *Linkpearl) FindThreadBy(roomID id.RoomID, field, value string, fromToke
 	}
 
 	for _, msg := range resp.Chunk {
-		evt, contains := l.eventContains(msg, field, value)
+		evt, contains := l.eventContains(ctx, msg, field, value)
 		if contains {
 			return evt
 		}
@@ -57,17 +58,17 @@ func (l *Linkpearl) FindThreadBy(roomID id.RoomID, field, value string, fromToke
 		return nil
 	}
 
-	return l.FindThreadBy(roomID, field, value, resp.NextBatch)
+	return l.FindThreadBy(ctx, roomID, field, value, resp.NextBatch)
 }
 
 // FindEventBy tries to find message event by field and value
-func (l *Linkpearl) FindEventBy(roomID id.RoomID, field, value string, fromToken ...string) *event.Event {
+func (l *Linkpearl) FindEventBy(ctx context.Context, roomID id.RoomID, field, value string, fromToken ...string) *event.Event {
 	var from string
 	if len(fromToken) > 0 {
 		from = fromToken[0]
 	}
 
-	resp, err := l.GetClient().Messages(roomID, from, "", mautrix.DirectionBackward, nil, l.eventsLimit)
+	resp, err := l.GetClient().Messages(ctx, roomID, from, "", mautrix.DirectionBackward, nil, l.eventsLimit)
 	err = UnwrapError(err)
 	if err != nil {
 		l.log.Warn().Err(err).Str("roomID", roomID.String()).Msg("cannot get room events")
@@ -75,7 +76,7 @@ func (l *Linkpearl) FindEventBy(roomID id.RoomID, field, value string, fromToken
 	}
 
 	for _, msg := range resp.Chunk {
-		evt, contains := l.eventContains(msg, field, value)
+		evt, contains := l.eventContains(ctx, msg, field, value)
 		if contains {
 			return evt
 		}
@@ -85,13 +86,13 @@ func (l *Linkpearl) FindEventBy(roomID id.RoomID, field, value string, fromToken
 		return nil
 	}
 
-	return l.FindEventBy(roomID, field, value, resp.End)
+	return l.FindEventBy(ctx, roomID, field, value, resp.End)
 }
 
-func (l *Linkpearl) eventContains(evt *event.Event, field, value string) (*event.Event, bool) {
+func (l *Linkpearl) eventContains(ctx context.Context, evt *event.Event, field, value string) (*event.Event, bool) {
 	if evt.Type == event.EventEncrypted {
 		ParseContent(evt, &l.log)
-		decrypted, err := l.GetClient().Crypto.Decrypt(evt)
+		decrypted, err := l.GetClient().Crypto.Decrypt(ctx, evt)
 		if err == nil {
 			evt = decrypted
 		}

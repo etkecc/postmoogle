@@ -38,6 +38,9 @@ type Config struct {
 	// DB config
 	DB DB
 
+	// PSD config
+	PSD PSD
+
 	// TLS config
 	TLS TLS
 
@@ -76,6 +79,12 @@ type Mailboxes struct {
 	Reserved   []string
 	Forwarded  []string
 	Activation string
+}
+
+type PSD struct {
+	URL      string
+	Login    string
+	Password string
 }
 
 // Relay config

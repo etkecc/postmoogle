@@ -18,16 +18,16 @@ require (
 	github.com/mcnijman/go-emailaddress v1.1.0
 	github.com/mileusna/crontab v1.2.0
 	github.com/raja/argon2pw v1.0.2-0.20210910183755-a391af63bd39
-	github.com/rs/zerolog v1.31.0
-	gitlab.com/etke.cc/go/env v1.0.0
+	github.com/rs/zerolog v1.32.0
+	gitlab.com/etke.cc/go/env v1.1.0
 	gitlab.com/etke.cc/go/fswatcher v1.0.0
 	gitlab.com/etke.cc/go/healthchecks v1.0.1
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/go/validator v1.0.6
-	gitlab.com/etke.cc/linkpearl v0.0.0-20231121221431-72443f33d266
-	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
-	maunium.net/go/mautrix v0.16.2
+	gitlab.com/etke.cc/linkpearl v0.0.0-20240211143445-bddf907d137a
+	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
+	maunium.net/go/mautrix v0.17.0
 )
 
 require (
@@ -50,12 +50,12 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	github.com/yuin/goldmark v1.6.0 // indirect
+	github.com/yuin/goldmark v1.7.0 // indirect
 	gitlab.com/etke.cc/go/trysmtp v1.1.3 // indirect
-	go.mau.fi/util v0.2.1 // indirect
-	golang.org/x/crypto v0.15.0 // indirect
-	golang.org/x/net v0.18.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
+	go.mau.fi/util v0.3.0 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	maunium.net/go/maulogger/v2 v2.4.1 // indirect
 )

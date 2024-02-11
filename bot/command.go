@@ -46,7 +46,7 @@ type (
 		key         string
 		description string
 		sanitizer   func(string) string
-		allowed     func(id.UserID, id.RoomID) bool
+		allowed     func(context.Context, id.UserID, id.RoomID) bool
 	}
 	commandList []command
 )
@@ -351,7 +351,7 @@ func (b *Bot) initCommands() commandList {
 
 func (b *Bot) handle(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	err := b.lp.GetClient().MarkRead(evt.RoomID, evt.ID)
+	err := b.lp.GetClient().MarkRead(ctx, evt.RoomID, evt.ID)
 	if err != nil {
 		b.log.Error().Err(err).Msg("cannot send read receipt")
 	}
@@ -378,14 +378,14 @@ func (b *Bot) handle(ctx context.Context) {
 	if cmd == nil {
 		return
 	}
-	_, err = b.lp.GetClient().UserTyping(evt.RoomID, true, 30*time.Second)
+	_, err = b.lp.GetClient().UserTyping(ctx, evt.RoomID, true, 30*time.Second)
 	if err != nil {
 		b.log.Error().Err(err).Msg("cannot send typing notification")
 	}
-	defer b.lp.GetClient().UserTyping(evt.RoomID, false, 30*time.Second) //nolint:errcheck // we don't care
+	defer b.lp.GetClient().UserTyping(ctx, evt.RoomID, false, 30*time.Second) //nolint:errcheck // we don't care
 
-	if !cmd.allowed(evt.Sender, evt.RoomID) {
-		b.lp.SendNotice(evt.RoomID, "not allowed to do that, kupo")
+	if !cmd.allowed(ctx, evt.Sender, evt.RoomID) {
+		b.lp.SendNotice(ctx, evt.RoomID, "not allowed to do that, kupo")
 		return
 	}
 
@@ -452,7 +452,7 @@ func (b *Bot) parseCommand(message string, toLower bool) []string {
 	return strings.Split(strings.TrimSpace(message), " ")
 }
 
-func (b *Bot) sendIntroduction(roomID id.RoomID) {
+func (b *Bot) sendIntroduction(ctx context.Context, roomID id.RoomID) {
 	var msg strings.Builder
 	msg.WriteString("Hello, kupo!\n\n")
 
@@ -468,7 +468,7 @@ func (b *Bot) sendIntroduction(roomID id.RoomID) {
 	msg.WriteString(utils.EmailsList("SOME_INBOX", ""))
 	msg.WriteString("` and have them appear in this room.")
 
-	b.lp.SendNotice(roomID, msg.String())
+	b.lp.SendNotice(ctx, roomID, msg.String())
 }
 
 func (b *Bot) getHelpValue(cfg config.Room, cmd command) string {
@@ -497,7 +497,7 @@ func (b *Bot) getHelpValue(cfg config.Room, cmd command) string {
 func (b *Bot) sendHelp(ctx context.Context) {
 	evt := eventFromContext(ctx)
 
-	cfg, serr := b.cfg.GetRoom(evt.RoomID)
+	cfg, serr := b.cfg.GetRoom(ctx, evt.RoomID)
 	if serr != nil {
 		b.log.Error().Err(serr).Msg("cannot retrieve settings")
 	}
@@ -505,7 +505,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 	var msg strings.Builder
 	msg.WriteString("The following commands are supported and accessible to you:\n\n")
 	for _, cmd := range b.commands {
-		if !cmd.allowed(evt.Sender, evt.RoomID) {
+		if !cmd.allowed(ctx, evt.Sender, evt.RoomID) {
 			continue
 		}
 		if cmd.key == "" {
@@ -528,7 +528,7 @@ func (b *Bot) sendHelp(ctx context.Context) {
 		msg.WriteString("\n")
 	}
 
-	b.lp.SendNotice(evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+	b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) runSend(ctx context.Context) {
@@ -538,7 +538,7 @@ func (b *Bot) runSend(ctx context.Context) {
 		return
 	}
 
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
 	if err != nil {
 		b.Error(ctx, "failed to retrieve room settings: %v", err)
 		return
@@ -555,11 +555,11 @@ func (b *Bot) runSend(ctx context.Context) {
 
 func (b *Bot) getSendDetails(ctx context.Context) (to, subject, body string, ok bool) {
 	evt := eventFromContext(ctx)
-	if !b.allowSend(evt.Sender, evt.RoomID) {
+	if !b.allowSend(ctx, evt.Sender, evt.RoomID) {
 		return "", "", "", false
 	}
 
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
 	if err != nil {
 		b.Error(ctx, "failed to retrieve room settings: %v", err)
 		return "", "", "", false
@@ -568,7 +568,7 @@ func (b *Bot) getSendDetails(ctx context.Context) (to, subject, body string, ok 
 	commandSlice := b.parseCommand(evt.Content.AsMessage().Body, false)
 	to, subject, body, err = utils.ParseSend(commandSlice)
 	if errors.Is(err, utils.ErrInvalidArgs) {
-		b.lp.SendNotice(evt.RoomID, fmt.Sprintf(
+		b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf(
 			"Usage:\n"+
 				"```\n"+
 				"%s send someone@example.com\n"+
@@ -585,7 +585,7 @@ func (b *Bot) getSendDetails(ctx context.Context) (to, subject, body string, ok 
 
 	mailbox := cfg.Mailbox()
 	if mailbox == "" {
-		b.lp.SendNotice(evt.RoomID, "mailbox is not configured, kupo", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+		b.lp.SendNotice(ctx, evt.RoomID, "mailbox is not configured, kupo", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return "", "", "", false
 	}
 
@@ -608,8 +608,8 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 		}
 	}
 
-	b.lock(evt.RoomID, evt.ID)
-	defer b.unlock(evt.RoomID, evt.ID)
+	b.lock(ctx, evt.RoomID, evt.ID)
+	defer b.unlock(ctx, evt.RoomID, evt.ID)
 
 	domain := utils.SanitizeDomain(cfg.Domain())
 	from := cfg.Mailbox() + "@" + domain
@@ -617,12 +617,12 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 	for _, to := range tos {
 		recipients := []string{to}
 		eml := email.New(ID, "", " "+ID, subject, from, to, to, "", body, htmlBody, nil, nil)
-		data := eml.Compose(b.cfg.GetBot().DKIMPrivateKey())
+		data := eml.Compose(b.cfg.GetBot(ctx).DKIMPrivateKey())
 		if data == "" {
-			b.lp.SendNotice(evt.RoomID, "email body is empty", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+			b.lp.SendNotice(ctx, evt.RoomID, "email body is empty", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 			return
 		}
-		queued, err := b.Sendmail(evt.ID, from, to, data)
+		queued, err := b.Sendmail(ctx, evt.ID, from, to, data)
 		if queued {
 			b.log.Warn().Err(err).Msg("email has been queued")
 			b.saveSentMetadata(ctx, queued, evt.ID, recipients, eml, cfg)
@@ -635,6 +635,6 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 		b.saveSentMetadata(ctx, false, evt.ID, recipients, eml, cfg)
 	}
 	if len(tos) > 1 {
-		b.lp.SendNotice(evt.RoomID, "All emails were sent.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+		b.lp.SendNotice(ctx, evt.RoomID, "All emails were sent.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 	}
 }

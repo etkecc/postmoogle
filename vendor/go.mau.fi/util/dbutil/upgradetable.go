@@ -8,6 +8,7 @@ package dbutil
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -189,27 +190,27 @@ func (db *Database) filterSQLUpgrade(lines [][]byte) (string, error) {
 }
 
 func sqlUpgradeFunc(fileName string, lines [][]byte) upgradeFunc {
-	return func(tx Execable, db *Database) error {
+	return func(ctx context.Context, db *Database) error {
 		if skip, err := db.parseDialectFilter(lines[0]); err == nil && skip == skipNextLine {
 			return nil
 		} else if upgradeSQL, err := db.filterSQLUpgrade(lines); err != nil {
 			panic(fmt.Errorf("failed to parse upgrade %s: %w", fileName, err))
 		} else {
-			_, err = tx.Exec(upgradeSQL)
+			_, err = db.Exec(ctx, upgradeSQL)
 			return err
 		}
 	}
 }
 
 func splitSQLUpgradeFunc(sqliteData, postgresData string) upgradeFunc {
-	return func(tx Execable, database *Database) (err error) {
-		switch database.Dialect {
+	return func(ctx context.Context, db *Database) (err error) {
+		switch db.Dialect {
 		case SQLite:
-			_, err = tx.Exec(sqliteData)
+			_, err = db.Exec(ctx, sqliteData)
 		case Postgres:
-			_, err = tx.Exec(postgresData)
+			_, err = db.Exec(ctx, postgresData)
 		default:
-			err = fmt.Errorf("unknown dialect %s", database.Dialect)
+			err = fmt.Errorf("unknown dialect %s", db.Dialect)
 		}
 		return
 	}

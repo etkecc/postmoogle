@@ -7,9 +7,15 @@
 package jsontime
 
 import (
+	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"time"
 )
+
+var ErrNotInteger = errors.New("value is not an integer")
 
 func parseTime(data []byte, unixConv func(int64) time.Time, into *time.Time) error {
 	var val int64
@@ -24,6 +30,28 @@ func parseTime(data []byte, unixConv func(int64) time.Time, into *time.Time) err
 	}
 	return nil
 }
+
+func anyIntegerToTime(src any, unixConv func(int64) time.Time, into *time.Time) error {
+	switch v := src.(type) {
+	case int:
+		*into = unixConv(int64(v))
+	case int8:
+		*into = unixConv(int64(v))
+	case int16:
+		*into = unixConv(int64(v))
+	case int32:
+		*into = unixConv(int64(v))
+	case int64:
+		*into = unixConv(int64(v))
+	default:
+		return fmt.Errorf("%w: %T", ErrNotInteger, src)
+	}
+
+	return nil
+}
+
+var _ sql.Scanner = &UnixMilli{}
+var _ driver.Valuer = UnixMilli{}
 
 type UnixMilli struct {
 	time.Time
@@ -40,6 +68,17 @@ func (um *UnixMilli) UnmarshalJSON(data []byte) error {
 	return parseTime(data, time.UnixMilli, &um.Time)
 }
 
+func (um UnixMilli) Value() (driver.Value, error) {
+	return um.UnixMilli(), nil
+}
+
+func (um *UnixMilli) Scan(src any) error {
+	return anyIntegerToTime(src, time.UnixMilli, &um.Time)
+}
+
+var _ sql.Scanner = &UnixMicro{}
+var _ driver.Valuer = UnixMicro{}
+
 type UnixMicro struct {
 	time.Time
 }
@@ -54,6 +93,17 @@ func (um UnixMicro) MarshalJSON() ([]byte, error) {
 func (um *UnixMicro) UnmarshalJSON(data []byte) error {
 	return parseTime(data, time.UnixMicro, &um.Time)
 }
+
+func (um UnixMicro) Value() (driver.Value, error) {
+	return um.UnixMicro(), nil
+}
+
+func (um *UnixMicro) Scan(src any) error {
+	return anyIntegerToTime(src, time.UnixMicro, &um.Time)
+}
+
+var _ sql.Scanner = &UnixNano{}
+var _ driver.Valuer = UnixNano{}
 
 type UnixNano struct {
 	time.Time
@@ -72,6 +122,16 @@ func (un *UnixNano) UnmarshalJSON(data []byte) error {
 	}, &un.Time)
 }
 
+func (un UnixNano) Value() (driver.Value, error) {
+	return un.UnixNano(), nil
+}
+
+func (un *UnixNano) Scan(src any) error {
+	return anyIntegerToTime(src, func(i int64) time.Time {
+		return time.Unix(0, i)
+	}, &un.Time)
+}
+
 type Unix struct {
 	time.Time
 }
@@ -83,8 +143,21 @@ func (u Unix) MarshalJSON() ([]byte, error) {
 	return json.Marshal(u.Unix())
 }
 
+var _ sql.Scanner = &Unix{}
+var _ driver.Valuer = Unix{}
+
 func (u *Unix) UnmarshalJSON(data []byte) error {
 	return parseTime(data, func(i int64) time.Time {
+		return time.Unix(i, 0)
+	}, &u.Time)
+}
+
+func (u Unix) Value() (driver.Value, error) {
+	return u.Unix(), nil
+}
+
+func (u *Unix) Scan(src any) error {
+	return anyIntegerToTime(src, func(i int64) time.Time {
 		return time.Unix(i, 0)
 	}, &u.Time)
 }

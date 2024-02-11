@@ -9,6 +9,9 @@ package dbutil
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,18 +22,61 @@ type LoggingExecable struct {
 	db                 *Database
 }
 
-func (le *LoggingExecable) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+type pqError interface {
+	Get(k byte) string
+}
+
+type PQErrorWithLine struct {
+	Underlying error
+	Line       string
+}
+
+func (pqe *PQErrorWithLine) Error() string {
+	return pqe.Underlying.Error()
+}
+
+func (pqe *PQErrorWithLine) Unwrap() error {
+	return pqe.Underlying
+}
+
+func addErrorLine(query string, err error) error {
+	if err == nil {
+		return err
+	}
+	var pqe pqError
+	if !errors.As(err, &pqe) {
+		return err
+	}
+	pos, _ := strconv.Atoi(pqe.Get('P'))
+	pos--
+	if pos <= 0 {
+		return err
+	}
+	lines := strings.Split(query, "\n")
+	for _, line := range lines {
+		lineRunes := []rune(line)
+		if pos < len(lineRunes)+1 {
+			return &PQErrorWithLine{Underlying: err, Line: line}
+		}
+		pos -= len(lineRunes) + 1
+	}
+	return err
+}
+
+func (le *LoggingExecable) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	start := time.Now()
 	query = le.db.mutateQuery(query)
 	res, err := le.UnderlyingExecable.ExecContext(ctx, query, args...)
+	err = addErrorLine(query, err)
 	le.db.Log.QueryTiming(ctx, "Exec", query, args, -1, time.Since(start), err)
 	return res, err
 }
 
-func (le *LoggingExecable) QueryContext(ctx context.Context, query string, args ...interface{}) (Rows, error) {
+func (le *LoggingExecable) QueryContext(ctx context.Context, query string, args ...any) (Rows, error) {
 	start := time.Now()
 	query = le.db.mutateQuery(query)
 	rows, err := le.UnderlyingExecable.QueryContext(ctx, query, args...)
+	err = addErrorLine(query, err)
 	le.db.Log.QueryTiming(ctx, "Query", query, args, -1, time.Since(start), err)
 	return &LoggingRows{
 		ctx:   ctx,
@@ -42,24 +88,12 @@ func (le *LoggingExecable) QueryContext(ctx context.Context, query string, args 
 	}, err
 }
 
-func (le *LoggingExecable) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+func (le *LoggingExecable) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
 	start := time.Now()
 	query = le.db.mutateQuery(query)
 	row := le.UnderlyingExecable.QueryRowContext(ctx, query, args...)
 	le.db.Log.QueryTiming(ctx, "QueryRow", query, args, -1, time.Since(start), nil)
 	return row
-}
-
-func (le *LoggingExecable) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return le.ExecContext(context.Background(), query, args...)
-}
-
-func (le *LoggingExecable) Query(query string, args ...interface{}) (Rows, error) {
-	return le.QueryContext(context.Background(), query, args...)
-}
-
-func (le *LoggingExecable) QueryRow(query string, args ...interface{}) *sql.Row {
-	return le.QueryRowContext(context.Background(), query, args...)
 }
 
 // loggingDB is a wrapper for LoggingExecable that allows access to BeginTx.
@@ -87,10 +121,6 @@ func (ld *loggingDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Logging
 		ctx:             ctx,
 		StartTime:       start,
 	}, nil
-}
-
-func (ld *loggingDB) Begin() (*LoggingTxn, error) {
-	return ld.BeginTx(context.Background(), nil)
 }
 
 type LoggingTxn struct {
@@ -129,7 +159,7 @@ type LoggingRows struct {
 	ctx   context.Context
 	db    *Database
 	query string
-	args  []interface{}
+	args  []any
 	rs    Rows
 	start time.Time
 	nrows int

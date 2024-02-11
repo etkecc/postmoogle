@@ -46,27 +46,28 @@ type mailServer struct {
 // Login used for outgoing mail submissions only (when you use postmoogle as smtp server in your scripts)
 func (m *mailServer) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
 	m.log.Debug().Str("username", username).Any("state", state).Msg("Login")
-	if m.bot.IsBanned(state.RemoteAddr) {
+	ctx := context.Background()
+	if m.bot.IsBanned(ctx, state.RemoteAddr) {
 		return nil, ErrBanned
 	}
 
 	if !email.AddressValid(username) {
 		m.log.Debug().Str("address", username).Msg("address is invalid")
-		m.bot.BanAuth(state.RemoteAddr)
+		m.bot.BanAuth(ctx, state.RemoteAddr)
 		return nil, ErrBanned
 	}
 
-	roomID, allow := m.bot.AllowAuth(username, password)
+	roomID, allow := m.bot.AllowAuth(ctx, username, password)
 	if !allow {
 		m.log.Debug().Str("username", username).Msg("username or password is invalid")
-		m.bot.BanAuth(state.RemoteAddr)
+		m.bot.BanAuth(ctx, state.RemoteAddr)
 		return nil, ErrBanned
 	}
 
 	return &outgoingSession{
 		ctx:       sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
 		sendmail:  m.sender.Send,
-		privkey:   m.bot.GetDKIMprivkey(),
+		privkey:   m.bot.GetDKIMprivkey(ctx),
 		from:      username,
 		log:       m.log,
 		domains:   m.domains,
@@ -79,7 +80,8 @@ func (m *mailServer) Login(state *smtp.ConnectionState, username, password strin
 // AnonymousLogin used for incoming mail submissions only
 func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
 	m.log.Debug().Any("state", state).Msg("AnonymousLogin")
-	if m.bot.IsBanned(state.RemoteAddr) {
+	ctx := context.Background()
+	if m.bot.IsBanned(ctx, state.RemoteAddr) {
 		return nil, ErrBanned
 	}
 

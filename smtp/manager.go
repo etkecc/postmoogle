@@ -60,16 +60,16 @@ type Manager struct {
 }
 
 type matrixbot interface {
-	AllowAuth(string, string) (id.RoomID, bool)
-	IsGreylisted(net.Addr) bool
-	IsBanned(net.Addr) bool
+	AllowAuth(context.Context, string, string) (id.RoomID, bool)
+	IsGreylisted(context.Context, net.Addr) bool
+	IsBanned(context.Context, net.Addr) bool
 	IsTrusted(net.Addr) bool
-	BanAuto(net.Addr)
-	BanAuth(net.Addr)
-	GetMapping(string) (id.RoomID, bool)
-	GetIFOptions(id.RoomID) email.IncomingFilteringOptions
+	BanAuto(context.Context, net.Addr)
+	BanAuth(context.Context, net.Addr)
+	GetMapping(context.Context, string) (id.RoomID, bool)
+	GetIFOptions(context.Context, id.RoomID) email.IncomingFilteringOptions
 	IncomingEmail(context.Context, *email.Email) error
-	GetDKIMprivkey() string
+	GetDKIMprivkey(context.Context) string
 }
 
 // Caller is Sendmail caller

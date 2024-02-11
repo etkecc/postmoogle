@@ -37,7 +37,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		if !ok {
 			return true
 		}
-		cfg, err := b.cfg.GetRoom(roomID)
+		cfg, err := b.cfg.GetRoom(ctx, roomID)
 		if err != nil {
 			b.log.Error().Err(err).Msg("cannot retrieve settings")
 		}
@@ -49,7 +49,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 	sort.Strings(slice)
 
 	if len(slice) == 0 {
-		b.lp.SendNotice(evt.RoomID, "No mailboxes are managed by the bot so far, kupo!", linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, "No mailboxes are managed by the bot so far, kupo!", linkpearl.RelatesTo(evt.ID))
 		return
 	}
 
@@ -64,20 +64,20 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		msg.WriteString("\n")
 	}
 
-	b.lp.SendNotice(evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) runDelete(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
 	if len(commandSlice) < 2 {
-		b.lp.SendNotice(evt.RoomID, fmt.Sprintf("Usage: `%s delete MAILBOX`", b.prefix), linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Usage: `%s delete MAILBOX`", b.prefix), linkpearl.RelatesTo(evt.ID))
 		return
 	}
 	mailbox := utils.Mailbox(commandSlice[1])
 
 	v, ok := b.rooms.Load(mailbox)
 	if v == nil || !ok {
-		b.lp.SendNotice(evt.RoomID, "mailbox does not exists, kupo", linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, "mailbox does not exists, kupo", linkpearl.RelatesTo(evt.ID))
 		return
 	}
 	roomID, ok := v.(id.RoomID)
@@ -86,18 +86,18 @@ func (b *Bot) runDelete(ctx context.Context, commandSlice []string) {
 	}
 
 	b.rooms.Delete(mailbox)
-	err := b.cfg.SetRoom(roomID, config.Room{})
+	err := b.cfg.SetRoom(ctx, roomID, config.Room{})
 	if err != nil {
 		b.Error(ctx, "cannot update settings: %v", err)
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "mailbox has been deleted", linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, "mailbox has been deleted", linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
-	cfg := b.cfg.GetBot()
+	cfg := b.cfg.GetBot(ctx)
 	if len(commandSlice) < 2 {
 		var msg strings.Builder
 		users := cfg.Users()
@@ -112,35 +112,35 @@ func (b *Bot) runUsers(ctx context.Context, commandSlice []string) {
 		msg.WriteString("where each pattern is like `@someone:example.com`, ")
 		msg.WriteString("`@bot.*:example.com`, `@*:another.com`, or `@*:*`\n")
 
-		b.lp.SendNotice(evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
 		return
 	}
 
 	_, homeserver, err := b.lp.GetClient().UserID.Parse()
 	if err != nil {
-		b.lp.SendNotice(evt.RoomID, fmt.Sprintf("invalid userID: %v", err), linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("invalid userID: %v", err), linkpearl.RelatesTo(evt.ID))
 	}
 
 	patterns := commandSlice[1:]
 	allowedUsers, err := parseMXIDpatterns(patterns, "@*:"+homeserver)
 	if err != nil {
-		b.lp.SendNotice(evt.RoomID, fmt.Sprintf("invalid patterns: %v", err), linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("invalid patterns: %v", err), linkpearl.RelatesTo(evt.ID))
 		return
 	}
 
 	cfg.Set(config.BotUsers, strings.Join(patterns, " "))
 
-	err = b.cfg.SetBot(cfg)
+	err = b.cfg.SetBot(ctx, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot set bot config: %v", err)
 	}
 	b.allowedUsers = allowedUsers
-	b.lp.SendNotice(evt.RoomID, "allowed users updated", linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, "allowed users updated", linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
-	cfg := b.cfg.GetBot()
+	cfg := b.cfg.GetBot(ctx)
 	if len(commandSlice) > 1 && commandSlice[1] == "reset" {
 		cfg.Set(config.BotDKIMPrivateKey, "")
 		cfg.Set(config.BotDKIMSignature, "")
@@ -157,14 +157,14 @@ func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 		}
 		cfg.Set(config.BotDKIMSignature, signature)
 		cfg.Set(config.BotDKIMPrivateKey, private)
-		err := b.cfg.SetBot(cfg)
+		err := b.cfg.SetBot(ctx, cfg)
 		if err != nil {
 			b.Error(ctx, "cannot save bot options: %v", err)
 			return
 		}
 	}
 
-	b.lp.SendNotice(evt.RoomID, fmt.Sprintf(
+	b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf(
 		"DKIM signature is: `%s`.\n"+
 			"You need to add it to DNS records of all domains added to postmoogle (if not already):\n"+
 			"Add new DNS record with type = `TXT`, key (subdomain/from): `postmoogle._domainkey` and value (to):\n ```\n%s\n```\n"+
@@ -177,7 +177,7 @@ func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 
 func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
-	cfg := b.cfg.GetBot()
+	cfg := b.cfg.GetBot(ctx)
 	if len(commandSlice) < 2 {
 		var msg strings.Builder
 		msg.WriteString("Currently: `")
@@ -195,30 +195,30 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 		msg.WriteString(" catch-all MAILBOX`")
 		msg.WriteString("where mailbox is valid and existing mailbox name\n")
 
-		b.lp.SendNotice(evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
 		return
 	}
 
 	mailbox := utils.Mailbox(commandSlice[1])
-	_, ok := b.GetMapping(mailbox)
+	_, ok := b.GetMapping(ctx, mailbox)
 	if !ok {
-		b.lp.SendNotice(evt.RoomID, "mailbox does not exist, kupo.", linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, "mailbox does not exist, kupo.", linkpearl.RelatesTo(evt.ID))
 		return
 	}
 
 	cfg.Set(config.BotCatchAll, mailbox)
-	err := b.cfg.SetBot(cfg)
+	err := b.cfg.SetBot(ctx, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot save bot options: %v", err)
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, "")), linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, "")), linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
-	cfg := b.cfg.GetBot()
+	cfg := b.cfg.GetBot(ctx)
 	if len(commandSlice) < 2 {
 		var msg strings.Builder
 		msg.WriteString("Currently: `")
@@ -233,13 +233,13 @@ func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
 		msg.WriteString(" adminroom ROOM_ID`")
 		msg.WriteString("where ROOM_ID is valid and existing matrix room id\n")
 
-		b.lp.SendNotice(evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
 		return
 	}
 
 	roomID := b.parseCommand(evt.Content.AsMessage().Body, false)[1] // get original value, without forced lower case
 	cfg.Set(config.BotAdminRoom, roomID)
-	err := b.cfg.SetBot(cfg)
+	err := b.cfg.SetBot(ctx, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot save bot options: %v", err)
 		return
@@ -247,12 +247,12 @@ func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
 
 	b.adminRooms = append([]id.RoomID{id.RoomID(roomID)}, b.adminRooms...) // make it the first room in list on the fly
 
-	b.lp.SendNotice(evt.RoomID, fmt.Sprintf("Admin Room is set to: `%s`.", roomID), linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Admin Room is set to: `%s`.", roomID), linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) printGreylist(ctx context.Context, roomID id.RoomID) {
-	cfg := b.cfg.GetBot()
-	greylist := b.cfg.GetGreylist()
+	cfg := b.cfg.GetBot(ctx)
+	greylist := b.cfg.GetGreylist(ctx)
 	var msg strings.Builder
 	size := len(greylist)
 	duration := cfg.Greylist()
@@ -278,7 +278,7 @@ func (b *Bot) printGreylist(ctx context.Context, roomID id.RoomID) {
 		msg.WriteString("where `MIN` is duration in minutes for automatic greylisting\n")
 	}
 
-	b.lp.SendNotice(roomID, msg.String(), linkpearl.RelatesTo(eventFromContext(ctx).ID))
+	b.lp.SendNotice(ctx, roomID, msg.String(), linkpearl.RelatesTo(eventFromContext(ctx).ID))
 }
 
 func (b *Bot) runGreylist(ctx context.Context, commandSlice []string) {
@@ -287,21 +287,21 @@ func (b *Bot) runGreylist(ctx context.Context, commandSlice []string) {
 		b.printGreylist(ctx, evt.RoomID)
 		return
 	}
-	cfg := b.cfg.GetBot()
+	cfg := b.cfg.GetBot(ctx)
 	value := utils.SanitizeIntString(commandSlice[1])
 	cfg.Set(config.BotGreylist, value)
-	err := b.cfg.SetBot(cfg)
+	err := b.cfg.SetBot(ctx, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot set bot config: %v", err)
 	}
-	b.lp.SendNotice(evt.RoomID, "greylist duration has been updated", linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, "greylist duration has been updated", linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 	evt := eventFromContext(ctx)
-	cfg := b.cfg.GetBot()
+	cfg := b.cfg.GetBot(ctx)
 	if len(commandSlice) < 2 {
-		banlist := b.cfg.GetBanlist()
+		banlist := b.cfg.GetBanlist(ctx)
 		var msg strings.Builder
 		size := len(banlist)
 		if size > 0 {
@@ -322,26 +322,26 @@ func (b *Bot) runBanlist(ctx context.Context, commandSlice []string) {
 		msg.WriteString("where each ip is IPv4 or IPv6\n\n")
 		msg.WriteString("You can find current banlist values below:\n")
 
-		b.lp.SendNotice(evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
 		b.addBanlistTimeline(ctx, false)
 		return
 	}
 	value := utils.SanitizeBoolString(commandSlice[1])
 	cfg.Set(config.BotBanlistEnabled, value)
-	err := b.cfg.SetBot(cfg)
+	err := b.cfg.SetBot(ctx, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot set bot config: %v", err)
 	}
-	b.lp.SendNotice(evt.RoomID, "banlist has been updated", linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, "banlist has been updated", linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) runBanlistTotals(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	banlist := b.cfg.GetBanlist()
+	banlist := b.cfg.GetBanlist(ctx)
 	var msg strings.Builder
 	size := len(banlist)
 	if size == 0 {
-		b.lp.SendNotice(evt.RoomID, "banlist is empty, kupo.", linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, "banlist is empty, kupo.", linkpearl.RelatesTo(evt.ID))
 		return
 	}
 
@@ -349,13 +349,13 @@ func (b *Bot) runBanlistTotals(ctx context.Context) {
 	msg.WriteString(strconv.Itoa(size))
 	msg.WriteString(" hosts banned\n\n")
 	msg.WriteString("You can find daily totals below:\n")
-	b.lp.SendNotice(evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
 	b.addBanlistTimeline(ctx, true)
 }
 
 func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) { //nolint:dupl // not in that case
 	evt := eventFromContext(ctx)
-	cfg := b.cfg.GetBot()
+	cfg := b.cfg.GetBot(ctx)
 	if len(commandSlice) < 2 {
 		var msg strings.Builder
 		msg.WriteString("Currently: `")
@@ -368,21 +368,21 @@ func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) { //nol
 			msg.WriteString(" banlist:auth true` (banlist itself must be enabled!)\n\n")
 		}
 
-		b.lp.SendNotice(evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
 		return
 	}
 	value := utils.SanitizeBoolString(commandSlice[1])
 	cfg.Set(config.BotBanlistAuth, value)
-	err := b.cfg.SetBot(cfg)
+	err := b.cfg.SetBot(ctx, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot set bot config: %v", err)
 	}
-	b.lp.SendNotice(evt.RoomID, "auth banning has been updated", linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, "auth banning has been updated", linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) runBanlistAuto(ctx context.Context, commandSlice []string) { //nolint:dupl // not in that case
 	evt := eventFromContext(ctx)
-	cfg := b.cfg.GetBot()
+	cfg := b.cfg.GetBot(ctx)
 	if len(commandSlice) < 2 {
 		var msg strings.Builder
 		msg.WriteString("Currently: `")
@@ -395,16 +395,16 @@ func (b *Bot) runBanlistAuto(ctx context.Context, commandSlice []string) { //nol
 			msg.WriteString(" banlist:auto true` (banlist itself must be enabled!)\n\n")
 		}
 
-		b.lp.SendNotice(evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
 		return
 	}
 	value := utils.SanitizeBoolString(commandSlice[1])
 	cfg.Set(config.BotBanlistAuto, value)
-	err := b.cfg.SetBot(cfg)
+	err := b.cfg.SetBot(ctx, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot set bot config: %v", err)
 	}
-	b.lp.SendNotice(evt.RoomID, "auto banning has been updated", linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, "auto banning has been updated", linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) runBanlistChange(ctx context.Context, mode string, commandSlice []string) {
@@ -413,11 +413,11 @@ func (b *Bot) runBanlistChange(ctx context.Context, mode string, commandSlice []
 		b.runBanlist(ctx, commandSlice)
 		return
 	}
-	if !b.cfg.GetBot().BanlistEnabled() {
-		b.lp.SendNotice(evt.RoomID, "banlist is disabled, you have to enable it first, kupo", linkpearl.RelatesTo(evt.ID))
+	if !b.cfg.GetBot(ctx).BanlistEnabled() {
+		b.lp.SendNotice(ctx, evt.RoomID, "banlist is disabled, you have to enable it first, kupo", linkpearl.RelatesTo(evt.ID))
 		return
 	}
-	banlist := b.cfg.GetBanlist()
+	banlist := b.cfg.GetBanlist(ctx)
 
 	var action func(net.Addr)
 	if mode == "remove" {
@@ -436,18 +436,18 @@ func (b *Bot) runBanlistChange(ctx context.Context, mode string, commandSlice []
 		action(addr)
 	}
 
-	err := b.cfg.SetBanlist(banlist)
+	err := b.cfg.SetBanlist(ctx, banlist)
 	if err != nil {
 		b.Error(ctx, "cannot set banlist: %v", err)
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "banlist has been updated, kupo", linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, "banlist has been updated, kupo", linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) addBanlistTimeline(ctx context.Context, onlyTotals bool) {
 	evt := eventFromContext(ctx)
-	banlist := b.cfg.GetBanlist()
+	banlist := b.cfg.GetBanlist(ctx)
 	timeline := map[string][]string{}
 	for ip, ts := range banlist {
 		key := "???"
@@ -479,22 +479,22 @@ func (b *Bot) addBanlistTimeline(ctx context.Context, onlyTotals bool) {
 			txt.WriteString(strings.Join(data, "`, `"))
 			txt.WriteString("`\n")
 		}
-		b.lp.SendNotice(evt.RoomID, txt.String(), linkpearl.RelatesTo(evt.ID))
+		b.lp.SendNotice(ctx, evt.RoomID, txt.String(), linkpearl.RelatesTo(evt.ID))
 	}
 }
 
 func (b *Bot) runBanlistReset(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	if !b.cfg.GetBot().BanlistEnabled() {
-		b.lp.SendNotice(evt.RoomID, "banlist is disabled, you have to enable it first, kupo", linkpearl.RelatesTo(evt.ID))
+	if !b.cfg.GetBot(ctx).BanlistEnabled() {
+		b.lp.SendNotice(ctx, evt.RoomID, "banlist is disabled, you have to enable it first, kupo", linkpearl.RelatesTo(evt.ID))
 		return
 	}
 
-	err := b.cfg.SetBanlist(config.List{})
+	err := b.cfg.SetBanlist(ctx, config.List{})
 	if err != nil {
 		b.Error(ctx, "cannot set banlist: %v", err)
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "banlist has been reset, kupo", linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, "banlist has been reset, kupo", linkpearl.RelatesTo(evt.ID))
 }

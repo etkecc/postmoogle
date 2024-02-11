@@ -58,7 +58,7 @@ type Rows interface {
 }
 
 type Scannable interface {
-	Scan(...interface{}) error
+	Scan(...any) error
 }
 
 // Expected implementations of Scannable
@@ -67,30 +67,16 @@ var (
 	_ Scannable = (Rows)(nil)
 )
 
-type UnderlyingContextExecable interface {
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-}
-
-type ContextExecable interface {
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...interface{}) (Rows, error)
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-}
-
 type UnderlyingExecable interface {
-	UnderlyingContextExecable
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 type Execable interface {
-	ContextExecable
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 type Transaction interface {
@@ -101,15 +87,15 @@ type Transaction interface {
 
 // Expected implementations of Execable
 var (
-	_ UnderlyingExecable        = (*sql.Tx)(nil)
-	_ UnderlyingExecable        = (*sql.DB)(nil)
-	_ Execable                  = (*LoggingExecable)(nil)
-	_ Transaction               = (*LoggingTxn)(nil)
-	_ UnderlyingContextExecable = (*sql.Conn)(nil)
+	_ UnderlyingExecable = (*sql.Tx)(nil)
+	_ UnderlyingExecable = (*sql.DB)(nil)
+	_ UnderlyingExecable = (*sql.Conn)(nil)
+	_ Execable           = (*LoggingExecable)(nil)
+	_ Transaction        = (*LoggingTxn)(nil)
 )
 
 type Database struct {
-	loggingDB
+	LoggingDB    loggingDB
 	RawDB        *sql.DB
 	ReadOnlyDB   *sql.DB
 	Owner        string
@@ -139,7 +125,7 @@ func (db *Database) Child(versionTable string, upgradeTable UpgradeTable, log Da
 	}
 	return &Database{
 		RawDB:        db.RawDB,
-		loggingDB:    db.loggingDB,
+		LoggingDB:    db.LoggingDB,
 		Owner:        "",
 		VersionTable: versionTable,
 		UpgradeTable: upgradeTable,
@@ -164,8 +150,8 @@ func NewWithDB(db *sql.DB, rawDialect string) (*Database, error) {
 		IgnoreForeignTables: true,
 		VersionTable:        "version",
 	}
-	wrappedDB.loggingDB.UnderlyingExecable = db
-	wrappedDB.loggingDB.db = wrappedDB
+	wrappedDB.LoggingDB.UnderlyingExecable = db
+	wrappedDB.LoggingDB.db = wrappedDB
 	return wrappedDB, nil
 }
 
@@ -259,7 +245,7 @@ func NewFromConfig(owner string, cfg Config, logger DatabaseLogger) (*Database, 
 		if roUri == "" {
 			uriParts := strings.Split(cfg.URI, "?")
 
-			var qs url.Values
+			qs := url.Values{}
 			if len(uriParts) == 2 {
 				var err error
 				qs, err = url.ParseQuery(uriParts[1])

@@ -1,11 +1,12 @@
 package queue
 
 import (
+	"context"
 	"strconv"
 )
 
 // Add to queue
-func (q *Queue) Add(id, from, to, data string) error {
+func (q *Queue) Add(ctx context.Context, id, from, to, data string) error {
 	itemkey := acQueueKey + "." + id
 	item := map[string]string{
 		"attempts": "0",
@@ -17,7 +18,7 @@ func (q *Queue) Add(id, from, to, data string) error {
 
 	q.mu.Lock(itemkey)
 	defer q.mu.Unlock(itemkey)
-	err := q.lp.SetAccountData(itemkey, item)
+	err := q.lp.SetAccountData(ctx, itemkey, item)
 	if err != nil {
 		q.log.Error().Err(err).Str("id", id).Msg("cannot enqueue email")
 		return err
@@ -25,13 +26,13 @@ func (q *Queue) Add(id, from, to, data string) error {
 
 	q.mu.Lock(acQueueKey)
 	defer q.mu.Unlock(acQueueKey)
-	queueIndex, err := q.lp.GetAccountData(acQueueKey)
+	queueIndex, err := q.lp.GetAccountData(ctx, acQueueKey)
 	if err != nil {
 		q.log.Error().Err(err).Msg("cannot get queue index")
 		return err
 	}
 	queueIndex[id] = itemkey
-	err = q.lp.SetAccountData(acQueueKey, queueIndex)
+	err = q.lp.SetAccountData(ctx, acQueueKey, queueIndex)
 	if err != nil {
 		q.log.Error().Err(err).Msg("cannot save queue index")
 		return err
@@ -41,8 +42,8 @@ func (q *Queue) Add(id, from, to, data string) error {
 }
 
 // Remove from queue
-func (q *Queue) Remove(id string) error {
-	index, err := q.lp.GetAccountData(acQueueKey)
+func (q *Queue) Remove(ctx context.Context, id string) error {
+	index, err := q.lp.GetAccountData(ctx, acQueueKey)
 	if err != nil {
 		q.log.Error().Err(err).Msg("cannot get queue index")
 		return err
@@ -52,7 +53,7 @@ func (q *Queue) Remove(id string) error {
 		itemkey = acQueueKey + "." + id
 	}
 	delete(index, id)
-	err = q.lp.SetAccountData(acQueueKey, index)
+	err = q.lp.SetAccountData(ctx, acQueueKey, index)
 	if err != nil {
 		q.log.Error().Err(err).Msg("cannot update queue index")
 		return err
@@ -60,15 +61,15 @@ func (q *Queue) Remove(id string) error {
 
 	q.mu.Lock(itemkey)
 	defer q.mu.Unlock(itemkey)
-	return q.lp.SetAccountData(itemkey, map[string]string{})
+	return q.lp.SetAccountData(ctx, itemkey, map[string]string{})
 }
 
 // try to send email
-func (q *Queue) try(itemkey string, maxRetries int) bool {
+func (q *Queue) try(ctx context.Context, itemkey string, maxRetries int) bool {
 	q.mu.Lock(itemkey)
 	defer q.mu.Unlock(itemkey)
 
-	item, err := q.lp.GetAccountData(itemkey)
+	item, err := q.lp.GetAccountData(ctx, itemkey)
 	if err != nil {
 		q.log.Error().Err(err).Str("id", itemkey).Msg("cannot retrieve a queue item")
 		return false
@@ -92,7 +93,7 @@ func (q *Queue) try(itemkey string, maxRetries int) bool {
 	q.log.Info().Str("id", itemkey).Str("from", item["from"]).Str("to", item["to"]).Err(err).Msg("attempted to deliver email, but it's not ready yet")
 	attempts++
 	item["attempts"] = strconv.Itoa(attempts)
-	err = q.lp.SetAccountData(itemkey, item)
+	err = q.lp.SetAccountData(ctx, itemkey, item)
 	if err != nil {
 		q.log.Error().Err(err).Str("id", itemkey).Msg("cannot update attempt count on email")
 	}

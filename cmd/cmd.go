@@ -114,9 +114,10 @@ func initMatrix(cfg *config.Config) {
 		log.Fatal().Err(err).Msg("cannot initialize matrix bot")
 	}
 
+	psd := utils.NewPSD(cfg.PSD.URL, cfg.PSD.Login, cfg.PSD.Password, &log)
 	mxc = mxconfig.New(lp, &log)
 	q = queue.New(lp, mxc, &log)
-	mxb, err = bot.New(q, lp, &log, mxc, cfg.Proxies, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
+	mxb, err = bot.New(q, lp, &log, mxc, psd, cfg.Proxies, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
 	if err != nil {
 		log.Panic().Err(err).Msg("cannot start matrix bot")
 	}

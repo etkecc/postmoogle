@@ -1,6 +1,7 @@
 package linkpearl
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha512"
 	"database/sql"
@@ -25,7 +26,7 @@ type Config struct {
 	// JoinPermit is a callback function that tells
 	// if linkpearl should respond to the given "invite" event
 	// and join the room
-	JoinPermit func(*event.Event) bool
+	JoinPermit func(context.Context, *event.Event) bool
 
 	// AutoLeave if true, linkpearl will automatically leave empty rooms
 	AutoLeave bool

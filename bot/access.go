@@ -22,19 +22,19 @@ func parseMXIDpatterns(patterns []string, defaultPattern string) ([]*regexp.Rege
 	return mxidwc.ParsePatterns(patterns)
 }
 
-func (b *Bot) allowUsers(actorID id.UserID, targetRoomID id.RoomID) bool {
+func (b *Bot) allowUsers(ctx context.Context, actorID id.UserID, targetRoomID id.RoomID) bool {
 	// first, check if it's an allowed user
 	if mxidwc.Match(actorID.String(), b.allowedUsers) {
 		return true
 	}
 
 	// second, check if it's an admin (admin may not fit the allowed users pattern)
-	if b.allowAdmin(actorID, targetRoomID) {
+	if b.allowAdmin(ctx, actorID, targetRoomID) {
 		return true
 	}
 
 	// then, check if it's the owner (same as above)
-	cfg, err := b.cfg.GetRoom(targetRoomID)
+	cfg, err := b.cfg.GetRoom(ctx, targetRoomID)
 	if err == nil && cfg.Owner() == actorID.String() {
 		return true
 	}
@@ -42,15 +42,15 @@ func (b *Bot) allowUsers(actorID id.UserID, targetRoomID id.RoomID) bool {
 	return false
 }
 
-func (b *Bot) allowAnyone(_ id.UserID, _ id.RoomID) bool {
+func (b *Bot) allowAnyone(_ context.Context, _ id.UserID, _ id.RoomID) bool {
 	return true
 }
 
-func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
-	if !b.allowUsers(actorID, targetRoomID) {
+func (b *Bot) allowOwner(ctx context.Context, actorID id.UserID, targetRoomID id.RoomID) bool {
+	if !b.allowUsers(ctx, actorID, targetRoomID) {
 		return false
 	}
-	cfg, err := b.cfg.GetRoom(targetRoomID)
+	cfg, err := b.cfg.GetRoom(ctx, targetRoomID)
 	if err != nil {
 		b.Error(context.Background(), "failed to retrieve settings: %v", err)
 		return false
@@ -61,19 +61,19 @@ func (b *Bot) allowOwner(actorID id.UserID, targetRoomID id.RoomID) bool {
 		return true
 	}
 
-	return owner == actorID.String() || b.allowAdmin(actorID, targetRoomID)
+	return owner == actorID.String() || b.allowAdmin(ctx, actorID, targetRoomID)
 }
 
-func (b *Bot) allowAdmin(actorID id.UserID, _ id.RoomID) bool {
+func (b *Bot) allowAdmin(_ context.Context, actorID id.UserID, _ id.RoomID) bool {
 	return mxidwc.Match(actorID.String(), b.allowedAdmins)
 }
 
-func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
-	if !b.allowUsers(actorID, targetRoomID) {
+func (b *Bot) allowSend(ctx context.Context, actorID id.UserID, targetRoomID id.RoomID) bool {
+	if !b.allowUsers(ctx, actorID, targetRoomID) {
 		return false
 	}
 
-	cfg, err := b.cfg.GetRoom(targetRoomID)
+	cfg, err := b.cfg.GetRoom(ctx, targetRoomID)
 	if err != nil {
 		b.Error(context.Background(), "failed to retrieve settings: %v", err)
 		return false
@@ -82,14 +82,14 @@ func (b *Bot) allowSend(actorID id.UserID, targetRoomID id.RoomID) bool {
 	return !cfg.NoSend()
 }
 
-func (b *Bot) allowReply(actorID id.UserID, targetRoomID id.RoomID) bool {
-	if !b.allowUsers(actorID, targetRoomID) {
+func (b *Bot) allowReply(ctx context.Context, actorID id.UserID, targetRoomID id.RoomID) bool {
+	if !b.allowUsers(ctx, actorID, targetRoomID) {
 		return false
 	}
 
-	cfg, err := b.cfg.GetRoom(targetRoomID)
+	cfg, err := b.cfg.GetRoom(ctx, targetRoomID)
 	if err != nil {
-		b.Error(context.Background(), "failed to retrieve settings: %v", err)
+		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return false
 	}
 
@@ -106,30 +106,30 @@ func (b *Bot) isReserved(mailbox string) bool {
 }
 
 // IsGreylisted checks if host is in greylist
-func (b *Bot) IsGreylisted(addr net.Addr) bool {
-	if b.cfg.GetBot().Greylist() == 0 {
+func (b *Bot) IsGreylisted(ctx context.Context, addr net.Addr) bool {
+	if b.cfg.GetBot(ctx).Greylist() == 0 {
 		return false
 	}
 
-	greylist := b.cfg.GetGreylist()
+	greylist := b.cfg.GetGreylist(ctx)
 	greylistedAt, ok := greylist.Get(addr)
 	if !ok {
 		b.log.Debug().Str("addr", addr.String()).Msg("greylisting")
 		greylist.Add(addr)
-		err := b.cfg.SetGreylist(greylist)
+		err := b.cfg.SetGreylist(ctx, greylist)
 		if err != nil {
 			b.log.Error().Err(err).Str("addr", addr.String()).Msg("cannot update greylist")
 		}
 		return true
 	}
-	duration := time.Duration(b.cfg.GetBot().Greylist()) * time.Minute
+	duration := time.Duration(b.cfg.GetBot(ctx).Greylist()) * time.Minute
 
 	return greylistedAt.Add(duration).After(time.Now().UTC())
 }
 
 // IsBanned checks if address is banned
-func (b *Bot) IsBanned(addr net.Addr) bool {
-	return b.cfg.GetBanlist().Has(addr)
+func (b *Bot) IsBanned(ctx context.Context, addr net.Addr) bool {
+	return b.cfg.GetBanlist(ctx).Has(addr)
 }
 
 // IsTrusted checks if address is a trusted (proxy)
@@ -146,12 +146,12 @@ func (b *Bot) IsTrusted(addr net.Addr) bool {
 }
 
 // Ban an address automatically
-func (b *Bot) BanAuto(addr net.Addr) {
-	if !b.cfg.GetBot().BanlistEnabled() {
+func (b *Bot) BanAuto(ctx context.Context, addr net.Addr) {
+	if !b.cfg.GetBot(ctx).BanlistEnabled() {
 		return
 	}
 
-	if !b.cfg.GetBot().BanlistAuto() {
+	if !b.cfg.GetBot(ctx).BanlistAuto() {
 		return
 	}
 
@@ -159,21 +159,21 @@ func (b *Bot) BanAuto(addr net.Addr) {
 		return
 	}
 	b.log.Debug().Str("addr", addr.String()).Msg("attempting to automatically ban")
-	banlist := b.cfg.GetBanlist()
+	banlist := b.cfg.GetBanlist(ctx)
 	banlist.Add(addr)
-	err := b.cfg.SetBanlist(banlist)
+	err := b.cfg.SetBanlist(ctx, banlist)
 	if err != nil {
 		b.log.Error().Err(err).Str("addr", addr.String()).Msg("cannot update banlist")
 	}
 }
 
 // Ban an address for incorrect auth automatically
-func (b *Bot) BanAuth(addr net.Addr) {
-	if !b.cfg.GetBot().BanlistEnabled() {
+func (b *Bot) BanAuth(ctx context.Context, addr net.Addr) {
+	if !b.cfg.GetBot(ctx).BanlistEnabled() {
 		return
 	}
 
-	if !b.cfg.GetBot().BanlistAuth() {
+	if !b.cfg.GetBot(ctx).BanlistAuth() {
 		return
 	}
 
@@ -181,33 +181,33 @@ func (b *Bot) BanAuth(addr net.Addr) {
 		return
 	}
 	b.log.Debug().Str("addr", addr.String()).Msg("attempting to automatically ban")
-	banlist := b.cfg.GetBanlist()
+	banlist := b.cfg.GetBanlist(ctx)
 	banlist.Add(addr)
-	err := b.cfg.SetBanlist(banlist)
+	err := b.cfg.SetBanlist(ctx, banlist)
 	if err != nil {
 		b.log.Error().Err(err).Str("addr", addr.String()).Msg("cannot update banlist")
 	}
 }
 
 // Ban an address manually
-func (b *Bot) BanManually(addr net.Addr) {
-	if !b.cfg.GetBot().BanlistEnabled() {
+func (b *Bot) BanManually(ctx context.Context, addr net.Addr) {
+	if !b.cfg.GetBot(ctx).BanlistEnabled() {
 		return
 	}
 	if b.IsTrusted(addr) {
 		return
 	}
 	b.log.Debug().Str("addr", addr.String()).Msg("attempting to manually ban")
-	banlist := b.cfg.GetBanlist()
+	banlist := b.cfg.GetBanlist(ctx)
 	banlist.Add(addr)
-	err := b.cfg.SetBanlist(banlist)
+	err := b.cfg.SetBanlist(ctx, banlist)
 	if err != nil {
 		b.log.Error().Err(err).Str("addr", addr.String()).Msg("cannot update banlist")
 	}
 }
 
 // AllowAuth check if SMTP login (email) and password are valid
-func (b *Bot) AllowAuth(email, password string) (id.RoomID, bool) {
+func (b *Bot) AllowAuth(ctx context.Context, email, password string) (id.RoomID, bool) {
 	var suffix bool
 	for _, domain := range b.domains {
 		if strings.HasSuffix(email, "@"+domain) {
@@ -223,7 +223,7 @@ func (b *Bot) AllowAuth(email, password string) (id.RoomID, bool) {
 	if !ok {
 		return "", false
 	}
-	cfg, err := b.cfg.GetRoom(roomID)
+	cfg, err := b.cfg.GetRoom(ctx, roomID)
 	if err != nil {
 		b.log.Error().Err(err).Msg("failed to retrieve settings")
 		return "", false

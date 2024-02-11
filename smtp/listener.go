@@ -1,6 +1,7 @@
 package smtp
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"sync"
@@ -15,10 +16,10 @@ type Listener struct {
 	tls      *tls.Config
 	tlsMu    sync.Mutex
 	listener net.Listener
-	isBanned func(net.Addr) bool
+	isBanned func(context.Context, net.Addr) bool
 }
 
-func NewListener(port string, tlsConfig *tls.Config, isBanned func(net.Addr) bool, log *zerolog.Logger) (*Listener, error) {
+func NewListener(port string, tlsConfig *tls.Config, isBanned func(context.Context, net.Addr) bool, log *zerolog.Logger) (*Listener, error) {
 	actual, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return nil, err
@@ -52,7 +53,7 @@ func (l *Listener) Accept() (net.Conn, error) {
 				continue
 			}
 		}
-		if l.isBanned(conn.RemoteAddr()) {
+		if l.isBanned(context.Background(), conn.RemoteAddr()) {
 			conn.Close()
 			l.log.Info().Str("addr", conn.RemoteAddr().String()).Msg("rejected connection (already banned)")
 			continue

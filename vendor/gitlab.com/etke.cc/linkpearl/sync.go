@@ -1,6 +1,7 @@
 package linkpearl
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -28,54 +29,56 @@ func (l *Linkpearl) OnEvent(callback mautrix.EventHandler) {
 func (l *Linkpearl) initSync() {
 	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType(
 		event.StateEncryption,
-		func(source mautrix.EventSource, evt *event.Event) {
-			go l.onEncryption(source, evt)
+		func(ctx context.Context, evt *event.Event) {
+			go l.onEncryption(ctx, evt)
 		},
 	)
 	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType(
 		event.StateMember,
-		func(source mautrix.EventSource, evt *event.Event) {
-			go l.onMembership(source, evt)
+		func(ctx context.Context, evt *event.Event) {
+			go l.onMembership(ctx, evt)
 		},
 	)
 }
 
-func (l *Linkpearl) onMembership(src mautrix.EventSource, evt *event.Event) {
-	l.ch.Machine().HandleMemberEvent(src, evt)
-	l.api.StateStore.SetMembership(evt.RoomID, id.UserID(evt.GetStateKey()), evt.Content.AsMember().Membership)
+func (l *Linkpearl) onMembership(ctx context.Context, evt *event.Event) {
+	l.ch.Machine().HandleMemberEvent(ctx, evt)
+	if err := l.api.StateStore.SetMembership(ctx, evt.RoomID, id.UserID(evt.GetStateKey()), evt.Content.AsMember().Membership); err != nil {
+		l.log.Error().Err(err).Str("roomID", evt.RoomID.String()).Str("userID", evt.GetStateKey()).Msg("cannot set membership")
+	}
 
 	// potentially autoaccept invites
-	l.onInvite(evt)
+	l.onInvite(ctx, evt)
 
 	// autoleave empty rooms
-	l.onEmpty(evt)
+	l.onEmpty(ctx, evt)
 }
 
-func (l *Linkpearl) onInvite(evt *event.Event) {
+func (l *Linkpearl) onInvite(ctx context.Context, evt *event.Event) {
 	userID := l.api.UserID.String()
 	invite := evt.Content.AsMember().Membership == event.MembershipInvite
 	if !invite || evt.GetStateKey() != userID {
 		return
 	}
 
-	if l.joinPermit(evt) {
-		l.tryJoin(evt.RoomID, 0)
+	if l.joinPermit(ctx, evt) {
+		l.tryJoin(ctx, evt.RoomID, 0)
 		return
 	}
 
-	l.tryLeave(evt.RoomID, 0)
+	l.tryLeave(ctx, evt.RoomID, 0)
 }
 
 // TODO: https://spec.matrix.org/v1.8/client-server-api/#post_matrixclientv3joinroomidoralias
 // endpoint supports server_name param and tells "The servers to attempt to join the room through. One of the servers must be participating in the room.",
 // meaning you can specify more than 1 server. It is not clear, what format should be used "example.com,example.org", or "example.com example.org", or whatever else.
 // Moreover, it is not clear if the following values can be used together with that field: l.api.UserID.Homeserver() and evt.Sender.Homeserver()
-func (l *Linkpearl) tryJoin(roomID id.RoomID, retry int) {
+func (l *Linkpearl) tryJoin(ctx context.Context, roomID id.RoomID, retry int) {
 	if retry >= l.maxretries {
 		return
 	}
 
-	_, err := l.api.JoinRoom(roomID.String(), "", nil)
+	_, err := l.api.JoinRoom(ctx, roomID.String(), "", nil)
 	err = UnwrapError(err)
 	if err != nil {
 		l.log.Error().Err(err).Str("roomID", roomID.String()).Msg("cannot join room")
@@ -84,31 +87,31 @@ func (l *Linkpearl) tryJoin(roomID id.RoomID, retry int) {
 		}
 		time.Sleep(5 * time.Second)
 		l.log.Error().Err(err).Str("roomID", roomID.String()).Int("retry", retry+1).Msg("trying to join again")
-		l.tryJoin(roomID, retry+1)
+		l.tryJoin(ctx, roomID, retry+1)
 	}
 }
 
-func (l *Linkpearl) tryLeave(roomID id.RoomID, retry int) {
+func (l *Linkpearl) tryLeave(ctx context.Context, roomID id.RoomID, retry int) {
 	if retry >= l.maxretries {
 		return
 	}
 
-	_, err := l.api.LeaveRoom(roomID)
+	_, err := l.api.LeaveRoom(ctx, roomID)
 	err = UnwrapError(err)
 	if err != nil {
 		l.log.Error().Err(err).Str("roomID", roomID.String()).Msg("cannot leave room")
 		time.Sleep(5 * time.Second)
 		l.log.Error().Err(err).Str("roomID", roomID.String()).Int("retry", retry+1).Msg("trying to leave again")
-		l.tryLeave(roomID, retry+1)
+		l.tryLeave(ctx, roomID, retry+1)
 	}
 }
 
-func (l *Linkpearl) onEmpty(evt *event.Event) {
+func (l *Linkpearl) onEmpty(ctx context.Context, evt *event.Event) {
 	if !l.autoleave {
 		return
 	}
 
-	members, err := l.api.StateStore.GetRoomJoinedOrInvitedMembers(evt.RoomID)
+	members, err := l.api.StateStore.GetRoomJoinedOrInvitedMembers(ctx, evt.RoomID)
 	err = UnwrapError(err)
 	if err != nil {
 		l.log.Error().Err(err).Str("roomID", evt.RoomID.String()).Msg("cannot get joined or invited members")
@@ -119,9 +122,11 @@ func (l *Linkpearl) onEmpty(evt *event.Event) {
 		return
 	}
 
-	l.tryLeave(evt.RoomID, 0)
+	l.tryLeave(ctx, evt.RoomID, 0)
 }
 
-func (l *Linkpearl) onEncryption(_ mautrix.EventSource, evt *event.Event) {
-	l.api.StateStore.SetEncryptionEvent(evt.RoomID, evt.Content.AsEncryption())
+func (l *Linkpearl) onEncryption(ctx context.Context, evt *event.Event) {
+	if err := l.api.StateStore.SetEncryptionEvent(ctx, evt.RoomID, evt.Content.AsEncryption()); err != nil {
+		l.log.Error().Err(err).Str("roomID", evt.RoomID.String()).Msg("cannot set encryption event")
+	}
 }

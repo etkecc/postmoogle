@@ -93,7 +93,7 @@ github.com/raja/argon2pw
 # github.com/rivo/uniseg v0.2.0
 ## explicit; go 1.12
 github.com/rivo/uniseg
-# github.com/rs/zerolog v1.31.0
+# github.com/rs/zerolog v1.32.0
 ## explicit; go 1.15
 github.com/rs/zerolog
 github.com/rs/zerolog/internal/cbor
@@ -113,8 +113,8 @@ github.com/tidwall/pretty
 # github.com/tidwall/sjson v1.2.5
 ## explicit; go 1.14
 github.com/tidwall/sjson
-# github.com/yuin/goldmark v1.6.0
-## explicit; go 1.18
+# github.com/yuin/goldmark v1.7.0
+## explicit; go 1.19
 github.com/yuin/goldmark
 github.com/yuin/goldmark/ast
 github.com/yuin/goldmark/extension
@@ -124,7 +124,7 @@ github.com/yuin/goldmark/renderer
 github.com/yuin/goldmark/renderer/html
 github.com/yuin/goldmark/text
 github.com/yuin/goldmark/util
-# gitlab.com/etke.cc/go/env v1.0.0
+# gitlab.com/etke.cc/go/env v1.1.0
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/env
 # gitlab.com/etke.cc/go/fswatcher v1.0.0
@@ -145,10 +145,10 @@ gitlab.com/etke.cc/go/trysmtp
 # gitlab.com/etke.cc/go/validator v1.0.6
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/validator
-# gitlab.com/etke.cc/linkpearl v0.0.0-20231121221431-72443f33d266
+# gitlab.com/etke.cc/linkpearl v0.0.0-20240211143445-bddf907d137a
 ## explicit; go 1.18
 gitlab.com/etke.cc/linkpearl
-# go.mau.fi/util v0.2.1
+# go.mau.fi/util v0.3.0
 ## explicit; go 1.20
 go.mau.fi/util/base58
 go.mau.fi/util/dbutil
@@ -157,7 +157,7 @@ go.mau.fi/util/exgjson
 go.mau.fi/util/jsontime
 go.mau.fi/util/random
 go.mau.fi/util/retryafter
-# golang.org/x/crypto v0.15.0
+# golang.org/x/crypto v0.19.0
 ## explicit; go 1.18
 golang.org/x/crypto/argon2
 golang.org/x/crypto/blake2b
@@ -172,18 +172,18 @@ golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
+# golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
 golang.org/x/exp/slices
-# golang.org/x/net v0.18.0
+# golang.org/x/net v0.21.0
 ## explicit; go 1.18
 golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/publicsuffix
-# golang.org/x/sys v0.14.0
+# golang.org/x/sys v0.17.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -207,13 +207,25 @@ golang.org/x/text/transform
 ## explicit; go 1.19
 maunium.net/go/maulogger/v2
 maunium.net/go/maulogger/v2/maulogadapt
-# maunium.net/go/mautrix v0.16.2
+# maunium.net/go/mautrix v0.17.0
 ## explicit; go 1.20
 maunium.net/go/mautrix
 maunium.net/go/mautrix/crypto
 maunium.net/go/mautrix/crypto/attachment
 maunium.net/go/mautrix/crypto/canonicaljson
 maunium.net/go/mautrix/crypto/cryptohelper
+maunium.net/go/mautrix/crypto/goolm
+maunium.net/go/mautrix/crypto/goolm/account
+maunium.net/go/mautrix/crypto/goolm/cipher
+maunium.net/go/mautrix/crypto/goolm/crypto
+maunium.net/go/mautrix/crypto/goolm/libolmpickle
+maunium.net/go/mautrix/crypto/goolm/megolm
+maunium.net/go/mautrix/crypto/goolm/message
+maunium.net/go/mautrix/crypto/goolm/olm
+maunium.net/go/mautrix/crypto/goolm/pk
+maunium.net/go/mautrix/crypto/goolm/sas
+maunium.net/go/mautrix/crypto/goolm/session
+maunium.net/go/mautrix/crypto/goolm/utilities
 maunium.net/go/mautrix/crypto/olm
 maunium.net/go/mautrix/crypto/sql_store_upgrade
 maunium.net/go/mautrix/crypto/ssss

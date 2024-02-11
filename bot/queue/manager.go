@@ -1,6 +1,8 @@
 package queue
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/linkpearl"
 
@@ -41,7 +43,8 @@ func (q *Queue) SetSendmail(function func(string, string, string) error) {
 // Process queue
 func (q *Queue) Process() {
 	q.log.Debug().Msg("staring queue processing...")
-	cfg := q.cfg.GetBot()
+	ctx := context.Background()
+	cfg := q.cfg.GetBot(ctx)
 
 	batchSize := cfg.QueueBatch()
 	if batchSize == 0 {
@@ -55,7 +58,7 @@ func (q *Queue) Process() {
 
 	q.mu.Lock(acQueueKey)
 	defer q.mu.Unlock(acQueueKey)
-	index, err := q.lp.GetAccountData(acQueueKey)
+	index, err := q.lp.GetAccountData(ctx, acQueueKey)
 	if err != nil {
 		q.log.Error().Err(err).Msg("cannot get queue index")
 	}
@@ -66,9 +69,9 @@ func (q *Queue) Process() {
 			q.log.Debug().Msg("finished re-deliveries from queue")
 			return
 		}
-		if dequeue := q.try(itemkey, maxRetries); dequeue {
+		if dequeue := q.try(ctx, itemkey, maxRetries); dequeue {
 			q.log.Info().Str("id", id).Msg("email has been delivered")
-			err = q.Remove(id)
+			err = q.Remove(ctx, id)
 			if err != nil {
 				q.log.Error().Err(err).Str("id", id).Msg("cannot dequeue email")
 			}

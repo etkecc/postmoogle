@@ -1,6 +1,8 @@
 package config
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/id"
@@ -27,10 +29,10 @@ func New(lp *linkpearl.Linkpearl, log *zerolog.Logger) *Manager {
 }
 
 // GetBot config
-func (m *Manager) GetBot() Bot {
+func (m *Manager) GetBot(ctx context.Context) Bot {
 	var err error
 	var config Bot
-	config, err = m.lp.GetAccountData(acBotKey)
+	config, err = m.lp.GetAccountData(ctx, acBotKey)
 	if err != nil {
 		m.log.Error().Err(err).Msg("cannot get bot settings")
 	}
@@ -43,13 +45,13 @@ func (m *Manager) GetBot() Bot {
 }
 
 // SetBot config
-func (m *Manager) SetBot(cfg Bot) error {
-	return m.lp.SetAccountData(acBotKey, cfg)
+func (m *Manager) SetBot(ctx context.Context, cfg Bot) error {
+	return m.lp.SetAccountData(ctx, acBotKey, cfg)
 }
 
 // GetRoom config
-func (m *Manager) GetRoom(roomID id.RoomID) (Room, error) {
-	config, err := m.lp.GetRoomAccountData(roomID, acRoomKey)
+func (m *Manager) GetRoom(ctx context.Context, roomID id.RoomID) (Room, error) {
+	config, err := m.lp.GetRoomAccountData(ctx, roomID, acRoomKey)
 	if err != nil {
 		m.log.Warn().Err(err).Str("room_id", roomID.String()).Msg("cannot get room settings")
 	}
@@ -61,19 +63,19 @@ func (m *Manager) GetRoom(roomID id.RoomID) (Room, error) {
 }
 
 // SetRoom config
-func (m *Manager) SetRoom(roomID id.RoomID, cfg Room) error {
-	return m.lp.SetRoomAccountData(roomID, acRoomKey, cfg)
+func (m *Manager) SetRoom(ctx context.Context, roomID id.RoomID, cfg Room) error {
+	return m.lp.SetRoomAccountData(ctx, roomID, acRoomKey, cfg)
 }
 
 // GetBanlist config
-func (m *Manager) GetBanlist() List {
-	if !m.GetBot().BanlistEnabled() {
+func (m *Manager) GetBanlist(ctx context.Context) List {
+	if !m.GetBot(ctx).BanlistEnabled() {
 		return make(List, 0)
 	}
 
 	m.mu.Lock("banlist")
 	defer m.mu.Unlock("banlist")
-	config, err := m.lp.GetAccountData(acBanlistKey)
+	config, err := m.lp.GetAccountData(ctx, acBanlistKey)
 	if err != nil {
 		m.log.Error().Err(err).Msg("cannot get banlist")
 	}
@@ -85,8 +87,8 @@ func (m *Manager) GetBanlist() List {
 }
 
 // SetBanlist config
-func (m *Manager) SetBanlist(cfg List) error {
-	if !m.GetBot().BanlistEnabled() {
+func (m *Manager) SetBanlist(ctx context.Context, cfg List) error {
+	if !m.GetBot(ctx).BanlistEnabled() {
 		return nil
 	}
 
@@ -96,12 +98,12 @@ func (m *Manager) SetBanlist(cfg List) error {
 		cfg = make(List, 0)
 	}
 
-	return m.lp.SetAccountData(acBanlistKey, cfg)
+	return m.lp.SetAccountData(ctx, acBanlistKey, cfg)
 }
 
 // GetGreylist config
-func (m *Manager) GetGreylist() List {
-	config, err := m.lp.GetAccountData(acGreylistKey)
+func (m *Manager) GetGreylist(ctx context.Context) List {
+	config, err := m.lp.GetAccountData(ctx, acGreylistKey)
 	if err != nil {
 		m.log.Error().Err(err).Msg("cannot get banlist")
 	}
@@ -114,6 +116,6 @@ func (m *Manager) GetGreylist() List {
 }
 
 // SetGreylist config
-func (m *Manager) SetGreylist(cfg List) error {
-	return m.lp.SetAccountData(acGreylistKey, cfg)
+func (m *Manager) SetGreylist(ctx context.Context, cfg List) error {
+	return m.lp.SetAccountData(ctx, acGreylistKey, cfg)
 }

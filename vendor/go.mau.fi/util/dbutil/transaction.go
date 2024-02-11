@@ -32,6 +32,22 @@ const (
 	ContextKeyDoTxnCallerSkip
 )
 
+func (db *Database) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return db.Conn(ctx).ExecContext(ctx, query, args...)
+}
+
+func (db *Database) Query(ctx context.Context, query string, args ...any) (Rows, error) {
+	return db.Conn(ctx).QueryContext(ctx, query, args...)
+}
+
+func (db *Database) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
+	return db.Conn(ctx).QueryRowContext(ctx, query, args...)
+}
+
+func (db *Database) BeginTx(ctx context.Context, opts *sql.TxOptions) (*LoggingTxn, error) {
+	return db.LoggingDB.BeginTx(ctx, opts)
+}
+
 func (db *Database) DoTxn(ctx context.Context, opts *sql.TxOptions, fn func(ctx context.Context) error) error {
 	if ctx.Value(ContextKeyDatabaseTransaction) != nil {
 		zerolog.Ctx(ctx).Trace().Msg("Already in a transaction, not creating a new one")
@@ -82,13 +98,13 @@ func (db *Database) DoTxn(ctx context.Context, opts *sql.TxOptions, fn func(ctx 
 	return nil
 }
 
-func (db *Database) Conn(ctx context.Context) ContextExecable {
+func (db *Database) Conn(ctx context.Context) Execable {
 	if ctx == nil {
-		return db
+		return &db.LoggingDB
 	}
 	txn, ok := ctx.Value(ContextKeyDatabaseTransaction).(Transaction)
 	if ok {
 		return txn
 	}
-	return db
+	return &db.LoggingDB
 }

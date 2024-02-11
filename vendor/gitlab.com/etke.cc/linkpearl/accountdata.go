@@ -1,13 +1,14 @@
 package linkpearl
 
 import (
+	"context"
 	"strings"
 
 	"maunium.net/go/mautrix/id"
 )
 
 // GetAccountData of the user (from cache and API, with encryption support)
-func (l *Linkpearl) GetAccountData(name string) (map[string]string, error) {
+func (l *Linkpearl) GetAccountData(ctx context.Context, name string) (map[string]string, error) {
 	cached, ok := l.acc.Get(name)
 	if ok {
 		if cached == nil {
@@ -17,7 +18,7 @@ func (l *Linkpearl) GetAccountData(name string) (map[string]string, error) {
 	}
 
 	var data map[string]string
-	err := l.GetClient().GetAccountData(name, &data)
+	err := l.GetClient().GetAccountData(ctx, name, &data)
 	if err != nil {
 		data = map[string]string{}
 		if strings.Contains(err.Error(), "M_NOT_FOUND") {
@@ -33,15 +34,15 @@ func (l *Linkpearl) GetAccountData(name string) (map[string]string, error) {
 }
 
 // SetAccountData of the user (to cache and API, with encryption support)
-func (l *Linkpearl) SetAccountData(name string, data map[string]string) error {
+func (l *Linkpearl) SetAccountData(ctx context.Context, name string, data map[string]string) error {
 	l.acc.Add(name, data)
 
 	data = l.encryptAccountData(data)
-	return UnwrapError(l.GetClient().SetAccountData(name, data))
+	return UnwrapError(l.GetClient().SetAccountData(ctx, name, data))
 }
 
 // GetRoomAccountData of the room (from cache and API, with encryption support)
-func (l *Linkpearl) GetRoomAccountData(roomID id.RoomID, name string) (map[string]string, error) {
+func (l *Linkpearl) GetRoomAccountData(ctx context.Context, roomID id.RoomID, name string) (map[string]string, error) {
 	key := roomID.String() + name
 	cached, ok := l.acc.Get(key)
 	if ok {
@@ -52,7 +53,7 @@ func (l *Linkpearl) GetRoomAccountData(roomID id.RoomID, name string) (map[strin
 	}
 
 	var data map[string]string
-	err := l.GetClient().GetRoomAccountData(roomID, name, &data)
+	err := l.GetClient().GetRoomAccountData(ctx, roomID, name, &data)
 	if err != nil {
 		data = map[string]string{}
 		if strings.Contains(err.Error(), "M_NOT_FOUND") {
@@ -68,12 +69,12 @@ func (l *Linkpearl) GetRoomAccountData(roomID id.RoomID, name string) (map[strin
 }
 
 // SetRoomAccountData of the room (to cache and API, with encryption support)
-func (l *Linkpearl) SetRoomAccountData(roomID id.RoomID, name string, data map[string]string) error {
+func (l *Linkpearl) SetRoomAccountData(ctx context.Context, roomID id.RoomID, name string, data map[string]string) error {
 	key := roomID.String() + name
 	l.acc.Add(key, data)
 
 	data = l.encryptAccountData(data)
-	return UnwrapError(l.GetClient().SetRoomAccountData(roomID, name, data))
+	return UnwrapError(l.GetClient().SetRoomAccountData(ctx, roomID, name, data))
 }
 
 func (l *Linkpearl) encryptAccountData(data map[string]string) map[string]string {

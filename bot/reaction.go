@@ -22,14 +22,14 @@ func (b *Bot) handleReaction(ctx context.Context) {
 	}
 
 	srcID := content.GetRelatesTo().EventID
-	srcEvt, err := b.lp.GetClient().GetEvent(evt.RoomID, srcID)
+	srcEvt, err := b.lp.GetClient().GetEvent(ctx, evt.RoomID, srcID)
 	if err != nil {
 		b.Error(ctx, "cannot find event %s: %v", srcID, err)
 		return
 	}
 	linkpearl.ParseContent(srcEvt, b.log)
-	if b.lp.GetMachine().StateStore.IsEncrypted(evt.RoomID) {
-		decrypted, derr := b.lp.GetClient().Crypto.Decrypt(srcEvt)
+	if ok, _ := b.lp.GetMachine().StateStore.IsEncrypted(ctx, evt.RoomID); ok { //nolint:errcheck // that's ok
+		decrypted, derr := b.lp.GetClient().Crypto.Decrypt(ctx, srcEvt)
 		if derr == nil {
 			srcEvt = decrypted
 		}

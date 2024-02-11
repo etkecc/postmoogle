@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"strconv"
 	"time"
 
@@ -9,21 +10,21 @@ import (
 	"gitlab.com/etke.cc/postmoogle/bot/config"
 )
 
-func (b *Bot) syncRooms() error {
+func (b *Bot) syncRooms(ctx context.Context) error {
 	adminRooms := []id.RoomID{}
 
-	adminRoom := b.cfg.GetBot().AdminRoom()
+	adminRoom := b.cfg.GetBot(ctx).AdminRoom()
 	if adminRoom != "" {
 		adminRooms = append(adminRooms, adminRoom)
 	}
 
-	resp, err := b.lp.GetClient().JoinedRooms()
+	resp, err := b.lp.GetClient().JoinedRooms(ctx)
 	if err != nil {
 		return err
 	}
 	for _, roomID := range resp.JoinedRooms {
-		b.migrateRoomSettings(roomID)
-		cfg, serr := b.cfg.GetRoom(roomID)
+		b.migrateRoomSettings(ctx, roomID)
+		cfg, serr := b.cfg.GetRoom(ctx, roomID)
 		if serr != nil {
 			continue
 		}
@@ -33,7 +34,7 @@ func (b *Bot) syncRooms() error {
 			b.rooms.Store(mailbox, roomID)
 		}
 
-		if cfg.Owner() != "" && b.allowAdmin(id.UserID(cfg.Owner()), "") {
+		if cfg.Owner() != "" && b.allowAdmin(ctx, id.UserID(cfg.Owner()), "") {
 			adminRooms = append(adminRooms, roomID)
 		}
 	}
@@ -42,8 +43,8 @@ func (b *Bot) syncRooms() error {
 	return nil
 }
 
-func (b *Bot) migrateRoomSettings(roomID id.RoomID) {
-	cfg, err := b.cfg.GetRoom(roomID)
+func (b *Bot) migrateRoomSettings(ctx context.Context, roomID id.RoomID) {
+	cfg, err := b.cfg.GetRoom(ctx, roomID)
 	if err != nil {
 		b.log.Error().Err(err).Msg("cannot retrieve room settings")
 		return
@@ -56,7 +57,7 @@ func (b *Bot) migrateRoomSettings(roomID id.RoomID) {
 		return
 	}
 	cfg.MigrateSpamlistSettings()
-	err = b.cfg.SetRoom(roomID, cfg)
+	err = b.cfg.SetRoom(ctx, roomID, cfg)
 	if err != nil {
 		b.log.Error().Err(err).Msg("cannot migrate room settings")
 	}
@@ -68,8 +69,8 @@ func (b *Bot) migrateRoomSettings(roomID id.RoomID) {
 // alongside with other database configs to simplify maintenance,
 // but with that simplification there is no proper way to migrate
 // existing sync token and session info. No data loss, tho.
-func (b *Bot) migrateMautrix015() error {
-	cfg := b.cfg.GetBot()
+func (b *Bot) migrateMautrix015(ctx context.Context) error {
+	cfg := b.cfg.GetBot(ctx)
 	ts := cfg.Mautrix015Migration()
 	// already migrated
 	if ts > 0 {
@@ -82,11 +83,11 @@ func (b *Bot) migrateMautrix015() error {
 
 	tss := strconv.FormatInt(ts, 10)
 	cfg.Set(config.BotMautrix015Migration, tss)
-	return b.cfg.SetBot(cfg)
+	return b.cfg.SetBot(ctx, cfg)
 }
 
-func (b *Bot) initBotUsers() ([]string, error) {
-	cfg := b.cfg.GetBot()
+func (b *Bot) initBotUsers(ctx context.Context) ([]string, error) {
+	cfg := b.cfg.GetBot(ctx)
 	cfgUsers := cfg.Users()
 	if len(cfgUsers) > 0 {
 		return cfgUsers, nil
@@ -97,10 +98,10 @@ func (b *Bot) initBotUsers() ([]string, error) {
 		return nil, err
 	}
 	cfg.Set(config.BotUsers, "@*:"+homeserver)
-	return cfg.Users(), b.cfg.SetBot(cfg)
+	return cfg.Users(), b.cfg.SetBot(ctx, cfg)
 }
 
 // SyncRooms and mailboxes
 func (b *Bot) SyncRooms() {
-	b.syncRooms() //nolint:errcheck // nothing can be done here
+	b.syncRooms(context.Background()) //nolint:errcheck // nothing can be done here
 }

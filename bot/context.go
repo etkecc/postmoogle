@@ -15,8 +15,10 @@ const (
 	ctxThreadID ctxkey = iota
 )
 
-func newContext(evt *event.Event) context.Context {
-	ctx := context.Background()
+func newContext(ctx context.Context, evt *event.Event) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	hub := sentry.CurrentHub().Clone()
 	ctx = sentry.SetHubOnContext(ctx, hub)
 	ctx = eventToContext(ctx, evt)

@@ -2,6 +2,7 @@
 package linkpearl
 
 import (
+	"context"
 	"database/sql"
 
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -31,7 +32,7 @@ type Linkpearl struct {
 	log zerolog.Logger
 	api *mautrix.Client
 
-	joinPermit  func(*event.Event) bool
+	joinPermit  func(ctx context.Context, evt *event.Event) bool
 	autoleave   bool
 	maxretries  int
 	eventsLimit int
@@ -54,7 +55,7 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.JoinPermit == nil {
 		// By default, we approve all join requests
-		cfg.JoinPermit = func(*event.Event) bool { return true }
+		cfg.JoinPermit = func(_ context.Context, _ *event.Event) bool { return true }
 	}
 }
 
@@ -103,7 +104,7 @@ func New(cfg *Config) (*Linkpearl, error) {
 		return nil, err
 	}
 	lp.ch.LoginAs = cfg.LoginAs()
-	if err = lp.ch.Init(); err != nil {
+	if err = lp.ch.Init(context.Background()); err != nil {
 		return nil, err
 	}
 	lp.api.Crypto = lp.ch
@@ -131,16 +132,16 @@ func (l *Linkpearl) GetAccountDataCrypter() *Crypter {
 }
 
 // SetPresence (own). See https://spec.matrix.org/v1.3/client-server-api/#put_matrixclientv3presenceuseridstatus
-func (l *Linkpearl) SetPresence(presence event.Presence, message string) error {
+func (l *Linkpearl) SetPresence(ctx context.Context, presence event.Presence, message string) error {
 	req := ReqPresence{Presence: presence, StatusMsg: message}
 	u := l.GetClient().BuildClientURL("v3", "presence", l.GetClient().UserID, "status")
-	_, err := l.GetClient().MakeRequest("PUT", u, req, nil)
+	_, err := l.GetClient().MakeRequest(ctx, "PUT", u, req, nil)
 
 	return err
 }
 
 // SetJoinPermit sets the the join permit callback function
-func (l *Linkpearl) SetJoinPermit(value func(*event.Event) bool) {
+func (l *Linkpearl) SetJoinPermit(value func(context.Context, *event.Event) bool) {
 	l.joinPermit = value
 }
 
@@ -152,7 +153,7 @@ func (l *Linkpearl) Start(optionalStatusMsg ...string) error {
 		statusMsg = optionalStatusMsg[0]
 	}
 
-	err := l.SetPresence(event.PresenceOnline, statusMsg)
+	err := l.SetPresence(context.Background(), event.PresenceOnline, statusMsg)
 	if err != nil {
 		l.log.Error().Err(err).Msg("cannot set presence")
 	}
@@ -165,7 +166,7 @@ func (l *Linkpearl) Start(optionalStatusMsg ...string) error {
 // Stop the client
 func (l *Linkpearl) Stop() {
 	l.log.Debug().Msg("stopping the client")
-	if err := l.api.SetPresence(event.PresenceOffline); err != nil {
+	if err := l.api.SetPresence(context.Background(), event.PresenceOffline); err != nil {
 		l.log.Error().Err(err).Msg("cannot set presence")
 	}
 	l.api.StopSync()

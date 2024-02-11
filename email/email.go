@@ -108,8 +108,9 @@ func (e *Email) Mailbox(incoming bool) string {
 	return utils.Mailbox(e.From)
 }
 
-func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, options *ContentOptions) {
+func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, options *ContentOptions, psd *utils.PSD) {
 	if options.Sender {
+		text.WriteString(psd.Status(e.From))
 		text.WriteString(e.From)
 	}
 	if options.Recipient {
@@ -125,8 +126,12 @@ func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, option
 		}
 	}
 	if options.CC && len(e.CC) > 0 {
+		ccs := make([]string, 0, len(e.CC))
+		for _, addr := range e.CC {
+			ccs = append(ccs, psd.Status(addr)+addr)
+		}
 		text.WriteString("\ncc: ")
-		text.WriteString(strings.Join(e.CC, ", "))
+		text.WriteString(strings.Join(ccs, ", "))
 	}
 	if options.Sender || options.Recipient || options.CC {
 		text.WriteString("\n\n")
@@ -146,10 +151,10 @@ func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, option
 }
 
 // Content converts the email object to a Matrix event content
-func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Content {
+func (e *Email) Content(threadID id.EventID, options *ContentOptions, psd *utils.PSD) *event.Content {
 	var text strings.Builder
 
-	e.contentHeader(threadID, &text, options)
+	e.contentHeader(threadID, &text, options, psd)
 
 	if threadID != "" || (threadID == "" && !options.Threadify) {
 		if e.HTML != "" && options.HTML {

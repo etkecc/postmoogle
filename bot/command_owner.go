@@ -16,7 +16,7 @@ import (
 
 func (b *Bot) runStop(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
 	if err != nil {
 		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return
@@ -24,19 +24,19 @@ func (b *Bot) runStop(ctx context.Context) {
 
 	mailbox := cfg.Get(config.RoomMailbox)
 	if mailbox == "" {
-		b.lp.SendNotice(evt.RoomID, "that room is not configured yet", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+		b.lp.SendNotice(ctx, evt.RoomID, "that room is not configured yet", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return
 	}
 
 	b.rooms.Delete(mailbox)
 
-	err = b.cfg.SetRoom(evt.RoomID, config.Room{})
+	err = b.cfg.SetRoom(ctx, evt.RoomID, config.Room{})
 	if err != nil {
 		b.Error(ctx, "cannot update settings: %v", err)
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "mailbox has been disabled", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+	b.lp.SendNotice(ctx, evt.RoomID, "mailbox has been disabled", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) handleOption(ctx context.Context, cmd []string) {
@@ -58,7 +58,7 @@ func (b *Bot) handleOption(ctx context.Context, cmd []string) {
 
 func (b *Bot) getOption(ctx context.Context, name string) {
 	evt := eventFromContext(ctx)
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
 	if err != nil {
 		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return
@@ -73,7 +73,7 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 		msg := fmt.Sprintf("`%s` is not set, kupo.\n"+
 			"To set it, send a `%s %s VALUE` command.",
 			name, b.prefix, name)
-		b.lp.SendNotice(evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+		b.lp.SendNotice(ctx, evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return
 	}
 
@@ -91,18 +91,18 @@ func (b *Bot) getOption(ctx context.Context, name string) {
 			"or just set a new one with `%s %s NEW_PASSWORD`.",
 			b.prefix, name)
 	}
-	b.lp.SendNotice(evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+	b.lp.SendNotice(ctx, evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) setMailbox(ctx context.Context, value string) {
 	evt := eventFromContext(ctx)
 	existingID, ok := b.getMapping(value)
 	if (ok && existingID != "" && existingID != evt.RoomID) || b.isReserved(value) {
-		b.lp.SendNotice(evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, "")))
+		b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, "")))
 		return
 	}
 
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
 	if err != nil {
 		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return
@@ -113,23 +113,23 @@ func (b *Bot) setMailbox(ctx context.Context, value string) {
 	if old != "" {
 		b.rooms.Delete(old)
 	}
-	active := b.ActivateMailbox(evt.Sender, evt.RoomID, value)
+	active := b.ActivateMailbox(ctx, evt.Sender, evt.RoomID, value)
 	cfg.Set(config.RoomActive, strconv.FormatBool(active))
 	value = fmt.Sprintf("%s@%s", value, utils.SanitizeDomain(cfg.Domain()))
 
-	err = b.cfg.SetRoom(evt.RoomID, cfg)
+	err = b.cfg.SetRoom(ctx, evt.RoomID, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot update settings: %v", err)
 		return
 	}
 
 	msg := fmt.Sprintf("mailbox of this room set to `%s`", value)
-	b.lp.SendNotice(evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+	b.lp.SendNotice(ctx, evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) setPassword(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
 	if err != nil {
 		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return
@@ -143,13 +143,13 @@ func (b *Bot) setPassword(ctx context.Context) {
 	}
 
 	cfg.Set(config.RoomPassword, value)
-	err = b.cfg.SetRoom(evt.RoomID, cfg)
+	err = b.cfg.SetRoom(ctx, evt.RoomID, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot update settings: %v", err)
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "SMTP password has been set", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+	b.lp.SendNotice(ctx, evt.RoomID, "SMTP password has been set", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {
@@ -159,7 +159,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 	}
 
 	evt := eventFromContext(ctx)
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
 	if err != nil {
 		b.Error(ctx, "failed to retrieve settings: %v", err)
 		return
@@ -176,19 +176,19 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 
 	old := cfg.Get(name)
 	if old == value {
-		b.lp.SendNotice(evt.RoomID, "nothing changed, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+		b.lp.SendNotice(ctx, evt.RoomID, "nothing changed, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return
 	}
 
 	cfg.Set(name, value)
-	err = b.cfg.SetRoom(evt.RoomID, cfg)
+	err = b.cfg.SetRoom(ctx, evt.RoomID, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot update settings: %v", err)
 		return
 	}
 
 	msg := fmt.Sprintf("`%s` of this room set to:\n```\n%s\n```", name, value)
-	b.lp.SendNotice(evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+	b.lp.SendNotice(ctx, evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
@@ -197,7 +197,7 @@ func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
 		b.getOption(ctx, config.RoomSpamlist)
 		return
 	}
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
 	if err != nil {
 		b.Error(ctx, "cannot get room settings: %v", err)
 		return
@@ -212,7 +212,7 @@ func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
 	}
 
 	cfg.Set(config.RoomSpamlist, utils.SliceString(spamlist))
-	err = b.cfg.SetRoom(evt.RoomID, cfg)
+	err = b.cfg.SetRoom(ctx, evt.RoomID, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot store room settings: %v", err)
 		return
@@ -223,7 +223,7 @@ func (b *Bot) runSpamlistAdd(ctx context.Context, commandSlice []string) {
 		threadID = evt.ID
 	}
 
-	b.lp.SendNotice(evt.RoomID, "spamlist has been updated, kupo", linkpearl.RelatesTo(threadID, cfg.NoThreads()))
+	b.lp.SendNotice(ctx, evt.RoomID, "spamlist has been updated, kupo", linkpearl.RelatesTo(threadID, cfg.NoThreads()))
 }
 
 func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
@@ -232,7 +232,7 @@ func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
 		b.getOption(ctx, config.RoomSpamlist)
 		return
 	}
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
 	if err != nil {
 		b.Error(ctx, "cannot get room settings: %v", err)
 		return
@@ -248,7 +248,7 @@ func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
 		toRemove[idx] = struct{}{}
 	}
 	if len(toRemove) == 0 {
-		b.lp.SendNotice(evt.RoomID, "nothing new, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+		b.lp.SendNotice(ctx, evt.RoomID, "nothing new, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return
 	}
 
@@ -261,34 +261,34 @@ func (b *Bot) runSpamlistRemove(ctx context.Context, commandSlice []string) {
 	}
 
 	cfg.Set(config.RoomSpamlist, utils.SliceString(updatedSpamlist))
-	err = b.cfg.SetRoom(evt.RoomID, cfg)
+	err = b.cfg.SetRoom(ctx, evt.RoomID, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot store room settings: %v", err)
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "spamlist has been updated, kupo", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+	b.lp.SendNotice(ctx, evt.RoomID, "spamlist has been updated, kupo", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) runSpamlistReset(ctx context.Context) {
 	evt := eventFromContext(ctx)
-	cfg, err := b.cfg.GetRoom(evt.RoomID)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
 	if err != nil {
 		b.Error(ctx, "cannot get room settings: %v", err)
 		return
 	}
 	spamlist := utils.StringSlice(cfg[config.RoomSpamlist])
 	if len(spamlist) == 0 {
-		b.lp.SendNotice(evt.RoomID, "spamlist is empty, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+		b.lp.SendNotice(ctx, evt.RoomID, "spamlist is empty, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 		return
 	}
 
 	cfg.Set(config.RoomSpamlist, "")
-	err = b.cfg.SetRoom(evt.RoomID, cfg)
+	err = b.cfg.SetRoom(ctx, evt.RoomID, cfg)
 	if err != nil {
 		b.Error(ctx, "cannot store room settings: %v", err)
 		return
 	}
 
-	b.lp.SendNotice(evt.RoomID, "spamlist has been reset, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+	b.lp.SendNotice(ctx, evt.RoomID, "spamlist has been reset, kupo.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
