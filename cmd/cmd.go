@@ -16,6 +16,7 @@ import (
 	"github.com/mileusna/crontab"
 	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/go/healthchecks"
+	"gitlab.com/etke.cc/go/psd"
 	"gitlab.com/etke.cc/linkpearl"
 
 	"gitlab.com/etke.cc/postmoogle/bot"
@@ -114,10 +115,10 @@ func initMatrix(cfg *config.Config) {
 		log.Fatal().Err(err).Msg("cannot initialize matrix bot")
 	}
 
-	psd := utils.NewPSD(cfg.PSD.URL, cfg.PSD.Login, cfg.PSD.Password, &log)
+	psdc := psd.NewClient(cfg.PSD.URL, cfg.PSD.Login, cfg.PSD.Password)
 	mxc = mxconfig.New(lp, &log)
 	q = queue.New(lp, mxc, &log)
-	mxb, err = bot.New(q, lp, &log, mxc, psd, cfg.Proxies, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
+	mxb, err = bot.New(q, lp, &log, mxc, psdc, cfg.Proxies, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
 	if err != nil {
 		log.Panic().Err(err).Msg("cannot start matrix bot")
 	}

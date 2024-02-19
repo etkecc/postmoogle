@@ -1,4 +1,4 @@
-package utils
+package psd
 
 import (
 	"context"
@@ -8,43 +8,25 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/rs/zerolog"
 )
 
-type PSD struct {
-	log      *zerolog.Logger
+type Client struct {
 	url      *url.URL
 	login    string
 	password string
 }
 
-type PSDTarget struct {
-	Targets []string          `json:"targets"`
-	Labels  map[string]string `json:"labels"`
-}
-
-func NewPSD(baseURL, login, password string, log *zerolog.Logger) *PSD {
+// NewClient returns a new PSD client
+func NewClient(baseURL, login, password string) *Client {
 	uri, err := url.Parse(baseURL)
 	if err != nil || login == "" || password == "" {
-		return &PSD{}
+		return &Client{}
 	}
-	return &PSD{url: uri, login: login, password: password, log: log}
+	return &Client{url: uri, login: login, password: password}
 }
 
-func (p *PSD) Status(email string) string {
-	psd, err := p.get(email)
-	if err != nil {
-		p.log.Error().Err(err).Str("email", email).Msg("error checking PSD")
-		return ""
-	}
-	if len(psd) == 0 {
-		return ""
-	}
-	return "👥" + psd[0].Labels["domain"] + " 👤"
-}
-
-func (p *PSD) get(identifier string) ([]*PSDTarget, error) {
+// Get returns the list of targets for the given identifier
+func (p *Client) Get(identifier string) ([]*Target, error) {
 	if p.url == nil {
 		return nil, nil
 	}
@@ -71,7 +53,7 @@ func (p *PSD) get(identifier string) ([]*PSDTarget, error) {
 	if err != nil {
 		return nil, err
 	}
-	var psd []*PSDTarget
+	var psd []*Target
 	err = json.Unmarshal(datab, &psd)
 	if err != nil {
 		return nil, err

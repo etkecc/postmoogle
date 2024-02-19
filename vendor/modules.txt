@@ -136,6 +136,9 @@ gitlab.com/etke.cc/go/healthchecks
 # gitlab.com/etke.cc/go/mxidwc v1.0.0
 ## explicit; go 1.19
 gitlab.com/etke.cc/go/mxidwc
+# gitlab.com/etke.cc/go/psd v1.0.0
+## explicit; go 1.21.0
+gitlab.com/etke.cc/go/psd
 # gitlab.com/etke.cc/go/secgen v1.1.1
 ## explicit; go 1.19
 gitlab.com/etke.cc/go/secgen

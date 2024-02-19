@@ -146,7 +146,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 			b.setThreadID(ctx, roomID, eml.MessageID, threadID)
 		}
 	}
-	content := eml.Content(threadID, cfg.ContentOptions(), b.psd)
+	content := eml.Content(threadID, cfg.ContentOptions(), b.psdc)
 	eventID, serr := b.lp.Send(ctx, roomID, content)
 	if serr != nil {
 		if !strings.Contains(serr.Error(), "M_UNKNOWN") { // if it's not an unknown event error
@@ -527,7 +527,7 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 	}
 
 	evt := eventFromContext(ctx)
-	content := eml.Content(threadID, cfg.ContentOptions(), b.psd)
+	content := eml.Content(threadID, cfg.ContentOptions(), b.psdc)
 	notice := format.RenderMarkdown(text, true, true)
 	msgContent, ok := content.Parsed.(*event.MessageEventContent)
 	if !ok {

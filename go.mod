@@ -1,6 +1,8 @@
 module gitlab.com/etke.cc/postmoogle
 
-go 1.18
+go 1.21.0
+
+toolchain go1.22.0
 
 // replace gitlab.com/etke.cc/linkpearl => ../linkpearl
 
@@ -23,6 +25,7 @@ require (
 	gitlab.com/etke.cc/go/fswatcher v1.0.0
 	gitlab.com/etke.cc/go/healthchecks v1.0.1
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
+	gitlab.com/etke.cc/go/psd v1.0.0
 	gitlab.com/etke.cc/go/secgen v1.1.1
 	gitlab.com/etke.cc/go/validator v1.0.6
 	gitlab.com/etke.cc/linkpearl v0.0.0-20240211143445-bddf907d137a

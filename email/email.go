@@ -8,6 +8,7 @@ import (
 
 	"github.com/emersion/go-msgauth/dkim"
 	"github.com/jhillyerd/enmime"
+	"gitlab.com/etke.cc/go/psd"
 	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"
@@ -108,9 +109,17 @@ func (e *Email) Mailbox(incoming bool) string {
 	return utils.Mailbox(e.From)
 }
 
-func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, options *ContentOptions, psd *utils.PSD) {
+func (e *Email) addressStatus(email string, psdc *psd.Client) string {
+	targets, _ := psdc.Get(email) //nolint:errcheck // that's ok
+	if len(targets) > 0 {
+		return "👥" + targets[0].GetDomain() + " 👤"
+	}
+	return ""
+}
+
+func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, options *ContentOptions, psdc *psd.Client) {
 	if options.Sender {
-		text.WriteString(psd.Status(e.From))
+		text.WriteString(e.addressStatus(e.From, psdc))
 		text.WriteString(e.From)
 	}
 	if options.Recipient {
@@ -128,7 +137,7 @@ func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, option
 	if options.CC && len(e.CC) > 0 {
 		ccs := make([]string, 0, len(e.CC))
 		for _, addr := range e.CC {
-			ccs = append(ccs, psd.Status(addr)+addr)
+			ccs = append(ccs, e.addressStatus(addr, psdc)+addr)
 		}
 		text.WriteString("\ncc: ")
 		text.WriteString(strings.Join(ccs, ", "))
@@ -151,10 +160,10 @@ func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, option
 }
 
 // Content converts the email object to a Matrix event content
-func (e *Email) Content(threadID id.EventID, options *ContentOptions, psd *utils.PSD) *event.Content {
+func (e *Email) Content(threadID id.EventID, options *ContentOptions, psdc *psd.Client) *event.Content {
 	var text strings.Builder
 
-	e.contentHeader(threadID, &text, options, psd)
+	e.contentHeader(threadID, &text, options, psdc)
 
 	if threadID != "" || (threadID == "" && !options.Threadify) {
 		if e.HTML != "" && options.HTML {
