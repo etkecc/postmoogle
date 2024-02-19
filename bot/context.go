@@ -44,10 +44,10 @@ func eventToContext(ctx context.Context, evt *event.Event) context.Context {
 	ctx = context.WithValue(ctx, ctxEvent, evt)
 	sentry.GetHubFromContext(ctx).ConfigureScope(func(scope *sentry.Scope) {
 		scope.SetUser(sentry.User{ID: evt.Sender.String()})
-		scope.SetContext("event", map[string]string{
-			"id":     evt.ID.String(),
-			"room":   evt.RoomID.String(),
-			"sender": evt.Sender.String(),
+		scope.SetContext("event", map[string]any{
+			"id":     evt.ID,
+			"room":   evt.RoomID,
+			"sender": evt.Sender,
 		})
 	})
 

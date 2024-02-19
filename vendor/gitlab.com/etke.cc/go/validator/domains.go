@@ -9,7 +9,7 @@ import (
 
 // based on W3C email regex, ref: https://www.w3.org/TR/2016/REC-html51-20161101/sec-forms.html#email-state-typeemail
 var domainRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$`)
-var privateSuffix = []string{".etke.host"}
+var privateSuffix = []string{".etke.host", ".onmatrix.chat"}
 
 // Domain checks if domain is valid
 func (v *V) Domain(domain string) bool {

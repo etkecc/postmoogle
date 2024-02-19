@@ -43,60 +43,16 @@ type mailServer struct {
 	sender  MailSender
 }
 
-// Login used for outgoing mail submissions only (when you use postmoogle as smtp server in your scripts)
-func (m *mailServer) Login(state *smtp.ConnectionState, username, password string) (smtp.Session, error) {
-	m.log.Debug().Str("username", username).Any("state", state).Msg("Login")
-	ctx := context.Background()
-	if m.bot.IsBanned(ctx, state.RemoteAddr) {
-		return nil, ErrBanned
-	}
-
-	if !email.AddressValid(username) {
-		m.log.Debug().Str("address", username).Msg("address is invalid")
-		m.bot.BanAuth(ctx, state.RemoteAddr)
-		return nil, ErrBanned
-	}
-
-	roomID, allow := m.bot.AllowAuth(ctx, username, password)
-	if !allow {
-		m.log.Debug().Str("username", username).Msg("username or password is invalid")
-		m.bot.BanAuth(ctx, state.RemoteAddr)
-		return nil, ErrBanned
-	}
-
-	return &outgoingSession{
-		ctx:       sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
-		sendmail:  m.sender.Send,
-		privkey:   m.bot.GetDKIMprivkey(ctx),
-		from:      username,
-		log:       m.log,
-		domains:   m.domains,
-		getRoomID: m.bot.GetMapping,
-		fromRoom:  roomID,
-		tos:       []string{},
-	}, nil
-}
-
-// AnonymousLogin used for incoming mail submissions only
-func (m *mailServer) AnonymousLogin(state *smtp.ConnectionState) (smtp.Session, error) {
-	m.log.Debug().Any("state", state).Msg("AnonymousLogin")
-	ctx := context.Background()
-	if m.bot.IsBanned(ctx, state.RemoteAddr) {
-		return nil, ErrBanned
-	}
-
-	return &incomingSession{
-		ctx:          sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone()),
-		getRoomID:    m.bot.GetMapping,
-		getFilters:   m.bot.GetIFOptions,
-		receiveEmail: m.ReceiveEmail,
-		ban:          m.bot.BanAuto,
-		greylisted:   m.bot.IsGreylisted,
-		trusted:      m.bot.IsTrusted,
-		log:          m.log,
-		domains:      m.domains,
-		addr:         state.RemoteAddr,
-		tos:          []string{},
+func (m *mailServer) NewSession(con *smtp.Conn) (smtp.Session, error) {
+	ctx := sentry.SetHubOnContext(context.Background(), sentry.CurrentHub().Clone())
+	return &session{
+		log:      m.log,
+		bot:      m.bot,
+		domains:  m.domains,
+		sendmail: m.sender.Send,
+		conn:     con,
+		ctx:      ctx,
+		privkey:  m.bot.GetDKIMprivkey(ctx),
 	}, nil
 }
 

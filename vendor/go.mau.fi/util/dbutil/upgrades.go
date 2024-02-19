@@ -183,7 +183,7 @@ func (db *Database) Upgrade(ctx context.Context) error {
 		doUpgrade := func(ctx context.Context) error {
 			err = upgradeItem.fn(ctx, db)
 			if err != nil {
-				return fmt.Errorf("failed to run upgrade #%d: %w", version, err)
+				return fmt.Errorf("failed to run upgrade v%d->v%d: %w", version, upgradeItem.upgradesTo, err)
 			}
 			version = upgradeItem.upgradesTo
 			logVersion = version

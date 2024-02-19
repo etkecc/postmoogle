@@ -2,6 +2,7 @@ package smtp
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 )
 
@@ -29,7 +30,11 @@ var NoEnhancedCode = EnhancedCode{-1, -1, -1}
 var EnhancedCodeNotSet = EnhancedCode{0, 0, 0}
 
 func (err *SMTPError) Error() string {
-	return err.Message
+	s := fmt.Sprintf("SMTP error %03d", err.Code)
+	if err.Message != "" {
+		s += ": " + err.Message
+	}
+	return s
 }
 
 func (err *SMTPError) Temporary() bool {
@@ -77,7 +82,7 @@ func (r *dataReader) Read(b []byte) (n int, err error) {
 	// not rewrite CRLF -> LF.
 
 	// Run data through a simple state machine to
-	// elide leading dots and detect ending .\r\n line.
+	// elide leading dots and detect End-of-Data (<CR><LF>.<CR><LF>) line.
 	const (
 		stateBeginLine = iota // beginning of line; initial state; must be zero
 		stateDot              // read . at beginning of line
@@ -101,17 +106,16 @@ func (r *dataReader) Read(b []byte) (n int, err error) {
 				r.state = stateDot
 				continue
 			}
+			if c == '\r' {
+				r.state = stateCR
+				break
+			}
 			r.state = stateData
 		case stateDot:
 			if c == '\r' {
 				r.state = stateDotCR
 				continue
 			}
-			if c == '\n' {
-				r.state = stateEOF
-				continue
-			}
-
 			r.state = stateData
 		case stateDotCR:
 			if c == '\n' {
@@ -128,9 +132,6 @@ func (r *dataReader) Read(b []byte) (n int, err error) {
 		case stateData:
 			if c == '\r' {
 				r.state = stateCR
-			}
-			if c == '\n' {
-				r.state = stateBeginLine
 			}
 		}
 		b[n] = c

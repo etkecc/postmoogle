@@ -70,24 +70,31 @@ var queryMethods = map[QueryMethod]queryFunc{
 }
 
 func queryDNSTXT(domain, selector string, txtLookup txtLookupFunc) (*queryResult, error) {
-	var txts []string
-	var err error
-	if txtLookup != nil {
-		txts, err = txtLookup(selector + "._domainkey." + domain)
-	} else {
-		txts, err = net.LookupTXT(selector + "._domainkey." + domain)
+	if txtLookup == nil {
+		txtLookup = net.LookupTXT
 	}
 
+	txts, err := txtLookup(selector + "._domainkey." + domain)
 	if netErr, ok := err.(net.Error); ok && netErr.Temporary() {
 		return nil, tempFailError("key unavailable: " + err.Error())
 	} else if err != nil {
 		return nil, permFailError("no key for signature: " + err.Error())
 	}
 
-	// Long keys are split in multiple parts
-	txt := strings.Join(txts, "")
-
-	return parsePublicKey(txt)
+	// net.LookupTXT will concatenate strings contained in a single TXT record.
+	// In other words, net.LookupTXT returns one entry per TXT record, even if
+	// a record contains multiple strings.
+	//
+	// RFC 6376 section 3.6.2.2 says multiple TXT records lead to undefined
+	// behavior, so reject that.
+	switch len(txts) {
+	case 0:
+		return nil, permFailError("no valid key found")
+	case 1:
+		return parsePublicKey(txts[0])
+	default:
+		return nil, permFailError("multiple TXT records found for key")
+	}
 }
 
 func parsePublicKey(s string) (*queryResult, error) {

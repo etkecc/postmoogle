@@ -293,12 +293,10 @@ func verify(h header, r io.Reader, sigField, sigValue string, options *VerifyOpt
 	}
 
 	// Parse algos
-	algos := strings.SplitN(stripWhitespace(params["a"]), "-", 2)
-	if len(algos) != 2 {
+	keyAlgo, hashAlgo, ok := strings.Cut(stripWhitespace(params["a"]), "-")
+	if !ok {
 		return verif, permFailError("malformed algorithm name")
 	}
-	keyAlgo := algos[0]
-	hashAlgo := algos[1]
 
 	// Check hash algo
 	if res.HashAlgos != nil {
@@ -457,6 +455,8 @@ func stripWhitespace(s string) string {
 	}, s)
 }
 
+var sigRegex = regexp.MustCompile(`(b\s*=)[^;]+`)
+
 func removeSignature(s string) string {
-	return regexp.MustCompile(`(b\s*=)[^;]+`).ReplaceAllString(s, "$1")
+	return sigRegex.ReplaceAllString(s, "$1")
 }

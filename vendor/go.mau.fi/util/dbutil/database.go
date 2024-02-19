@@ -183,11 +183,12 @@ type Config struct {
 func (db *Database) Close() error {
 	err := db.RawDB.Close()
 	if db.ReadOnlyDB != nil {
-		err2 := db.ReadOnlyDB.Close()
-		if err == nil {
-			err = fmt.Errorf("closing read-only db failed: %w", err2)
-		} else {
-			err = fmt.Errorf("%w (closing read-only db also failed: %v)", err, err2)
+		if err2 := db.ReadOnlyDB.Close(); err2 != nil {
+			if err == nil {
+				err = fmt.Errorf("closing read-only db failed: %w", err2)
+			} else {
+				err = fmt.Errorf("%w (closing read-only db also failed: %v)", err, err2)
+			}
 		}
 	}
 	return err

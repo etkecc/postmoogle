@@ -11,7 +11,7 @@ import (
 
 	"github.com/jaytaylor/html2text"
 	"github.com/jhillyerd/enmime/internal/coding"
-	"github.com/jhillyerd/enmime/mediatype"
+	inttp "github.com/jhillyerd/enmime/internal/textproto"
 	"github.com/pkg/errors"
 )
 
@@ -57,7 +57,7 @@ func (e *Envelope) GetHeaderValues(name string) []string {
 		return []string{}
 	}
 
-	rawValues := (*e.header)[textproto.CanonicalMIMEHeaderKey(name)]
+	rawValues := (*e.header)[inttp.CanonicalEmailMIMEHeaderKey(name)]
 	values := make([]string, 0, len(rawValues))
 	for _, v := range rawValues {
 		values = append(values, coding.DecodeExtHeader(v))
@@ -215,11 +215,7 @@ func (p Parser) EnvelopeFromPart(root *Part) (*Envelope, error) {
 	if e.Root != nil {
 		_ = e.Root.DepthMatchAll(func(part *Part) bool {
 			// Using DepthMatchAll to traverse all parts, don't care about result.
-			for i := range part.Errors {
-				// Range index is needed to get the correct address, because range value points to
-				// a locally scoped variable.
-				e.Errors = append(e.Errors, part.Errors[i])
-			}
+			e.Errors = append(e.Errors, part.Errors...)
 			return false
 		})
 	}
@@ -234,7 +230,7 @@ func parseTextOnlyBody(root *Part, e *Envelope) error {
 	var charset string
 	var isHTML bool
 	if ctype := root.Header.Get(hnContentType); ctype != "" {
-		if mediatype, mparams, _, err := mediatype.Parse(ctype); err == nil {
+		if mediatype, mparams, _, err := root.parseMediaType(ctype); err == nil {
 			isHTML = (mediatype == ctTextHTML)
 			if mparams[hpCharset] != "" {
 				charset = mparams[hpCharset]
@@ -273,7 +269,7 @@ func parseTextOnlyBody(root *Part, e *Envelope) error {
 func parseMultiPartBody(root *Part, e *Envelope) error {
 	// Parse top-level multipart
 	ctype := root.Header.Get(hnContentType)
-	mediatype, params, _, err := mediatype.Parse(ctype)
+	mediatype, params, _, err := root.parseMediaType(ctype)
 	if err != nil {
 		return fmt.Errorf("unable to parse media type: %v", err)
 	}

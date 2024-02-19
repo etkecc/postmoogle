@@ -2,8 +2,6 @@ linters:
   disable-all: true
   enable:
     - bodyclose
-    - deadcode
-    - depguard
     - dogsled
     - dupl
     - errcheck
@@ -24,17 +22,16 @@ linters:
     - prealloc
     - revive
     - staticcheck
-    - structcheck
     - typecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
     - whitespace
 issues:
   exclude-rules:
     - path: _test\.go
       linters:
+        - goconst
         - prealloc
     - path: _test\.go
       text: "G306:"

@@ -10,9 +10,6 @@
 </h6>
 
 <p align="center">
-  <a href="https://travis-ci.org/gabriel-vasile/mimetype">
-    <img alt="Build Status" src="https://travis-ci.org/gabriel-vasile/mimetype.svg?branch=master">
-  </a>
   <a href="https://pkg.go.dev/github.com/gabriel-vasile/mimetype">
     <img alt="Go Reference" src="https://pkg.go.dev/badge/github.com/gabriel-vasile/mimetype.svg">
   </a>
@@ -30,7 +27,7 @@
 ## Features
 - fast and precise MIME type and file extension detection
 - long list of [supported MIME types](supported_mimes.md)
-- posibility to [extend](https://pkg.go.dev/github.com/gabriel-vasile/mimetype#example-package-Extend) with other file formats
+- possibility to [extend](https://pkg.go.dev/github.com/gabriel-vasile/mimetype#example-package-Extend) with other file formats
 - common file formats are prioritized
 - [text vs. binary files differentiation](https://pkg.go.dev/github.com/gabriel-vasile/mimetype#example-package-TextVsBinary)
 - safe for concurrent usage

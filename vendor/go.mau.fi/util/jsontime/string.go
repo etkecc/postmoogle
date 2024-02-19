@@ -53,7 +53,7 @@ func (um UnixMicroString) MarshalJSON() ([]byte, error) {
 	if um.IsZero() {
 		return []byte{'"', '0', '"'}, nil
 	}
-	return json.Marshal(strconv.FormatInt(um.UnixMilli(), 10))
+	return json.Marshal(strconv.FormatInt(um.UnixMicro(), 10))
 }
 
 func (um *UnixMicroString) UnmarshalJSON(data []byte) error {
@@ -68,7 +68,7 @@ func (um UnixNanoString) MarshalJSON() ([]byte, error) {
 	if um.IsZero() {
 		return []byte{'"', '0', '"'}, nil
 	}
-	return json.Marshal(um.UnixNano())
+	return json.Marshal(strconv.FormatInt(um.UnixNano(), 10))
 }
 
 func (um *UnixNanoString) UnmarshalJSON(data []byte) error {
@@ -85,7 +85,7 @@ func (u UnixString) MarshalJSON() ([]byte, error) {
 	if u.IsZero() {
 		return []byte{'"', '0', '"'}, nil
 	}
-	return json.Marshal(u.Unix())
+	return json.Marshal(strconv.FormatInt(u.Unix(), 10))
 }
 
 func (u *UnixString) UnmarshalJSON(data []byte) error {

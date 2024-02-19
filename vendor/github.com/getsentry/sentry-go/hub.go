@@ -267,6 +267,18 @@ func (hub *Hub) CaptureException(exception error) *EventID {
 	return eventID
 }
 
+// CaptureCheckIn calls the method of the same name on currently bound Client instance
+// passing it a top-level Scope.
+// Returns CheckInID if the check-in was captured successfully, or nil otherwise.
+func (hub *Hub) CaptureCheckIn(checkIn *CheckIn, monitorConfig *MonitorConfig) *EventID {
+	client, scope := hub.Client(), hub.Scope()
+	if client == nil {
+		return nil
+	}
+
+	return client.CaptureCheckIn(checkIn, monitorConfig, scope)
+}
+
 // AddBreadcrumb records a new breadcrumb.
 //
 // The total number of breadcrumbs that can be recorded are limited by the
@@ -280,31 +292,27 @@ func (hub *Hub) AddBreadcrumb(breadcrumb *Breadcrumb, hint *BreadcrumbHint) {
 		return
 	}
 
-	options := client.Options()
-	max := defaultMaxBreadcrumbs
-
-	if options.MaxBreadcrumbs != 0 {
-		max = options.MaxBreadcrumbs
-	}
-
+	max := client.options.MaxBreadcrumbs
 	if max < 0 {
 		return
 	}
 
-	if options.BeforeBreadcrumb != nil {
-		h := &BreadcrumbHint{}
-		if hint != nil {
-			h = hint
+	if client.options.BeforeBreadcrumb != nil {
+		if hint == nil {
+			hint = &BreadcrumbHint{}
 		}
-		if breadcrumb = options.BeforeBreadcrumb(breadcrumb, h); breadcrumb == nil {
+		if breadcrumb = client.options.BeforeBreadcrumb(breadcrumb, hint); breadcrumb == nil {
 			Logger.Println("breadcrumb dropped due to BeforeBreadcrumb callback.")
 			return
 		}
 	}
 
-	if max > maxBreadcrumbs {
+	if max == 0 {
+		max = defaultMaxBreadcrumbs
+	} else if max > maxBreadcrumbs {
 		max = maxBreadcrumbs
 	}
+
 	hub.Scope().AddBreadcrumb(breadcrumb, max)
 }
 

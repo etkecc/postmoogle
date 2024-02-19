@@ -2,11 +2,8 @@ package dkim
 
 import (
 	"io"
-	"regexp"
 	"strings"
 )
-
-var rxReduceWS = regexp.MustCompile(`[ \t\r\n]+`)
 
 // Canonicalization is a canonicalization algorithm.
 type Canonicalization string
@@ -113,17 +110,15 @@ func (c *simpleCanonicalizer) CanonicalizeBody(w io.Writer) io.WriteCloser {
 type relaxedCanonicalizer struct{}
 
 func (c *relaxedCanonicalizer) CanonicalizeHeader(s string) string {
-	kv := strings.SplitN(s, ":", 2)
-
-	k := strings.TrimSpace(strings.ToLower(kv[0]))
-
-	var v string
-	if len(kv) > 1 {
-		v = rxReduceWS.ReplaceAllString(kv[1], " ")
-		v = strings.TrimSpace(v)
-
+	k, v, ok := strings.Cut(s, ":")
+	if !ok {
+		return strings.TrimSpace(strings.ToLower(s)) + ":" + crlf
 	}
 
+	k = strings.TrimSpace(strings.ToLower(k))
+	v = strings.Join(strings.FieldsFunc(v, func(r rune) bool {
+		return r == ' ' || r == '\t' || r == '\n' || r == '\r'
+	}), " ")
 	return k + ":" + v + crlf
 }
 

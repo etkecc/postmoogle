@@ -30,16 +30,25 @@ const (
 	utf8 = "utf-8"
 )
 
+type MediaTypeParseOptions struct {
+	StripMediaTypeInvalidCharacters bool
+}
+
 // Parse is a more tolerant implementation of Go's mime.ParseMediaType function.
 //
 // Tolerances accounted for:
-//   * Missing ';' between content-type and media parameters
-//   * Repeating media parameters
-//   * Unquoted values in media parameters containing 'tspecials' characters
-//   * Newline characters
+//   - Missing ';' between content-type and media parameters
+//   - Repeating media parameters
+//   - Unquoted values in media parameters containing 'tspecials' characters
+//   - Newline characters
 func Parse(ctype string) (mtype string, params map[string]string, invalidParams []string, err error) {
+	return ParseWithOptions(ctype, MediaTypeParseOptions{})
+}
+
+// ParseWithOptions parses media-type with additional options controlling the parsing behavior.
+func ParseWithOptions(ctype string, options MediaTypeParseOptions) (mtype string, params map[string]string, invalidParams []string, err error) {
 	mtype, params, err = mime.ParseMediaType(
-		fixNewlines(fixUnescapedQuotes(fixUnquotedSpecials(fixMangledMediaType(removeTrailingHTMLTags(ctype), ';')))))
+		fixNewlines(fixUnescapedQuotes(fixUnquotedSpecials(fixMangledMediaType(removeTrailingHTMLTags(ctype), ';', options)))))
 	if err != nil {
 		if err.Error() == "mime: no media type" {
 			return "", nil, nil, nil
@@ -63,7 +72,7 @@ func Parse(ctype string) (mtype string, params map[string]string, invalidParams 
 
 // fixMangledMediaType is used to insert ; separators into media type strings that lack them, and
 // remove repeated parameters.
-func fixMangledMediaType(mtype string, sep rune) string {
+func fixMangledMediaType(mtype string, sep rune, options MediaTypeParseOptions) string {
 	strsep := string([]rune{sep})
 	if mtype == "" {
 		return ""
@@ -83,6 +92,10 @@ func fixMangledMediaType(mtype string, sep rune) string {
 			if p == "" {
 				// The content type is completely missing. Put in a placeholder.
 				p = ctPlaceholder
+			}
+			// Remove invalid characters (specials)
+			if options.StripMediaTypeInvalidCharacters {
+				p = removeTypeSpecials(p)
 			}
 			// Check for missing token after slash.
 			if strings.HasSuffix(p, "/") {
@@ -122,6 +135,12 @@ func fixMangledMediaType(mtype string, sep rune) string {
 			p = coding.RFC2047Decode(p)
 
 			pair := strings.SplitAfter(p, "=")
+
+			if strings.TrimSpace(pair[0]) == "=" {
+				// Ignore unnamed parameters.
+				continue
+			}
+
 			if strings.Contains(mtype, strings.TrimSpace(pair[0])) {
 				// Ignore repeated parameters.
 				continue
@@ -156,16 +175,24 @@ func fixMangledMediaType(mtype string, sep rune) string {
 // Content-Type header.
 //
 // Given this this header:
-//     `Content-Type: text/calendar; charset=utf-8; method=text/calendar`
+//
+//	`Content-Type: text/calendar; charset=utf-8; method=text/calendar`
+//
 // `consumeParams` should be given this part:
-//     ` charset=utf-8; method=text/calendar`
+//
+//	` charset=utf-8; method=text/calendar`
+//
 // And returns (first pass):
-//     `consumed = "charset=utf-8;"`
-//     `rest     = " method=text/calendar"`
+//
+//	`consumed = "charset=utf-8;"`
+//	`rest     = " method=text/calendar"`
+//
 // Capture the `consumed` value (to build a clean Content-Type header value) and pass the value of
 // `rest` back to `consumeParam`. That second call will return:
-//     `consumed = " method=\"text/calendar\""`
-//     `rest     = ""`
+//
+//	`consumed = " method=\"text/calendar\""`
+//	`rest     = ""`
+//
 // Again, use the value of `consumed` to build a clean Content-Type header value. Given that `rest`
 // is empty, all of the parameters have been consumed successfully.
 //
@@ -381,8 +408,8 @@ func fixUnquotedSpecials(s string) string {
 
 // fixUnescapedQuotes inspects for unescaped quotes inside of a quoted string and escapes them
 //
-//  Input:  application/rtf; charset=iso-8859-1; name=""V047411.rtf".rtf"
-//  Output: application/rtf; charset=iso-8859-1; name="\"V047411.rtf\".rtf"
+//	Input:  application/rtf; charset=iso-8859-1; name=""V047411.rtf".rtf"
+//	Output: application/rtf; charset=iso-8859-1; name="\"V047411.rtf\".rtf"
 func fixUnescapedQuotes(hvalue string) string {
 	params := stringutil.SplitAfterUnquoted(hvalue, ';', '"')
 	sb := &strings.Builder{}
@@ -507,6 +534,14 @@ loop:
 
 	if tagStart != 0 {
 		return value[0:tagStart]
+	}
+
+	return value
+}
+
+func removeTypeSpecials(value string) string {
+	for _, r := range []string{"(", ")", "<", ">", "@", ",", ":", "\\", "\"", "[", "]", "?", "="} {
+		value = strings.ReplaceAll(value, r, "")
 	}
 
 	return value

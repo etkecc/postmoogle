@@ -3,10 +3,12 @@ package enmime
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
+	"math/rand"
 	"mime"
 	"net/mail"
 	"net/textproto"
+	"os"
 	"path/filepath"
 	"reflect"
 	"time"
@@ -21,18 +23,25 @@ import (
 type MailBuilder struct {
 	to, cc, bcc          []mail.Address
 	from                 mail.Address
-	replyTo              mail.Address
+	replyTo              []mail.Address
 	subject              string
 	date                 time.Time
 	header               textproto.MIMEHeader
 	text, html           []byte
 	inlines, attachments []*Part
 	err                  error
+	randSource           rand.Source
 }
 
 // Builder returns an empty MailBuilder struct.
 func Builder() MailBuilder {
 	return MailBuilder{}
+}
+
+// RandSeed sets the seed for random uuid boundary strings.
+func (p MailBuilder) RandSeed(seed int64) MailBuilder {
+	p.randSource = stringutil.NewLockedSource(seed)
+	return p
 }
 
 // Error returns the stored error from a file attachment/inline read or nil.
@@ -46,16 +55,31 @@ func (p MailBuilder) Date(date time.Time) MailBuilder {
 	return p
 }
 
+// GetDate returns the stored date.
+func (p *MailBuilder) GetDate() time.Time {
+	return p.date
+}
+
 // From returns a copy of MailBuilder with the specified From header.
 func (p MailBuilder) From(name, addr string) MailBuilder {
 	p.from = mail.Address{Name: name, Address: addr}
 	return p
 }
 
+// GetFrom returns the stored from header.
+func (p *MailBuilder) GetFrom() mail.Address {
+	return p.from
+}
+
 // Subject returns a copy of MailBuilder with the specified Subject header.
 func (p MailBuilder) Subject(subject string) MailBuilder {
 	p.subject = subject
 	return p
+}
+
+// GetSubject returns the stored subject header.
+func (p *MailBuilder) GetSubject() string {
+	return p.subject
 }
 
 // To returns a copy of MailBuilder with this name & address appended to the To header.  name may be
@@ -73,6 +97,13 @@ func (p MailBuilder) ToAddrs(to []mail.Address) MailBuilder {
 	return p
 }
 
+// GetTo returns a copy of the stored to addresses.
+func (p *MailBuilder) GetTo() []mail.Address {
+	var to []mail.Address
+	to = append(to, p.to...)
+	return to
+}
+
 // CC returns a copy of MailBuilder with this name & address appended to the CC header.  name may be
 // empty.
 func (p MailBuilder) CC(name, addr string) MailBuilder {
@@ -86,6 +117,13 @@ func (p MailBuilder) CC(name, addr string) MailBuilder {
 func (p MailBuilder) CCAddrs(cc []mail.Address) MailBuilder {
 	p.cc = cc
 	return p
+}
+
+// GetCC returns a copy of the stored cc addresses.
+func (p *MailBuilder) GetCC() []mail.Address {
+	var cc []mail.Address
+	cc = append(cc, p.cc...)
+	return cc
 }
 
 // BCC returns a copy of MailBuilder with this name & address appended to the BCC list.  name may be
@@ -106,11 +144,36 @@ func (p MailBuilder) BCCAddrs(bcc []mail.Address) MailBuilder {
 	return p
 }
 
+// GetBCC returns a copy of the stored bcc addresses.
+func (p *MailBuilder) GetBCC() []mail.Address {
+	var bcc []mail.Address
+	bcc = append(bcc, p.bcc...)
+	return bcc
+}
+
 // ReplyTo returns a copy of MailBuilder with this name & address appended to the To header.  name
 // may be empty.
 func (p MailBuilder) ReplyTo(name, addr string) MailBuilder {
-	p.replyTo = mail.Address{Name: name, Address: addr}
+	if len(addr) > 0 {
+		p.replyTo = append(p.replyTo, mail.Address{Name: name, Address: addr})
+	}
 	return p
+}
+
+// ReplyToAddrs returns a copy of MailBuilder with the new reply to header list. This method only
+// has an effect if the Send method is used to transmit the message, there is no effect on the parts
+// returned by Build().
+func (p MailBuilder) ReplyToAddrs(replyTo []mail.Address) MailBuilder {
+	p.replyTo = replyTo
+	return p
+}
+
+// GetReplyTo returns a copy of the stored replyTo header addresses.
+func (p *MailBuilder) GetReplyTo() []mail.Address {
+	replyTo := make([]mail.Address, len(p.replyTo))
+	copy(replyTo, p.replyTo)
+
+	return replyTo
 }
 
 // Header returns a copy of MailBuilder with the specified value added to the named header.
@@ -125,10 +188,22 @@ func (p MailBuilder) Header(name, value string) MailBuilder {
 	return p
 }
 
+// GetHeader gets the first value associated with the given header.
+func (p *MailBuilder) GetHeader(name string) string {
+	return p.header.Get(name)
+}
+
 // Text returns a copy of MailBuilder that will use the provided bytes for its text/plain Part.
 func (p MailBuilder) Text(body []byte) MailBuilder {
 	p.text = body
 	return p
+}
+
+// GetText returns a copy of the stored text/plain part.
+func (p *MailBuilder) GetText() []byte {
+	var text []byte
+	text = append(text, p.text...)
+	return text
 }
 
 // HTML returns a copy of MailBuilder that will use the provided bytes for its text/html Part.
@@ -137,10 +212,27 @@ func (p MailBuilder) HTML(body []byte) MailBuilder {
 	return p
 }
 
+// GetHTML returns a copy of the stored text/html part.
+func (p *MailBuilder) GetHTML() []byte {
+	var html []byte
+	html = append(html, p.html...)
+	return html
+}
+
 // AddAttachment returns a copy of MailBuilder that includes the specified attachment.
 func (p MailBuilder) AddAttachment(b []byte, contentType string, fileName string) MailBuilder {
 	part := NewPart(contentType)
 	part.Content = b
+	part.FileName = fileName
+	part.Disposition = cdAttachment
+	p.attachments = append(p.attachments, part)
+	return p
+}
+
+// AddAttachmentWithReader returns a copy of MailBuilder that includes the specified attachment, using an io.Reader to pull the content of the attachment.
+func (p MailBuilder) AddAttachmentWithReader(r io.Reader, contentType string, fileName string) MailBuilder {
+	part := NewPart(contentType)
+	part.ContentReader = r
 	part.FileName = fileName
 	part.Disposition = cdAttachment
 	p.attachments = append(p.attachments, part)
@@ -155,7 +247,7 @@ func (p MailBuilder) AddFileAttachment(path string) MailBuilder {
 	if p.err != nil {
 		return p
 	}
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		p.err = err
 		return p
@@ -190,7 +282,7 @@ func (p MailBuilder) AddFileInline(path string) MailBuilder {
 	if p.err != nil {
 		return p
 	}
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		p.err = err
 		return p
@@ -225,7 +317,7 @@ func (p MailBuilder) AddFileOtherPart(path string) MailBuilder {
 	if p.err != nil {
 		return p
 	}
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		p.err = err
 		return p
@@ -318,8 +410,8 @@ func (p MailBuilder) Build() (*Part, error) {
 	if len(p.cc) > 0 {
 		h.Set("Cc", stringutil.JoinAddress(p.cc))
 	}
-	if p.replyTo.Address != "" {
-		h.Set("Reply-To", p.replyTo.String())
+	if len(p.replyTo) > 0 {
+		h.Set("Reply-To", stringutil.JoinAddress(p.replyTo))
 	}
 	date := p.date
 	if date.IsZero() {
@@ -330,6 +422,13 @@ func (p MailBuilder) Build() (*Part, error) {
 		for _, s := range v {
 			h.Add(k, s)
 		}
+	}
+	if r := p.randSource; r != nil {
+		// Traverse all parts, discard match result.
+		_ = root.DepthMatchAll(func(part *Part) bool {
+			part.randSource = r
+			return false
+		})
 	}
 	return root, nil
 }

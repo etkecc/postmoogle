@@ -57,6 +57,25 @@ if err != nil {
 }
 ```
 
+### Validating that the publix suffix is ICANN managed ###
+
+Whether the public suffix is managed by the Internet Corporation for Assigned Names and Numbers.
+If not an error is returned and the public suffix is privately managed. For example, foo.org and foo.co.uk are ICANN domains, foo.dyndns.org and foo.blogspot.co.uk are private domains. More information on [publix suffixes here](https://godoc.org/golang.org/x/net/publicsuffix).
+
+```go
+import "github.com/mcnijman/go-emailaddress"
+
+email, err := emailaddress.Parse("foo@bar.com")
+if err != nil {
+    fmt.Println("invalid email")
+}
+
+err := email.ValidateIcanSuffix()
+if err != nil {
+    fmt.Println("not an icann suffix")
+}
+```
+
 ### Finding emails ###
 
 This will look for emails in a byte array (ie text or an html response).
@@ -64,7 +83,7 @@ This will look for emails in a byte array (ie text or an html response).
 ```go
 import "github.com/mcnijman/go-emailaddress"
 
-text := []byte(`Send me an email at foo@bar.com.`)
+text := []byte(`Send me an email at foo@bar.com or foo@domain.fakesuffix.`)
 validateHost := false
 
 emails := emailaddress.Find(text, validateHost)
@@ -73,6 +92,7 @@ for _, e := range emails {
     fmt.Println(e)
 }
 // foo@bar.com
+// foo@domain.fakesuffix
 ```
 
 As RFC 5322 is really broad this method will likely match images and urls that contain
@@ -81,7 +101,7 @@ the '@' character (ie. !--logo@2x.png). For more reliable results, you can use t
 ```go
 import "github.com/mcnijman/go-emailaddress"
 
-text := []byte(`Send me an email at foo@bar.com or fake@domain.foobar.`)
+text := []byte(`Send me an email at foo@domain.com or foo@domain.fakesuffix.`)
 validateHost := false
 
 emails := emailaddress.FindWithIcannSuffix(text, validateHost)

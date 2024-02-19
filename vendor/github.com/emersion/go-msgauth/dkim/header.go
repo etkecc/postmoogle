@@ -66,28 +66,24 @@ func foldHeaderField(kv string) string {
 	return fold.String() + crlf
 }
 
-func parseHeaderField(s string) (k string, v string) {
-	kv := strings.SplitN(s, ":", 2)
-	k = strings.TrimSpace(kv[0])
-	if len(kv) > 1 {
-		v = strings.TrimSpace(kv[1])
-	}
-	return
+func parseHeaderField(s string) (string, string) {
+	key, value, _ := strings.Cut(s, ":")
+	return strings.TrimSpace(key), strings.TrimSpace(value)
 }
 
 func parseHeaderParams(s string) (map[string]string, error) {
 	pairs := strings.Split(s, ";")
 	params := make(map[string]string)
 	for _, s := range pairs {
-		kv := strings.SplitN(s, "=", 2)
-		if len(kv) != 2 {
+		key, value, ok := strings.Cut(s, "=")
+		if !ok {
 			if strings.TrimSpace(s) == "" {
 				continue
 			}
 			return params, errors.New("dkim: malformed header params")
 		}
 
-		params[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+		params[strings.TrimSpace(key)] = strings.TrimSpace(value)
 	}
 	return params, nil
 }
@@ -149,6 +145,8 @@ func newHeaderPicker(h header) *headerPicker {
 }
 
 func (p *headerPicker) Pick(key string) string {
+	key = strings.ToLower(key)
+
 	at := p.picked[key]
 	for i := len(p.h) - 1; i >= 0; i-- {
 		kv := p.h[i]

@@ -11,7 +11,9 @@ import (
 
 	"github.com/jhillyerd/enmime/internal/coding"
 	"github.com/jhillyerd/enmime/internal/stringutil"
+	inttp "github.com/jhillyerd/enmime/internal/textproto"
 	"github.com/jhillyerd/enmime/mediatype"
+
 	"github.com/pkg/errors"
 )
 
@@ -108,22 +110,26 @@ func ParseAddressList(list string) ([]*mail.Address, error) {
 // ParseMediaType is a more tolerant implementation of Go's mime.ParseMediaType function.
 //
 // Tolerances accounted for:
-//   * Missing ';' between content-type and media parameters
-//   * Repeating media parameters
-//   * Unquoted values in media parameters containing 'tspecials' characters
+//   - Missing ';' between content-type and media parameters
+//   - Repeating media parameters
+//   - Unquoted values in media parameters containing 'tspecials' characters
+//
+// Deprecated: Use mediaType.Parse instead
 func ParseMediaType(ctype string) (mtype string, params map[string]string, invalidParams []string,
 	err error) {
 	// Export of internal function.
 	return mediatype.Parse(ctype)
 }
 
-// readHeader reads a block of SMTP or MIME headers and returns a textproto.MIMEHeader.
-// Header parse warnings & errors will be added to p.Errors, io errors will be returned directly.
-func readHeader(r *bufio.Reader, p *Part) (textproto.MIMEHeader, error) {
+// ReadHeader reads a block of SMTP or MIME headers and returns a
+// textproto.MIMEHeader. Header parse warnings & errors will be added to
+// ErrorCollector, io errors will be returned directly.
+func ReadHeader(r *bufio.Reader, p ErrorCollector) (textproto.MIMEHeader, error) {
 	// buf holds the massaged output for textproto.Reader.ReadMIMEHeader()
 	buf := &bytes.Buffer{}
-	tp := textproto.NewReader(r)
+	tp := inttp.NewReader(r)
 	firstHeader := true
+line:
 	for {
 		// Pull out each line of the headers as a temporary slice s
 		s, err := tp.ReadLineBytes()
@@ -137,30 +143,41 @@ func readHeader(r *bufio.Reader, p *Part) (textproto.MIMEHeader, error) {
 		if firstSpace == 0 {
 			// Starts with space: continuation
 			buf.WriteByte(' ')
-			buf.Write(textproto.TrimBytes(s))
+			buf.Write(inttp.TrimBytes(s))
 			continue
 		}
 		if firstColon == 0 {
 			// Can't parse line starting with colon: skip
-			p.addError(ErrorMalformedHeader, "Header line %q started with a colon", s)
+			p.AddError(ErrorMalformedHeader, "Header line %q started with a colon", s)
 			continue
 		}
 		if firstColon > 0 {
-			// Contains a colon, treat as a new header line
-			if !firstHeader {
-				// New Header line, end the previous
-				buf.Write([]byte{'\r', '\n'})
-			}
-
 			// Behavior change in net/textproto package in Golang 1.12.10 and 1.13.1:
 			// A space preceding the first colon in a header line is no longer handled
 			// automatically due to CVE-2019-16276 which takes advantage of this
 			// particular violation of RFC-7230 to exploit HTTP/1.1
 			if bytes.Contains(s[:firstColon+1], []byte{' ', ':'}) {
 				s = bytes.Replace(s, []byte{' ', ':'}, []byte{':'}, 1)
+				firstColon = bytes.IndexByte(s, ':')
 			}
 
-			s = textproto.TrimBytes(s)
+			// Behavior change in net/textproto package in Golang 1.20: invalid characters
+			// in header keys are no longer allowed; https://github.com/golang/go/issues/53188
+			for _, c := range s[:firstColon] {
+				if c != ' ' && !inttp.ValidEmailHeaderFieldByte(c) {
+					p.AddError(
+						ErrorMalformedHeader, "Header name %q contains invalid character %q", s, c)
+					continue line
+				}
+			}
+
+			// Contains a colon, treat as a new header line
+			if !firstHeader {
+				// New Header line, end the previous
+				buf.Write([]byte{'\r', '\n'})
+			}
+
+			s = inttp.TrimBytes(s)
 			buf.Write(s)
 			firstHeader = false
 		} else {
@@ -169,7 +186,7 @@ func readHeader(r *bufio.Reader, p *Part) (textproto.MIMEHeader, error) {
 				// Attempt to detect and repair a non-indented continuation of previous line
 				buf.WriteByte(' ')
 				buf.Write(s)
-				p.addWarning(ErrorMalformedHeader, "Continued line %q was not indented", s)
+				p.AddWarning(ErrorMalformedHeader, "Continued line %q was not indented", s)
 			} else {
 				// Empty line, finish header parsing
 				buf.Write([]byte{'\r', '\n'})
@@ -179,9 +196,15 @@ func readHeader(r *bufio.Reader, p *Part) (textproto.MIMEHeader, error) {
 	}
 
 	buf.Write([]byte{'\r', '\n'})
-	tr := textproto.NewReader(bufio.NewReader(buf))
-	header, err := tr.ReadMIMEHeader()
-	return header, errors.WithStack(err)
+	tr := inttp.NewReader(bufio.NewReader(buf))
+	header, err := tr.ReadEmailMIMEHeader()
+	return textproto.MIMEHeader(header), errors.WithStack(err)
+}
+
+// readHeader reads a block of SMTP or MIME headers and returns a textproto.MIMEHeader.
+// Header parse warnings & errors will be added to p.Errors, io errors will be returned directly.
+func readHeader(r *bufio.Reader, p *Part) (textproto.MIMEHeader, error) {
+	return ReadHeader(r, &partErrorCollector{p})
 }
 
 // decodeToUTF8Base64Header decodes a MIME header per RFC 2047, reencoding to =?utf-8b?
