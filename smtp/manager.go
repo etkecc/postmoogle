@@ -3,7 +3,9 @@ package smtp
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -90,7 +92,14 @@ func NewManager(cfg *Config) *Manager {
 	}
 
 	s := smtp.NewServer(mailsrv)
-	s.ErrorLog = loggerWrapper{func(s string, i ...any) { cfg.Logger.Error().Msgf(s, i...) }}
+	s.ErrorLog = loggerWrapper{func(s string, i ...any) {
+		msg := fmt.Sprintf(s, i...)
+		if strings.Contains(msg, "connection reset by peer") {
+			cfg.Logger.Warn().Msg(msg)
+			return
+		}
+		cfg.Logger.Error().Msg(msg)
+	}}
 	s.ReadTimeout = 10 * time.Second
 	s.WriteTimeout = 10 * time.Second
 	s.MaxMessageBytes = int64(cfg.MaxSize * 1024 * 1024)
