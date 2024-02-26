@@ -8,6 +8,7 @@ import (
 
 	"github.com/emersion/go-msgauth/dkim"
 	"github.com/jhillyerd/enmime"
+	"github.com/kvannotten/mailstrip"
 	"gitlab.com/etke.cc/go/psd"
 	"gitlab.com/etke.cc/linkpearl"
 	"maunium.net/go/mautrix/event"
@@ -173,7 +174,11 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions, psdc *psd.
 		}
 	}
 
-	parsed := format.RenderMarkdown(text.String(), true, true)
+	body := text.String()
+	if options.Stripify && threadID != "" { // strip only in thread replies
+		body = mailstrip.Parse(body).String()
+	}
+	parsed := format.RenderMarkdown(body, true, true)
 	parsed.RelatesTo = linkpearl.RelatesTo(threadID, !options.Threads)
 
 	var cc string
@@ -208,6 +213,10 @@ func (e *Email) ContentBody(threadID id.EventID, options *ContentOptions) *event
 		text = format.HTMLToMarkdown(e.HTML)
 	} else {
 		text = e.Text
+	}
+
+	if options.Stripify {
+		text = mailstrip.Parse(text).String()
 	}
 
 	parsed := format.RenderMarkdown(text, true, true)

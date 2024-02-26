@@ -126,6 +126,15 @@ func (b *Bot) initCommands() commandList {
 			allowed:   b.allowOwner,
 		},
 		{
+			key: config.RoomStripify,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - strip incoming email reply quotes and signatures; `false` - send incoming email as-is)",
+				config.RoomStripify,
+			),
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
+		},
+		{
 			key: config.RoomNoSend,
 			description: fmt.Sprintf(
 				"Get or set `%s` of the room (`true` - disable email sending; `false` - enable email sending)",

@@ -7,8 +7,20 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"time"
 )
+
+var version = func() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" {
+				return setting.Value
+			}
+		}
+	}
+	return "0.0.0-unknown"
+}()
 
 type Client struct {
 	url      *url.URL
@@ -25,21 +37,23 @@ func NewClient(baseURL, login, password string) *Client {
 	return &Client{url: uri, login: login, password: password}
 }
 
-// Get returns the list of targets for the given identifier
-func (p *Client) Get(identifier string) ([]*Target, error) {
+// GetWithContext returns the list of targets for the given identifier using the given context
+func (p *Client) GetWithContext(ctx context.Context, identifier string) ([]*Target, error) {
 	if p.url == nil {
 		return nil, nil
 	}
 	cloned := *p.url
 	uri := cloned.JoinPath("/node/" + identifier)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	childCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri.String(), http.NoBody)
+
+	req, err := http.NewRequestWithContext(childCtx, http.MethodGet, uri.String(), http.NoBody)
 	if err != nil {
 		return nil, err
 	}
 	req.SetBasicAuth(p.login, p.password)
+	req.Header.Set("User-Agent", "Go-psd-client/"+version)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -60,4 +74,9 @@ func (p *Client) Get(identifier string) ([]*Target, error) {
 	}
 
 	return psd, nil
+}
+
+// Get returns the list of targets for the given identifier
+func (p *Client) Get(identifier string) ([]*Target, error) {
+	return p.GetWithContext(context.Background(), identifier)
 }

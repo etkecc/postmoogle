@@ -15,6 +15,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.3
 	github.com/getsentry/sentry-go v0.27.0
 	github.com/jhillyerd/enmime v1.2.0
+	github.com/kvannotten/mailstrip v0.0.0-20200711213611-0002f5c0467e
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mcnijman/go-emailaddress v1.1.1
@@ -25,11 +26,11 @@ require (
 	gitlab.com/etke.cc/go/fswatcher v1.0.0
 	gitlab.com/etke.cc/go/healthchecks v1.0.1
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
-	gitlab.com/etke.cc/go/psd v1.0.0
+	gitlab.com/etke.cc/go/psd v1.1.1
 	gitlab.com/etke.cc/go/secgen v1.2.0
 	gitlab.com/etke.cc/go/validator v1.0.7
 	gitlab.com/etke.cc/linkpearl v0.0.0-20240211143445-bddf907d137a
-	golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 	maunium.net/go/mautrix v0.17.0
 )
 

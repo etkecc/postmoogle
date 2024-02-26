@@ -20,6 +20,7 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] Receive attachments
 - [x] Subaddressing support
 - [x] Catch-all mailbox
+- [x] Strip forwarding, signatures, and other noise from emails if configured
 - [x] Map email threads to matrix threads
 - [x] Multi-domain support
 - [x] SMTP verification
@@ -126,6 +127,7 @@ If you want to change them - check available options in the help message (`!pm h
 * **`!pm autoreply`** - Get or set autoreply of the room (markdown supported) that will be sent on any new incoming email thread
 * **`!pm signature`** - Get or set signature of the room (markdown supported)
 * **`!pm threadify`** - Get or set `threadify` of the room (`true` - send incoming email body in thread; `false` - send incoming email body as part of the message)
+* **`!pm stripify`** - Get or set `threadify` of the room (`true` - strip incoming email's reply quotes and signatures; `false` - send incoming email as-is)
 * **`!pm nosend`** - Get or set `nosend` of the room (`true` - disable email sending; `false` - enable email sending)
 * **`!pm noreplies`** - Get or set `noreplies` of the room (`true` - ignore matrix replies; `false` - parse matrix replies)
 * **`!pm nosender`** - Get or set `nosender` of the room (`true` - hide email sender; `false` - show email sender)

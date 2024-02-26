@@ -146,6 +146,18 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 			b.setThreadID(ctx, roomID, eml.MessageID, threadID)
 		}
 	}
+
+	// if automatic stripping is enabled, there is a chance something important may be stripped out
+	// to prevent that, we use a hacky way to generate content without stripping and save it as a file fist
+	if cfg.Stripify() && !cfg.Threadify() {
+		contentOpts := cfg.ContentOptions()
+		contentOpts.Stripify = false
+		content := eml.Content(threadID, contentOpts, b.psdc)
+		eml.Files = append(eml.Files, //nolint:forcetypeassert // that's ok
+			utils.NewFile("original.md", []byte(content.Parsed.(*event.MessageEventContent).Body)),
+		)
+	}
+
 	content := eml.Content(threadID, cfg.ContentOptions(), b.psdc)
 	eventID, serr := b.lp.Send(ctx, roomID, content)
 	if serr != nil {
@@ -164,6 +176,16 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 	b.setLastEventID(ctx, roomID, threadID, eventID)
 
 	if newThread && cfg.Threadify() {
+		// if automatic stripping is enabled, there is a chance something important may be stripped out
+		// to prevent that, we use a hacky way to generate content without stripping and save it as a file fist
+		if cfg.Stripify() {
+			contentOpts := cfg.ContentOptions()
+			contentOpts.Stripify = false
+			content := eml.ContentBody(threadID, contentOpts)
+			eml.Files = append(eml.Files, //nolint:forcetypeassert // that's ok
+				utils.NewFile("original.md", []byte(content.Parsed.(*event.MessageEventContent).Body)),
+			)
+		}
 		_, berr := b.lp.Send(ctx, roomID, eml.ContentBody(threadID, cfg.ContentOptions()))
 		if berr != nil {
 			return berr

@@ -23,6 +23,7 @@ const (
 	RoomAutoreply = "autoreply"
 
 	RoomThreadify   = "threadify"
+	RoomStripify    = "stripify"
 	RoomNoCC        = "nocc"
 	RoomNoFiles     = "nofiles"
 	RoomNoHTML      = "nohtml"
@@ -82,6 +83,10 @@ func (s Room) Autoreply() string {
 
 func (s Room) Threadify() bool {
 	return utils.Bool(s.Get(RoomThreadify))
+}
+
+func (s Room) Stripify() bool {
+	return utils.Bool(s.Get(RoomStripify))
 }
 
 func (s Room) NoSend() bool {
@@ -198,6 +203,7 @@ func (s Room) ContentOptions() *email.ContentOptions {
 		Recipient: !s.NoRecipient(),
 		Subject:   !s.NoSubject(),
 		Threads:   !s.NoThreads(),
+		Stripify:  s.Stripify(),
 		Threadify: s.Threadify(),
 
 		ToKey:         "cc.etke.postmoogle.to",

@@ -58,6 +58,9 @@ github.com/jhillyerd/enmime/internal/coding
 github.com/jhillyerd/enmime/internal/stringutil
 github.com/jhillyerd/enmime/internal/textproto
 github.com/jhillyerd/enmime/mediatype
+# github.com/kvannotten/mailstrip v0.0.0-20200711213611-0002f5c0467e
+## explicit; go 1.14
+github.com/kvannotten/mailstrip
 # github.com/lib/pq v1.10.9
 ## explicit; go 1.13
 github.com/lib/pq
@@ -139,7 +142,7 @@ gitlab.com/etke.cc/go/healthchecks
 # gitlab.com/etke.cc/go/mxidwc v1.0.0
 ## explicit; go 1.19
 gitlab.com/etke.cc/go/mxidwc
-# gitlab.com/etke.cc/go/psd v1.0.0
+# gitlab.com/etke.cc/go/psd v1.1.1
 ## explicit; go 1.21.0
 gitlab.com/etke.cc/go/psd
 # gitlab.com/etke.cc/go/secgen v1.2.0
@@ -178,7 +181,7 @@ golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/exp v0.0.0-20240213143201-ec583247a57a
+# golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
