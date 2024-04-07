@@ -27,14 +27,11 @@ type Client struct {
 	text       *textproto.Conn
 	serverName string
 	lmtp       bool
-	// map of supported extensions
-	ext map[string]string
-	// supported auth mechanisms
-	auth       []string
-	localName  string   // the name to use in HELO/EHLO/LHLO
-	didHello   bool     // whether we've said HELO/EHLO/LHLO
-	helloError error    // the error from the hello
-	rcpts      []string // recipients accumulated for the current session
+	ext        map[string]string // supported extensions
+	localName  string            // the name to use in HELO/EHLO/LHLO
+	didHello   bool              // whether we've said HELO/EHLO/LHLO
+	helloError error             // the error from the hello
+	rcpts      []string          // recipients accumulated for the current session
 
 	// Time to wait for command responses (this includes 3xx reply to DATA).
 	CommandTimeout time.Duration
@@ -54,7 +51,8 @@ var defaultDialer = net.Dialer{Timeout: defaultTimeout}
 // Dial returns a new Client connected to an SMTP server at addr. The addr must
 // include a port, as in "mail.example.com:smtp".
 //
-// This function returns a plaintext connection. To enable TLS, use StartTLS.
+// This function returns a plaintext connection. To enable TLS, use
+// DialStartTLS.
 func Dial(addr string) (*Client, error) {
 	conn, err := defaultDialer.Dial("tcp", addr)
 	if err != nil {
@@ -83,6 +81,22 @@ func DialTLS(addr string, tlsConfig *tls.Config) (*Client, error) {
 	return client, nil
 }
 
+// DialStartTLS retruns a new Client connected to an SMTP server via STARTTLS
+// at addr. The addr must include a port, as in "mail.example.com:smtp".
+//
+// A nil tlsConfig is equivalent to a zero tls.Config.
+func DialStartTLS(addr string, tlsConfig *tls.Config) (*Client, error) {
+	c, err := Dial(addr)
+	if err != nil {
+		return nil, err
+	}
+	if err := initStartTLS(c, tlsConfig); err != nil {
+		c.Close()
+		return nil, err
+	}
+	return c, nil
+}
+
 // NewClient returns a new Client using an existing connection and host as a
 // server name to be used when authenticating.
 func NewClient(conn net.Conn) *Client {
@@ -100,6 +114,29 @@ func NewClient(conn net.Conn) *Client {
 	c.setConn(conn)
 
 	return c
+}
+
+// NewClientStartTLS creates a new Client and performs a STARTTLS command.
+func NewClientStartTLS(conn net.Conn, tlsConfig *tls.Config) (*Client, error) {
+	c := NewClient(conn)
+	if err := initStartTLS(c, tlsConfig); err != nil {
+		c.Close()
+		return nil, err
+	}
+	return c, nil
+}
+
+func initStartTLS(c *Client, tlsConfig *tls.Config) error {
+	if err := c.hello(); err != nil {
+		return err
+	}
+	if ok, _ := c.Extension("STARTTLS"); !ok {
+		return errors.New("smtp: server doesn't support STARTTLS")
+	}
+	if err := c.startTLS(tlsConfig); err != nil {
+		return err
+	}
+	return nil
 }
 
 // NewClientLMTP returns a new LMTP Client (as defined in RFC 2033) using an
@@ -247,20 +284,17 @@ func (c *Client) ehlo() error {
 			}
 		}
 	}
-	if mechs, ok := ext["AUTH"]; ok {
-		c.auth = strings.Split(mechs, " ")
-	}
 	c.ext = ext
 	return err
 }
 
-// StartTLS sends the STARTTLS command and encrypts all further communication.
+// startTLS sends the STARTTLS command and encrypts all further communication.
 // Only servers that advertise the STARTTLS extension support this function.
 //
 // A nil config is equivalent to a zero tls.Config.
 //
 // If server returns an error, it will be of type *SMTPError.
-func (c *Client) StartTLS(config *tls.Config) error {
+func (c *Client) startTLS(config *tls.Config) error {
 	if err := c.hello(); err != nil {
 		return err
 	}
@@ -284,7 +318,7 @@ func (c *Client) StartTLS(config *tls.Config) error {
 }
 
 // TLSConnectionState returns the client's TLS connection state.
-// The return values are their zero values if StartTLS did
+// The return values are their zero values if STARTTLS did
 // not succeed.
 func (c *Client) TLSConnectionState() (state tls.ConnectionState, ok bool) {
 	tc, ok := c.conn.(*tls.Conn)
@@ -572,7 +606,7 @@ func (c *Client) LMTPData(statusCb func(rcpt string, status *SMTPError)) (io.Wri
 // address from, to addresses to, with message r.
 //
 // This function does not start TLS, nor does it perform authentication. Use
-// StartTLS and Auth before-hand if desirable.
+// DialStartTLS and Auth before-hand if desirable.
 //
 // The addresses in the to parameter are the SMTP RCPT addresses.
 //
@@ -606,6 +640,46 @@ func (c *Client) SendMail(from string, to []string, r io.Reader) error {
 
 var testHookStartTLS func(*tls.Config) // nil, except for tests
 
+func sendMail(addr string, implicitTLS bool, a sasl.Client, from string, to []string, r io.Reader) error {
+	if err := validateLine(from); err != nil {
+		return err
+	}
+	for _, recp := range to {
+		if err := validateLine(recp); err != nil {
+			return err
+		}
+	}
+
+	var (
+		c   *Client
+		err error
+	)
+	if implicitTLS {
+		c, err = DialTLS(addr, nil)
+	} else {
+		c, err = DialStartTLS(addr, nil)
+	}
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	if a != nil {
+		if ok, _ := c.Extension("AUTH"); !ok {
+			return errors.New("smtp: server doesn't support AUTH")
+		}
+		if err = c.Auth(a); err != nil {
+			return err
+		}
+	}
+
+	if err := c.SendMail(from, to, r); err != nil {
+		return err
+	}
+
+	return c.Quit()
+}
+
 // SendMail connects to the server at addr, switches to TLS, authenticates with
 // the optional SASL client, and then sends an email from address from, to
 // addresses to, with message r. The addr must include a port, as in
@@ -628,76 +702,12 @@ var testHookStartTLS func(*tls.Config) // nil, except for tests
 // attachments (see the mime/multipart package or the go-message package), or
 // other mail functionality.
 func SendMail(addr string, a sasl.Client, from string, to []string, r io.Reader) error {
-	if err := validateLine(from); err != nil {
-		return err
-	}
-	for _, recp := range to {
-		if err := validateLine(recp); err != nil {
-			return err
-		}
-	}
-
-	c, err := Dial(addr)
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
-	if err = c.hello(); err != nil {
-		return err
-	}
-	if ok, _ := c.Extension("STARTTLS"); !ok {
-		return errors.New("smtp: server doesn't support STARTTLS")
-	}
-	if err = c.StartTLS(nil); err != nil {
-		return err
-	}
-	if a != nil {
-		if ok, _ := c.Extension("AUTH"); !ok {
-			return errors.New("smtp: server doesn't support AUTH")
-		}
-		if err = c.Auth(a); err != nil {
-			return err
-		}
-	}
-	if err := c.SendMail(from, to, r); err != nil {
-		return err
-	}
-	return c.Quit()
+	return sendMail(addr, false, a, from, to, r)
 }
 
 // SendMailTLS works like SendMail, but with implicit TLS.
 func SendMailTLS(addr string, a sasl.Client, from string, to []string, r io.Reader) error {
-	if err := validateLine(from); err != nil {
-		return err
-	}
-	for _, recp := range to {
-		if err := validateLine(recp); err != nil {
-			return err
-		}
-	}
-
-	c, err := DialTLS(addr, nil)
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
-	if err = c.hello(); err != nil {
-		return err
-	}
-	if a != nil {
-		if ok, _ := c.Extension("AUTH"); !ok {
-			return errors.New("smtp: server doesn't support AUTH")
-		}
-		if err = c.Auth(a); err != nil {
-			return err
-		}
-	}
-	if err := c.SendMail(from, to, r); err != nil {
-		return err
-	}
-	return c.Quit()
+	return sendMail(addr, true, a, from, to, r)
 }
 
 // Extension reports whether an extension is support by the server.
@@ -708,12 +718,45 @@ func (c *Client) Extension(ext string) (bool, string) {
 	if err := c.hello(); err != nil {
 		return false, ""
 	}
-	if c.ext == nil {
-		return false, ""
-	}
 	ext = strings.ToUpper(ext)
 	param, ok := c.ext[ext]
 	return ok, param
+}
+
+// SupportsAuth checks whether an authentication mechanism is supported.
+func (c *Client) SupportsAuth(mech string) bool {
+	if err := c.hello(); err != nil {
+		return false
+	}
+	mechs, ok := c.ext["AUTH"]
+	if !ok {
+		return false
+	}
+	for _, m := range strings.Split(mechs, " ") {
+		if strings.EqualFold(m, mech) {
+			return true
+		}
+	}
+	return false
+}
+
+// MaxMessageSize returns the maximum message size accepted by the server.
+// 0 means unlimited.
+//
+// If the server doesn't convey this information, ok = false is returned.
+func (c *Client) MaxMessageSize() (size int, ok bool) {
+	if err := c.hello(); err != nil {
+		return 0, false
+	}
+	v := c.ext["SIZE"]
+	if v == "" {
+		return 0, false
+	}
+	size, err := strconv.Atoi(v)
+	if err != nil || size < 0 {
+		return 0, false
+	}
+	return size, true
 }
 
 // Reset sends the RSET command to the server, aborting the current mail

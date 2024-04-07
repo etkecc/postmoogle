@@ -118,7 +118,7 @@ func (mach *OlmMachine) EncryptMegolmEvent(ctx context.Context, roomID id.RoomID
 	log.Debug().Msg("Encrypted event successfully")
 	err = mach.CryptoStore.UpdateOutboundGroupSession(ctx, session)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to update megolm session in crypto store after encrypting")
+		return nil, fmt.Errorf("failed to update outbound group session after encrypting: %w", err)
 	}
 	encrypted := &event.EncryptedEventContent{
 		Algorithm:        id.AlgorithmMegolmV1,
@@ -330,6 +330,17 @@ func (mach *OlmMachine) encryptAndSendGroupSession(ctx context.Context, session 
 				Str("target_user_id", userID.String()).
 				Str("target_device_id", deviceID.String()).
 				Msg("Encrypted group session for device")
+			if !mach.DisableSharedGroupSessionTracking {
+				err := mach.CryptoStore.MarkOutboundGroupSessionShared(ctx, userID, device.identity.IdentityKey, session.id)
+				if err != nil {
+					log.Warn().
+						Err(err).
+						Str("target_user_id", userID.String()).
+						Str("target_device_id", deviceID.String()).
+						Stringer("target_session_id", session.id).
+						Msg("Failed to mark outbound group session shared")
+				}
+			}
 		}
 	}
 

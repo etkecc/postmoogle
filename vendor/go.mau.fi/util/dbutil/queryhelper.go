@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"golang.org/x/exp/constraints"
 )
@@ -58,6 +59,34 @@ func NumPtr[T constraints.Integer | constraints.Float](val T) *T {
 		return nil
 	}
 	return &val
+}
+
+// UnixPtr returns a pointer to the given time as unix seconds, or nil if the time is zero.
+func UnixPtr(val time.Time) *int64 {
+	return ConvertedPtr(val, time.Time.Unix)
+}
+
+// UnixMilliPtr returns a pointer to the given time as unix milliseconds, or nil if the time is zero.
+func UnixMilliPtr(val time.Time) *int64 {
+	return ConvertedPtr(val, time.Time.UnixMilli)
+}
+
+type Zeroable interface {
+	IsZero() bool
+}
+
+// ConvertedPtr returns a pointer to the converted version of the given value, or nil if the input is zero.
+//
+// This is primarily meant for time.Time, but it can be used with any type that has implements `IsZero() bool`.
+//
+//	yourTime := time.Now()
+//	unixMSPtr := dbutil.TimePtr(yourTime, time.Time.UnixMilli)
+func ConvertedPtr[Input Zeroable, Output any](val Input, converter func(Input) Output) *Output {
+	if val.IsZero() {
+		return nil
+	}
+	converted := converter(val)
+	return &converted
 }
 
 func (qh *QueryHelper[T]) GetDB() *Database {

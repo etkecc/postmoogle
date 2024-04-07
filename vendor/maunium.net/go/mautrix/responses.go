@@ -118,19 +118,7 @@ type RespCreateMXC struct {
 }
 
 // RespPreviewURL is the JSON response for https://spec.matrix.org/v1.2/client-server-api/#get_matrixmediav3preview_url
-type RespPreviewURL struct {
-	CanonicalURL string `json:"og:url,omitempty"`
-	Title        string `json:"og:title,omitempty"`
-	Type         string `json:"og:type,omitempty"`
-	Description  string `json:"og:description,omitempty"`
-
-	ImageURL id.ContentURIString `json:"og:image,omitempty"`
-
-	ImageSize   int    `json:"matrix:image:size,omitempty"`
-	ImageWidth  int    `json:"og:image:width,omitempty"`
-	ImageHeight int    `json:"og:image:height,omitempty"`
-	ImageType   string `json:"og:image:type,omitempty"`
-}
+type RespPreviewURL = event.LinkPreview
 
 // RespUserInteractive is the JSON response for https://spec.matrix.org/v1.2/client-server-api/#user-interactive-authentication-api
 type RespUserInteractive struct {
@@ -321,6 +309,12 @@ func (slr SyncLeftRoom) MarshalJSON() ([]byte, error) {
 	return marshalAndDeleteEmpty((marshalableSyncLeftRoom)(slr), syncLeftRoomPathsToDelete)
 }
 
+type BeeperInboxPreviewEvent struct {
+	EventID   id.EventID         `json:"event_id"`
+	Timestamp jsontime.UnixMilli `json:"origin_server_ts"`
+	Event     *event.Event       `json:"event,omitempty"`
+}
+
 type SyncJoinedRoom struct {
 	Summary     LazyLoadSummary `json:"summary"`
 	State       SyncEventsList  `json:"state"`
@@ -331,6 +325,8 @@ type SyncJoinedRoom struct {
 	UnreadNotifications *UnreadNotificationCounts `json:"unread_notifications,omitempty"`
 	// https://github.com/matrix-org/matrix-spec-proposals/pull/2654
 	MSC2654UnreadCount *int `json:"org.matrix.msc2654.unread_count,omitempty"`
+	// Beeper extension
+	BeeperInboxPreview *BeeperInboxPreviewEvent `json:"com.beeper.inbox.preview,omitempty"`
 }
 
 type UnreadNotificationCounts struct {
@@ -593,30 +589,30 @@ type RespTimestampToEvent struct {
 }
 
 type RespRoomKeysVersionCreate struct {
-	Version string `json:"version"`
+	Version id.KeyBackupVersion `json:"version"`
 }
 
-type RespRoomKeysVersion struct {
-	Algorithm string          `json:"algorithm"`
-	AuthData  json.RawMessage `json:"auth_data"`
-	Count     int             `json:"count"`
-	ETag      string          `json:"etag"`
-	Version   string          `json:"version"`
+type RespRoomKeysVersion[A any] struct {
+	Algorithm id.KeyBackupAlgorithm `json:"algorithm"`
+	AuthData  A                     `json:"auth_data"`
+	Count     int                   `json:"count"`
+	ETag      string                `json:"etag"`
+	Version   id.KeyBackupVersion   `json:"version"`
 }
 
-type RespRoomKeys struct {
-	Rooms map[id.RoomID]RespRoomKeysRoom `json:"rooms"`
+type RespRoomKeys[S any] struct {
+	Rooms map[id.RoomID]RespRoomKeyBackup[S] `json:"rooms"`
 }
 
-type RespRoomKeysRoom struct {
-	Sessions map[id.SessionID]RespRoomKeysSession `json:"sessions"`
+type RespRoomKeyBackup[S any] struct {
+	Sessions map[id.SessionID]RespKeyBackupData[S] `json:"sessions"`
 }
 
-type RespRoomKeysSession struct {
-	FirstMessageIndex int             `json:"first_message_index"`
-	ForwardedCount    int             `json:"forwarded_count"`
-	IsVerified        bool            `json:"is_verified"`
-	SessionData       json.RawMessage `json:"session_data"`
+type RespKeyBackupData[S any] struct {
+	FirstMessageIndex int  `json:"first_message_index"`
+	ForwardedCount    int  `json:"forwarded_count"`
+	IsVerified        bool `json:"is_verified"`
+	SessionData       S    `json:"session_data"`
 }
 
 type RespRoomKeysUpdate struct {

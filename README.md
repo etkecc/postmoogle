@@ -65,6 +65,7 @@ env vars
 * **POSTMOOGLE_STATUSMSG** - presence status message
 * **POSTMOOGLE_MONITORING_SENTRY_DSN** - sentry DSN
 * **POSTMOOGLE_MONITORING_SENTRY_RATE** - sentry sample rate, from 0 to 100 (default: 20)
+* **POSTMOOGLE_MONITORING_HEALTHCHECKS_URL** - healthchecks.io url, default: `https://hc-ping.com`
 * **POSTMOOGLE_MONITORING_HEALTHCHECKS_UUID** - healthchecks.io UUID
 * **POSTMOOGLE_MONITORING_HEALTHCHECKS_DURATION** - heathchecks.io duration between pings in secods (default: 5)
 * **POSTMOOGLE_LOGLEVEL** - log level

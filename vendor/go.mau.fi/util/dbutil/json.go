@@ -31,3 +31,16 @@ func (j JSON) Value() (driver.Value, error) {
 	v, err := json.Marshal(j.Data)
 	return string(v), err
 }
+
+// JSONPtr is a convenience function for wrapping a pointer to a value in the JSON utility, but removing typed nils
+// (i.e. preventing nils from turning into the string "null" in the database).
+func JSONPtr[T any](val *T) JSON {
+	return JSON{Data: UntypedNil(val)}
+}
+
+func UntypedNil[T any](val *T) any {
+	if val == nil {
+		return nil
+	}
+	return val
+}

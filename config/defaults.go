@@ -15,8 +15,9 @@ var defaultConfig = &Config{
 		Dialect: "sqlite3",
 	},
 	Monitoring: Monitoring{
-		SentrySampleRate:   20,
-		HealthechsDuration: 5,
+		SentrySampleRate:     20,
+		HealthchecksURL:      "https://hc-ping.com",
+		HealthchecksDuration: 60,
 	},
 	TLS: TLS{
 		Port: "587",

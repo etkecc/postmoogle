@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/emersion/go-sasl"
 )
 
 // Number of errors we'll tolerate per connection before closing. Defaults to 3.
@@ -139,11 +141,7 @@ func (c *Conn) handle(cmd string, arg string) {
 		c.writeResponse(221, EnhancedCode{2, 0, 0}, "Bye")
 		c.Close()
 	case "AUTH":
-		if c.server.AuthDisabled {
-			c.protocolError(500, EnhancedCode{5, 5, 2}, "Syntax error, AUTH command unrecognized")
-		} else {
-			c.handleAuth(arg)
-		}
+		c.handleAuth(arg)
 	case "STARTTLS":
 		c.handleStartTLS()
 	default:
@@ -205,7 +203,7 @@ func (c *Conn) Conn() net.Conn {
 
 func (c *Conn) authAllowed() bool {
 	_, isTLS := c.TLSConnectionState()
-	return !c.server.AuthDisabled && (isTLS || c.server.AllowInsecureAuth)
+	return isTLS || c.server.AllowInsecureAuth
 }
 
 // protocolError writes errors responses and closes the connection once too many
@@ -250,18 +248,26 @@ func (c *Conn) handleGreet(enhanced bool, arg string) {
 		return
 	}
 
-	caps := []string{}
-	caps = append(caps, c.server.caps...)
+	caps := []string{
+		"PIPELINING",
+		"8BITMIME",
+		"ENHANCEDSTATUSCODES",
+		"CHUNKING",
+	}
 	if _, isTLS := c.TLSConnectionState(); c.server.TLSConfig != nil && !isTLS {
 		caps = append(caps, "STARTTLS")
 	}
 	if c.authAllowed() {
+		mechs := c.authMechanisms()
+
 		authCap := "AUTH"
-		for name := range c.server.auths {
+		for _, name := range mechs {
 			authCap += " " + name
 		}
 
-		caps = append(caps, authCap)
+		if len(mechs) > 0 {
+			caps = append(caps, authCap)
+		}
 	}
 	if c.server.EnableSMTPUTF8 {
 		caps = append(caps, "SMTPUTF8")
@@ -279,6 +285,9 @@ func (c *Conn) handleGreet(enhanced bool, arg string) {
 		caps = append(caps, fmt.Sprintf("SIZE %v", c.server.MaxMessageBytes))
 	} else {
 		caps = append(caps, "SIZE")
+	}
+	if c.server.MaxRecipients > 0 {
+		caps = append(caps, fmt.Sprintf("LIMITS RCPTMAX=%v", c.server.MaxRecipients))
 	}
 
 	args := []string{"Hello " + domain}
@@ -348,16 +357,18 @@ func (c *Conn) handleMail(arg string) {
 			}
 			opts.RequireTLS = true
 		case "BODY":
-			switch value {
-			case "BINARYMIME":
+			value = strings.ToUpper(value)
+			switch BodyType(value) {
+			case BodyBinaryMIME:
 				if !c.server.EnableBINARYMIME {
 					c.writeResponse(504, EnhancedCode{5, 5, 4}, "BINARYMIME is not implemented")
 					return
 				}
 				c.binarymime = true
-			case "7BIT", "8BITMIME":
+			case Body7Bit, Body8BitMIME:
+				// This space is intentionally left blank
 			default:
-				c.writeResponse(500, EnhancedCode{5, 5, 4}, "Unknown BODY value")
+				c.writeResponse(501, EnhancedCode{5, 5, 4}, "Unknown BODY value")
 				return
 			}
 			opts.Body = BodyType(value)
@@ -765,7 +776,7 @@ func (c *Conn) handleAuth(arg string) {
 		return
 	}
 
-	if _, isTLS := c.TLSConnectionState(); !isTLS && !c.server.AllowInsecureAuth {
+	if !c.authAllowed() {
 		c.writeResponse(523, EnhancedCode{5, 7, 10}, "TLS is required")
 		return
 	}
@@ -778,17 +789,20 @@ func (c *Conn) handleAuth(arg string) {
 		var err error
 		ir, err = base64.StdEncoding.DecodeString(parts[1])
 		if err != nil {
+			c.writeResponse(454, EnhancedCode{4, 7, 0}, "Invalid base64 data")
 			return
 		}
 	}
 
-	newSasl, ok := c.server.auths[mechanism]
-	if !ok {
-		c.writeResponse(504, EnhancedCode{5, 7, 4}, "Unsupported authentication mechanism")
+	sasl, err := c.auth(mechanism)
+	if err != nil {
+		if smtpErr, ok := err.(*SMTPError); ok {
+			c.writeResponse(smtpErr.Code, smtpErr.EnhancedCode, smtpErr.Message)
+		} else {
+			c.writeResponse(454, EnhancedCode{4, 7, 0}, err.Error())
+		}
 		return
 	}
-
-	sasl := newSasl(c)
 
 	response := ir
 	for {
@@ -832,6 +846,20 @@ func (c *Conn) handleAuth(arg string) {
 
 	c.writeResponse(235, EnhancedCode{2, 0, 0}, "Authentication succeeded")
 	c.didAuth = true
+}
+
+func (c *Conn) authMechanisms() []string {
+	if authSession, ok := c.Session().(AuthSession); ok {
+		return authSession.AuthMechanisms()
+	}
+	return nil
+}
+
+func (c *Conn) auth(mech string) (sasl.Server, error) {
+	if authSession, ok := c.Session().(AuthSession); ok {
+		return authSession.Auth(mech)
+	}
+	return nil, ErrAuthUnknownMechanism
 }
 
 func (c *Conn) handleStartTLS() {

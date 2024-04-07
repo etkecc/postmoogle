@@ -2,8 +2,6 @@ package healthchecks
 
 import (
 	"fmt"
-	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -20,21 +18,12 @@ var DefaultErrLog = func(operation string, err error) {
 }
 
 // New healthchecks client
-func New(hcUUID string, errlog ...ErrLog) *Client {
+func New(options ...Option) *Client {
 	rid, _ := uuid.NewRandom()
 	c := &Client{
-		baseURL: DefaultAPI,
-		uuid:    hcUUID,
-		rid:     rid.String(),
-		done:    make(chan bool, 1),
+		rid: rid.String(),
 	}
-	c.HTTP = &http.Client{
-		Timeout: 10 * time.Second,
-	}
-	c.log = DefaultErrLog
-	if len(errlog) > 0 {
-		c.log = errlog[0]
-	}
+	c.init(options...)
 
 	return c
 }

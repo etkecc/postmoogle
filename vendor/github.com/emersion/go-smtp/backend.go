@@ -2,6 +2,8 @@ package smtp
 
 import (
 	"io"
+
+	"github.com/emersion/go-sasl"
 )
 
 var (
@@ -20,11 +22,27 @@ var (
 		EnhancedCode: EnhancedCode{5, 7, 0},
 		Message:      "Authentication not supported",
 	}
+	ErrAuthUnknownMechanism = &SMTPError{
+		Code:         504,
+		EnhancedCode: EnhancedCode{5, 7, 4},
+		Message:      "Unsupported authentication mechanism",
+	}
 )
 
 // A SMTP server backend.
 type Backend interface {
 	NewSession(c *Conn) (Session, error)
+}
+
+// BackendFunc is an adapter to allow the use of an ordinary function as a
+// Backend.
+type BackendFunc func(c *Conn) (Session, error)
+
+var _ Backend = (BackendFunc)(nil)
+
+// NewSession calls f(c).
+func (f BackendFunc) NewSession(c *Conn) (Session, error) {
+	return f(c)
 }
 
 // Session is used by servers to respond to an SMTP client.
@@ -36,9 +54,6 @@ type Session interface {
 
 	// Free all resources associated with session.
 	Logout() error
-
-	// Authenticate the user using SASL PLAIN.
-	AuthPlain(username, password string) error
 
 	// Set return path for currently processed message.
 	Mail(from string, opts *MailOptions) error
@@ -75,4 +90,13 @@ type LMTPSession interface {
 // information.
 type StatusCollector interface {
 	SetStatus(rcptTo string, err error)
+}
+
+// AuthSession is an add-on interface for Session. It provides support for the
+// AUTH extension.
+type AuthSession interface {
+	Session
+
+	AuthMechanisms() []string
+	Auth(mech string) (sasl.Server, error)
 }
