@@ -13,27 +13,27 @@ import (
 // OnEventType allows callers to be notified when there are new events for the given event type.
 // There are no duplicate checks.
 func (l *Linkpearl) OnEventType(eventType event.Type, callback mautrix.EventHandler) {
-	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType(eventType, callback)
+	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType(eventType, callback) //nolint:forcetypeassert // we know it's an ExtensibleSyncer
 }
 
 // OnSync shortcut to mautrix.DefaultSyncer.OnSync
 func (l *Linkpearl) OnSync(callback mautrix.SyncHandler) {
-	l.api.Syncer.(mautrix.ExtensibleSyncer).OnSync(callback)
+	l.api.Syncer.(mautrix.ExtensibleSyncer).OnSync(callback) //nolint:forcetypeassert // we know it's an ExtensibleSyncer
 }
 
 // OnEvent shortcut to mautrix.DefaultSyncer.OnEvent
 func (l *Linkpearl) OnEvent(callback mautrix.EventHandler) {
-	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEvent(callback)
+	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEvent(callback) //nolint:forcetypeassert // we know it's an ExtensibleSyncer
 }
 
 func (l *Linkpearl) initSync() {
-	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType(
+	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType( //nolint:forcetypeassert // we know it's an ExtensibleSyncer
 		event.StateEncryption,
 		func(ctx context.Context, evt *event.Event) {
 			go l.onEncryption(ctx, evt)
 		},
 	)
-	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType(
+	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType( //nolint:forcetypeassert // we know it's an ExtensibleSyncer
 		event.StateMember,
 		func(ctx context.Context, evt *event.Event) {
 			go l.onMembership(ctx, evt)

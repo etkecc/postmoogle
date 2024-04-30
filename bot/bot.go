@@ -135,15 +135,10 @@ func (b *Bot) Start(statusMsg string) error {
 
 	b.initSync()
 	b.log.Info().Msg("Postmoogle has been started")
-	return b.lp.Start(statusMsg)
+	return b.lp.Start(ctx, statusMsg)
 }
 
 // Stop the bot
 func (b *Bot) Stop() {
-	ctx := context.Background()
-	err := b.lp.GetClient().SetPresence(ctx, event.PresenceOffline)
-	if err != nil {
-		b.log.Error().Err(err).Msg("cannot set presence = offline")
-	}
-	b.lp.GetClient().StopSync()
+	b.lp.Stop(context.Background())
 }

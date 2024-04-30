@@ -1,6 +1,8 @@
 package linkpearl
 
 import (
+	"errors"
+
 	"github.com/rs/zerolog"
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/event"
@@ -120,26 +122,12 @@ func ParseContent(evt *event.Event, log *zerolog.Logger) {
 
 // UnwrapError tries to unwrap a error into something meaningful, like mautrix.HTTPError or mautrix.RespError
 func UnwrapError(err error) error {
-	switch err.(type) {
-	case nil:
-		return nil
-	case mautrix.HTTPError:
-		return unwrapHTTPError(err)
-	default:
-		return err
+	var httpErr mautrix.HTTPError
+	if errors.As(err, &httpErr) {
+		uwerr := httpErr.Unwrap()
+		if uwerr != nil {
+			return uwerr
+		}
 	}
-}
-
-func unwrapHTTPError(err error) error {
-	httperr, ok := err.(mautrix.HTTPError)
-	if !ok {
-		return err
-	}
-
-	uwerr := httperr.Unwrap()
-	if uwerr != nil {
-		return uwerr
-	}
-
-	return httperr
+	return err
 }

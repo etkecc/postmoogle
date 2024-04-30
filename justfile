@@ -54,3 +54,4 @@ login:
 docker:
     docker buildx create --use
     docker buildx build --pull --provenance=false --platform {{ platforms }} --push -t {{ gitlab_image }} -t {{ etke_image }} .
+    docker buildx rm

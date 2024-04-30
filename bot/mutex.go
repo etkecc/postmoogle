@@ -6,26 +6,22 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
-func (b *Bot) lock(ctx context.Context, roomID id.RoomID, optionalEventID ...id.EventID) {
+const (
+	reactionLock   = "📨"
+	reactionUnlock = "✅"
+)
+
+func (b *Bot) lock(ctx context.Context, roomID id.RoomID, eventID id.EventID) {
 	b.mu.Lock(roomID.String())
 
-	if len(optionalEventID) == 0 {
-		return
-	}
-	evtID := optionalEventID[0]
-	if _, err := b.lp.GetClient().SendReaction(ctx, roomID, evtID, "📨"); err != nil {
-		b.log.Error().Err(err).Str("roomID", roomID.String()).Str("eventID", evtID.String()).Msg("cannot send reaction on lock")
+	if err := b.lp.SendReaction(ctx, roomID, eventID, reactionLock); err != nil {
+		b.log.Error().Err(err).Str("roomID", roomID.String()).Str("eventID", eventID.String()).Msg("cannot send reaction on lock")
 	}
 }
 
-func (b *Bot) unlock(ctx context.Context, roomID id.RoomID, optionalEventID ...id.EventID) {
+func (b *Bot) unlock(ctx context.Context, roomID id.RoomID, eventID id.EventID) {
 	b.mu.Unlock(roomID.String())
-
-	if len(optionalEventID) == 0 {
-		return
-	}
-	evtID := optionalEventID[0]
-	if _, err := b.lp.GetClient().SendReaction(ctx, roomID, evtID, "✅"); err != nil {
-		b.log.Error().Err(err).Str("roomID", roomID.String()).Str("eventID", evtID.String()).Msg("cannot send reaction on unlock")
+	if err := b.lp.ReplaceReaction(ctx, roomID, eventID, reactionLock, reactionUnlock); err != nil {
+		b.log.Error().Err(err).Str("roomID", roomID.String()).Str("eventID", eventID.String()).Msg("cannot send reaction on unlock")
 	}
 }

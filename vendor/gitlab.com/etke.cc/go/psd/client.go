@@ -53,13 +53,17 @@ func (p *Client) GetWithContext(ctx context.Context, identifier string) ([]*Targ
 		return nil, err
 	}
 	req.SetBasicAuth(p.login, p.password)
-	req.Header.Set("User-Agent", "Go-psd-client/"+version)
+	req.Header.Set("User-Agent", "Go-PSD-client/"+version)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusGone { // not found, to distinguish from reverse proxy 404 error
+			return nil, nil
+		}
+
 		err = fmt.Errorf("%s", resp.Status) //nolint:goerr113 // that's ok
 		return nil, err
 	}

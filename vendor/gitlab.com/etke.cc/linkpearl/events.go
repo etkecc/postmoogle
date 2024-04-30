@@ -15,6 +15,12 @@ type RespThreads struct {
 	NextBatch string         `json:"next_batch"`
 }
 
+// RespRelations is response of https://spec.matrix.org/v1.8/client-server-api/#get_matrixclientv1roomsroomidrelationseventidreltype
+type RespRelations struct {
+	Chunk     []*event.Event `json:"chunk"`
+	NextBatch string         `json:"next_batch"`
+}
+
 // Threads endpoint, ref: https://spec.matrix.org/v1.8/client-server-api/#get_matrixclientv1roomsroomidthreads
 func (l *Linkpearl) Threads(ctx context.Context, roomID id.RoomID, fromToken ...string) (*RespThreads, error) {
 	var from string
@@ -33,8 +39,26 @@ func (l *Linkpearl) Threads(ctx context.Context, roomID id.RoomID, fromToken ...
 	return resp, UnwrapError(err)
 }
 
+// Relations returns all relations of the given type for the given event
+func (l *Linkpearl) Relations(ctx context.Context, roomID id.RoomID, eventID id.EventID, relType string, fromToken ...string) (*RespRelations, error) {
+	var from string
+	if len(fromToken) > 0 {
+		from = fromToken[0]
+	}
+
+	query := map[string]string{
+		"from":  from,
+		"limit": "100",
+	}
+
+	var resp *RespRelations
+	urlPath := l.GetClient().BuildURLWithQuery(mautrix.ClientURLPath{"v1", "rooms", roomID, "relations", eventID, relType}, query)
+	_, err := l.GetClient().MakeRequest(ctx, "GET", urlPath, nil, &resp)
+	return resp, UnwrapError(err)
+}
+
 // FindThreadBy tries to find thread message event by field and value
-func (l *Linkpearl) FindThreadBy(ctx context.Context, roomID id.RoomID, field, value string, fromToken ...string) *event.Event {
+func (l *Linkpearl) FindThreadBy(ctx context.Context, roomID id.RoomID, fieldValue map[string]string, fromToken ...string) *event.Event {
 	var from string
 	if len(fromToken) > 0 {
 		from = fromToken[0]
@@ -48,9 +72,11 @@ func (l *Linkpearl) FindThreadBy(ctx context.Context, roomID id.RoomID, field, v
 	}
 
 	for _, msg := range resp.Chunk {
-		evt, contains := l.eventContains(ctx, msg, field, value)
-		if contains {
-			return evt
+		for field, value := range fieldValue {
+			evt, contains := l.eventContains(ctx, msg, field, value)
+			if contains {
+				return evt
+			}
 		}
 	}
 
@@ -58,11 +84,11 @@ func (l *Linkpearl) FindThreadBy(ctx context.Context, roomID id.RoomID, field, v
 		return nil
 	}
 
-	return l.FindThreadBy(ctx, roomID, field, value, resp.NextBatch)
+	return l.FindThreadBy(ctx, roomID, fieldValue, resp.NextBatch)
 }
 
 // FindEventBy tries to find message event by field and value
-func (l *Linkpearl) FindEventBy(ctx context.Context, roomID id.RoomID, field, value string, fromToken ...string) *event.Event {
+func (l *Linkpearl) FindEventBy(ctx context.Context, roomID id.RoomID, fieldValue map[string]string, fromToken ...string) *event.Event {
 	var from string
 	if len(fromToken) > 0 {
 		from = fromToken[0]
@@ -76,9 +102,11 @@ func (l *Linkpearl) FindEventBy(ctx context.Context, roomID id.RoomID, field, va
 	}
 
 	for _, msg := range resp.Chunk {
-		evt, contains := l.eventContains(ctx, msg, field, value)
-		if contains {
-			return evt
+		for field, value := range fieldValue {
+			evt, contains := l.eventContains(ctx, msg, field, value)
+			if contains {
+				return evt
+			}
 		}
 	}
 
@@ -86,7 +114,7 @@ func (l *Linkpearl) FindEventBy(ctx context.Context, roomID id.RoomID, field, va
 		return nil
 	}
 
-	return l.FindEventBy(ctx, roomID, field, value, resp.End)
+	return l.FindEventBy(ctx, roomID, fieldValue, resp.End)
 }
 
 func (l *Linkpearl) eventContains(ctx context.Context, evt *event.Event, field, value string) (*event.Event, bool) {

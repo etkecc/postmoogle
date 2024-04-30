@@ -17,8 +17,3 @@ func (c *Client) Auto(every time.Duration) {
 		}
 	}
 }
-
-// Shutdown the client
-func (c *Client) Shutdown() {
-	c.done <- true
-}

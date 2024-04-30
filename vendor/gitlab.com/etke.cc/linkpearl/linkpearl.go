@@ -21,6 +21,8 @@ const (
 	DefaultAccountDataCache = 1000
 	// DefaultEventsLimit for methods like lp.Threads() and lp.FindEventBy()
 	DefaultEventsLimit = 1000
+	// DefaultTypingTimeout in seconds for typing notifications
+	DefaultTypingTimeout = 60
 )
 
 // Linkpearl object
@@ -104,7 +106,7 @@ func New(cfg *Config) (*Linkpearl, error) {
 		return nil, err
 	}
 	lp.ch.LoginAs = cfg.LoginAs()
-	if err = lp.ch.Init(context.Background()); err != nil {
+	if err := lp.ch.Init(context.Background()); err != nil {
 		return nil, err
 	}
 	lp.api.Crypto = lp.ch
@@ -140,33 +142,33 @@ func (l *Linkpearl) SetPresence(ctx context.Context, presence event.Presence, me
 	return err
 }
 
-// SetJoinPermit sets the the join permit callback function
+// SetJoinPermit sets the join permit callback function
 func (l *Linkpearl) SetJoinPermit(value func(context.Context, *event.Event) bool) {
 	l.joinPermit = value
 }
 
 // Start performs matrix /sync
-func (l *Linkpearl) Start(optionalStatusMsg ...string) error {
+func (l *Linkpearl) Start(ctx context.Context, optionalStatusMsg ...string) error {
 	l.initSync()
 	var statusMsg string
 	if len(optionalStatusMsg) > 0 {
 		statusMsg = optionalStatusMsg[0]
 	}
 
-	err := l.SetPresence(context.Background(), event.PresenceOnline, statusMsg)
+	err := l.SetPresence(ctx, event.PresenceOnline, statusMsg)
 	if err != nil {
 		l.log.Error().Err(err).Msg("cannot set presence")
 	}
-	defer l.Stop()
+	defer l.Stop(ctx)
 
 	l.log.Info().Msg("client has been started")
-	return l.api.Sync()
+	return l.api.SyncWithContext(ctx)
 }
 
 // Stop the client
-func (l *Linkpearl) Stop() {
+func (l *Linkpearl) Stop(ctx context.Context) {
 	l.log.Debug().Msg("stopping the client")
-	if err := l.api.SetPresence(context.Background(), event.PresenceOffline); err != nil {
+	if err := l.api.SetPresence(ctx, event.PresenceOffline); err != nil {
 		l.log.Error().Err(err).Msg("cannot set presence")
 	}
 	l.api.StopSync()

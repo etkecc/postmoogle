@@ -10,7 +10,7 @@ require (
 	github.com/archdx/zerolog-sentry v1.8.2
 	github.com/emersion/go-msgauth v0.6.8
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
-	github.com/emersion/go-smtp v0.21.0
+	github.com/emersion/go-smtp v0.21.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gabriel-vasile/mimetype v1.4.3
 	github.com/getsentry/sentry-go v0.27.0
@@ -24,14 +24,14 @@ require (
 	github.com/rs/zerolog v1.32.0
 	gitlab.com/etke.cc/go/env v1.1.0
 	gitlab.com/etke.cc/go/fswatcher v1.0.0
-	gitlab.com/etke.cc/go/healthchecks/v2 v2.0.0
+	gitlab.com/etke.cc/go/healthchecks/v2 v2.2.0
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
-	gitlab.com/etke.cc/go/psd v1.1.1
+	gitlab.com/etke.cc/go/psd v1.1.2
 	gitlab.com/etke.cc/go/secgen v1.2.0
 	gitlab.com/etke.cc/go/validator v1.0.7
-	gitlab.com/etke.cc/linkpearl v0.0.0-20240316115913-106577b88942
-	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0
-	maunium.net/go/mautrix v0.18.0
+	gitlab.com/etke.cc/linkpearl v0.0.0-20240425105001-435ae2720365
+	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
+	maunium.net/go/mautrix v0.18.1
 )
 
 require (
@@ -56,7 +56,7 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yuin/goldmark v1.7.1 // indirect
 	gitlab.com/etke.cc/go/trysmtp v1.1.3 // indirect
-	go.mau.fi/util v0.4.1 // indirect
+	go.mau.fi/util v0.4.2 // indirect
 	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect

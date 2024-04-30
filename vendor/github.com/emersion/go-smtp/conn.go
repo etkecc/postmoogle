@@ -232,12 +232,7 @@ func (c *Conn) handleGreet(enhanced bool, arg string) {
 	sess, err := c.server.Backend.NewSession(c)
 	if err != nil {
 		c.helo = ""
-
-		if smtpErr, ok := err.(*SMTPError); ok {
-			c.writeResponse(smtpErr.Code, smtpErr.EnhancedCode, smtpErr.Message)
-			return
-		}
-		c.writeResponse(451, EnhancedCode{4, 0, 0}, err.Error())
+		c.writeError(451, EnhancedCode{4, 0, 0}, err)
 		return
 	}
 
@@ -421,11 +416,7 @@ func (c *Conn) handleMail(arg string) {
 	}
 
 	if err := c.Session().Mail(from, opts); err != nil {
-		if smtpErr, ok := err.(*SMTPError); ok {
-			c.writeResponse(smtpErr.Code, smtpErr.EnhancedCode, smtpErr.Message)
-			return
-		}
-		c.writeResponse(451, EnhancedCode{4, 0, 0}, err.Error())
+		c.writeError(451, EnhancedCode{4, 0, 0}, err)
 		return
 	}
 
@@ -725,11 +716,7 @@ func (c *Conn) handleRcpt(arg string) {
 	}
 
 	if err := c.Session().Rcpt(recipient, opts); err != nil {
-		if smtpErr, ok := err.(*SMTPError); ok {
-			c.writeResponse(smtpErr.Code, smtpErr.EnhancedCode, smtpErr.Message)
-			return
-		}
-		c.writeResponse(451, EnhancedCode{4, 0, 0}, err.Error())
+		c.writeError(451, EnhancedCode{4, 0, 0}, err)
 		return
 	}
 	c.recipients = append(c.recipients, recipient)
@@ -786,21 +773,21 @@ func (c *Conn) handleAuth(arg string) {
 	// Parse client initial response if there is one
 	var ir []byte
 	if len(parts) > 1 {
-		var err error
-		ir, err = base64.StdEncoding.DecodeString(parts[1])
-		if err != nil {
-			c.writeResponse(454, EnhancedCode{4, 7, 0}, "Invalid base64 data")
-			return
+		if parts[1] == "=" {
+			ir = []byte{}
+		} else {
+			var err error
+			ir, err = base64.StdEncoding.DecodeString(parts[1])
+			if err != nil {
+				c.writeResponse(454, EnhancedCode{4, 7, 0}, "Invalid base64 data")
+				return
+			}
 		}
 	}
 
 	sasl, err := c.auth(mechanism)
 	if err != nil {
-		if smtpErr, ok := err.(*SMTPError); ok {
-			c.writeResponse(smtpErr.Code, smtpErr.EnhancedCode, smtpErr.Message)
-		} else {
-			c.writeResponse(454, EnhancedCode{4, 7, 0}, err.Error())
-		}
+		c.writeError(454, EnhancedCode{4, 7, 0}, err)
 		return
 	}
 
@@ -808,11 +795,7 @@ func (c *Conn) handleAuth(arg string) {
 	for {
 		challenge, done, err := sasl.Next(response)
 		if err != nil {
-			if smtpErr, ok := err.(*SMTPError); ok {
-				c.writeResponse(smtpErr.Code, smtpErr.EnhancedCode, smtpErr.Message)
-				return
-			}
-			c.writeResponse(454, EnhancedCode{4, 7, 0}, err.Error())
+			c.writeError(454, EnhancedCode{4, 7, 0}, err)
 			return
 		}
 
@@ -837,10 +820,14 @@ func (c *Conn) handleAuth(arg string) {
 			return
 		}
 
-		response, err = base64.StdEncoding.DecodeString(encoded)
-		if err != nil {
-			c.writeResponse(454, EnhancedCode{4, 7, 0}, "Invalid base64 data")
-			return
+		if encoded == "=" {
+			response = []byte{}
+		} else {
+			response, err = base64.StdEncoding.DecodeString(encoded)
+			if err != nil {
+				c.writeResponse(454, EnhancedCode{4, 7, 0}, "Invalid base64 data")
+				return
+			}
 		}
 	}
 
@@ -930,7 +917,7 @@ func (c *Conn) handleData(arg string) {
 	}
 
 	r := newDataReader(c)
-	code, enhancedCode, msg := toSMTPStatus(c.Session().Data(r))
+	code, enhancedCode, msg := dataErrorToStatus(c.Session().Data(r))
 	r.limited = false
 	io.Copy(ioutil.Discard, r) // Make sure all the data has been consumed
 	c.writeResponse(code, enhancedCode, msg)
@@ -1027,7 +1014,7 @@ func (c *Conn) handleBdat(arg string) {
 		// the whole chunk.
 		io.Copy(ioutil.Discard, chunk)
 
-		c.writeResponse(toSMTPStatus(err))
+		c.writeResponse(dataErrorToStatus(err))
 
 		if err == errPanic {
 			c.Close()
@@ -1050,11 +1037,11 @@ func (c *Conn) handleBdat(arg string) {
 		if c.server.LMTP {
 			c.bdatStatus.fillRemaining(err)
 			for i, rcpt := range c.recipients {
-				code, enchCode, msg := toSMTPStatus(<-c.bdatStatus.status[i])
+				code, enchCode, msg := dataErrorToStatus(<-c.bdatStatus.status[i])
 				c.writeResponse(code, enchCode, "<"+rcpt+"> "+msg)
 			}
 		} else {
-			c.writeResponse(toSMTPStatus(err))
+			c.writeResponse(dataErrorToStatus(err))
 		}
 
 		if err == errPanic {
@@ -1189,7 +1176,7 @@ func (c *Conn) handleDataLMTP() {
 	}
 
 	for i, rcpt := range c.recipients {
-		code, enchCode, msg := toSMTPStatus(<-status.status[i])
+		code, enchCode, msg := dataErrorToStatus(<-status.status[i])
 		c.writeResponse(code, enchCode, "<"+rcpt+"> "+msg)
 	}
 
@@ -1200,7 +1187,7 @@ func (c *Conn) handleDataLMTP() {
 	}
 }
 
-func toSMTPStatus(err error) (code int, enchCode EnhancedCode, msg string) {
+func dataErrorToStatus(err error) (code int, enchCode EnhancedCode, msg string) {
 	if err != nil {
 		if smtperr, ok := err.(*SMTPError); ok {
 			return smtperr.Code, smtperr.EnhancedCode, smtperr.Message
@@ -1250,6 +1237,14 @@ func (c *Conn) writeResponse(code int, enhCode EnhancedCode, text ...string) {
 		c.text.PrintfLine("%d %v", code, text[len(text)-1])
 	} else {
 		c.text.PrintfLine("%d %v.%v.%v %v", code, enhCode[0], enhCode[1], enhCode[2], text[len(text)-1])
+	}
+}
+
+func (c *Conn) writeError(code int, enhCode EnhancedCode, err error) {
+	if smtpErr, ok := err.(*SMTPError); ok {
+		c.writeResponse(smtpErr.Code, smtpErr.EnhancedCode, smtpErr.Message)
+	} else {
+		c.writeResponse(code, enhCode, err.Error())
 	}
 }
 

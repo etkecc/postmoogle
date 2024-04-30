@@ -280,7 +280,7 @@ func (b *Bot) sendAutoreply(ctx context.Context, roomID id.RoomID, threadID id.E
 		queued, err = b.Sendmail(ctx, evt.ID, meta.From, to, data)
 		if queued {
 			b.log.Info().Err(err).Str("from", meta.From).Str("to", to).Msg("email has been queued")
-			b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg, "Autoreply has been sent to "+to+" (queued)")
+			b.saveSentMetadata(ctx, queued, meta.ThreadID, to, eml, cfg, "Autoreply has been sent to "+to+" (queued)")
 			continue
 		}
 
@@ -289,7 +289,7 @@ func (b *Bot) sendAutoreply(ctx context.Context, roomID id.RoomID, threadID id.E
 			continue
 		}
 
-		b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg, "Autoreply has been sent to "+to)
+		b.saveSentMetadata(ctx, queued, meta.ThreadID, to, eml, cfg, "Autoreply has been sent to "+to)
 	}
 }
 
@@ -364,7 +364,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		queued, err = b.Sendmail(ctx, evt.ID, meta.From, to, data)
 		if queued {
 			b.log.Info().Err(err).Str("from", meta.From).Str("to", to).Msg("email has been queued")
-			b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg)
+			b.saveSentMetadata(ctx, queued, meta.ThreadID, to, eml, cfg)
 			continue
 		}
 
@@ -373,7 +373,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 			continue
 		}
 
-		b.saveSentMetadata(ctx, queued, meta.ThreadID, recipients, eml, cfg)
+		b.saveSentMetadata(ctx, queued, meta.ThreadID, to, eml, cfg)
 	}
 }
 
@@ -538,11 +538,10 @@ func (b *Bot) getParentEmail(ctx context.Context, evt *event.Event, newFromMailb
 
 // saveSentMetadata used to save metadata from !pm sent and thread reply events to a separate notice message
 // because that metadata is needed to determine email thread relations
-func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, recipients []string, eml *email.Email, cfg config.Room, textOverride ...string) {
-	addrs := strings.Join(recipients, ", ")
-	text := "Email has been sent to " + addrs
+func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, to string, eml *email.Email, cfg config.Room, textOverride ...string) {
+	text := "Email has been sent to " + to
 	if queued {
-		text = "Email to " + addrs + " has been queued"
+		text = "Email to " + to + " has been queued"
 	}
 	if len(textOverride) > 0 {
 		text = textOverride[0]

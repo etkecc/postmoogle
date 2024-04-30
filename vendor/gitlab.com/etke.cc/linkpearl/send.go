@@ -2,6 +2,7 @@ package linkpearl
 
 import (
 	"context"
+	"time"
 
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/event"
@@ -12,13 +13,25 @@ import (
 // Send a message to the roomID and automatically try to encrypt it, if the destination room is encrypted
 //
 //nolint:unparam // it's public interface
-func (l *Linkpearl) Send(ctx context.Context, roomID id.RoomID, content interface{}) (id.EventID, error) {
+func (l *Linkpearl) Send(ctx context.Context, roomID id.RoomID, content any) (id.EventID, error) {
 	l.log.Debug().Str("roomID", roomID.String()).Any("content", content).Msg("sending event")
 	resp, err := l.api.SendMessageEvent(ctx, roomID, event.EventMessage, content)
 	if err != nil {
 		return "", UnwrapError(err)
 	}
 	return resp.EventID, nil
+}
+
+// SendTyping notification
+func (l *Linkpearl) SendTyping(ctx context.Context, roomID id.RoomID, typing bool, timeout ...int) {
+	ttl := DefaultTypingTimeout
+	if len(timeout) > 0 {
+		ttl = timeout[0]
+	}
+	_, err := l.api.UserTyping(ctx, roomID, typing, time.Duration(ttl)*time.Second)
+	if err != nil {
+		l.log.Warn().Err(err).Bool("typing", typing).Msg("cannot set typing")
+	}
 }
 
 // SendNotice to a room with optional relations, markdown supported

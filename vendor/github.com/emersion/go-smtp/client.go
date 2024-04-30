@@ -44,9 +44,7 @@ type Client struct {
 
 // 30 seconds was chosen as it's the same duration as http.DefaultTransport's
 // timeout.
-const defaultTimeout = 30 * time.Second
-
-var defaultDialer = net.Dialer{Timeout: defaultTimeout}
+var defaultDialer = net.Dialer{Timeout: 30 * time.Second}
 
 // Dial returns a new Client connected to an SMTP server at addr. The addr must
 // include a port, as in "mail.example.com:smtp".
@@ -358,8 +356,13 @@ func (c *Client) Auth(a sasl.Client) error {
 	if err != nil {
 		return err
 	}
-	resp64 := make([]byte, encoding.EncodedLen(len(resp)))
-	encoding.Encode(resp64, resp)
+	var resp64 []byte
+	if len(resp) > 0 {
+		resp64 = make([]byte, encoding.EncodedLen(len(resp)))
+		encoding.Encode(resp64, resp)
+	} else if resp != nil {
+		resp64 = []byte{'='}
+	}
 	code, msg64, err := c.cmd(0, strings.TrimSpace(fmt.Sprintf("AUTH %s %s", mech, resp64)))
 	for err == nil {
 		var msg []byte

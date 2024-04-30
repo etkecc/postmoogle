@@ -624,7 +624,6 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 	from := cfg.Mailbox() + "@" + domain
 	ID := email.MessageID(evt.ID, domain)
 	for _, to := range tos {
-		recipients := []string{to}
 		eml := email.New(ID, "", " "+ID, subject, from, to, to, "", body, htmlBody, nil, nil)
 		data := eml.Compose(b.cfg.GetBot(ctx).DKIMPrivateKey())
 		if data == "" {
@@ -634,14 +633,14 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 		queued, err := b.Sendmail(ctx, evt.ID, from, to, data)
 		if queued {
 			b.log.Warn().Err(err).Msg("email has been queued")
-			b.saveSentMetadata(ctx, queued, evt.ID, recipients, eml, cfg)
+			b.saveSentMetadata(ctx, queued, evt.ID, to, eml, cfg)
 			continue
 		}
 		if err != nil {
 			b.Error(ctx, "cannot send email to %s: %v", to, err)
 			continue
 		}
-		b.saveSentMetadata(ctx, false, evt.ID, recipients, eml, cfg)
+		b.saveSentMetadata(ctx, false, evt.ID, to, eml, cfg)
 	}
 	if len(tos) > 1 {
 		b.lp.SendNotice(ctx, evt.RoomID, "All emails were sent.", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))

@@ -17,7 +17,7 @@ github.com/emersion/go-msgauth/dkim
 # github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
 ## explicit; go 1.12
 github.com/emersion/go-sasl
-# github.com/emersion/go-smtp v0.21.0
+# github.com/emersion/go-smtp v0.21.1
 ## explicit; go 1.13
 github.com/emersion/go-smtp
 # github.com/fsnotify/fsnotify v1.7.0
@@ -136,13 +136,13 @@ gitlab.com/etke.cc/go/env
 # gitlab.com/etke.cc/go/fswatcher v1.0.0
 ## explicit; go 1.20
 gitlab.com/etke.cc/go/fswatcher
-# gitlab.com/etke.cc/go/healthchecks/v2 v2.0.0
+# gitlab.com/etke.cc/go/healthchecks/v2 v2.2.0
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/healthchecks/v2
 # gitlab.com/etke.cc/go/mxidwc v1.0.0
 ## explicit; go 1.19
 gitlab.com/etke.cc/go/mxidwc
-# gitlab.com/etke.cc/go/psd v1.1.1
+# gitlab.com/etke.cc/go/psd v1.1.2
 ## explicit; go 1.21.0
 gitlab.com/etke.cc/go/psd
 # gitlab.com/etke.cc/go/secgen v1.2.0
@@ -154,10 +154,10 @@ gitlab.com/etke.cc/go/trysmtp
 # gitlab.com/etke.cc/go/validator v1.0.7
 ## explicit; go 1.18
 gitlab.com/etke.cc/go/validator
-# gitlab.com/etke.cc/linkpearl v0.0.0-20240316115913-106577b88942
+# gitlab.com/etke.cc/linkpearl v0.0.0-20240425105001-435ae2720365
 ## explicit; go 1.21
 gitlab.com/etke.cc/linkpearl
-# go.mau.fi/util v0.4.1
+# go.mau.fi/util v0.4.2
 ## explicit; go 1.21
 go.mau.fi/util/base58
 go.mau.fi/util/dbutil
@@ -182,7 +182,7 @@ golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0
+# golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 ## explicit; go 1.20
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
@@ -220,7 +220,7 @@ golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# maunium.net/go/mautrix v0.18.0
+# maunium.net/go/mautrix v0.18.1
 ## explicit; go 1.21
 maunium.net/go/mautrix
 maunium.net/go/mautrix/crypto
