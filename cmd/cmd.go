@@ -13,12 +13,12 @@ import (
 	zlogsentry "github.com/archdx/zerolog-sentry"
 	"github.com/getsentry/sentry-go"
 	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/mileusna/crontab"
 	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/go/healthchecks/v2"
 	"gitlab.com/etke.cc/go/psd"
 	"gitlab.com/etke.cc/linkpearl"
+	_ "modernc.org/sqlite"
 
 	"gitlab.com/etke.cc/postmoogle/bot"
 	mxconfig "gitlab.com/etke.cc/postmoogle/bot/config"
@@ -101,6 +101,9 @@ func initHealthchecks(cfg *config.Config) {
 }
 
 func initMatrix(cfg *config.Config) {
+	if cfg.DB.Dialect == "sqlite3" {
+		cfg.DB.Dialect = "sqlite"
+	}
 	db, err := sql.Open(cfg.DB.Dialect, cfg.DB.DSN)
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot initialize SQL database")
