@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"regexp"
 	"sync"
 
@@ -36,7 +37,7 @@ type Bot struct {
 	commands                commandList
 	rooms                   sync.Map
 	proxies                 []string
-	sendmail                func(string, string, string) error
+	sendmail                func(string, string, string, *url.URL) error
 	psdc                    *psd.Client
 	cfg                     *config.Manager
 	log                     *zerolog.Logger

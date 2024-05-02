@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -36,7 +37,7 @@ const (
 var ErrNoRoom = errors.New("room not found")
 
 // SetSendmail sets mail sending func to the bot
-func (b *Bot) SetSendmail(sendmail func(string, string, string) error) {
+func (b *Bot) SetSendmail(sendmail func(string, string, string, *url.URL) error) {
 	b.sendmail = sendmail
 	b.q.SetSendmail(sendmail)
 }
@@ -60,14 +61,14 @@ func (b *Bot) shouldQueue(msg string) bool {
 
 // Sendmail tries to send email immediately, but if it gets 4xx error (greylisting),
 // the email will be added to the queue and retried several times after that
-func (b *Bot) Sendmail(ctx context.Context, eventID id.EventID, from, to, data string) (bool, error) {
+func (b *Bot) Sendmail(ctx context.Context, eventID id.EventID, from, to, data string, relayOverride *url.URL) (bool, error) {
 	log := b.log.With().Str("from", from).Str("to", to).Str("eventID", eventID.String()).Logger()
 	log.Info().Msg("attempting to deliver email")
-	err := b.sendmail(from, to, data)
+	err := b.sendmail(from, to, data, relayOverride)
 	if err != nil {
 		if b.shouldQueue(err.Error()) {
 			log.Info().Err(err).Msg("email has been added to the queue")
-			return true, b.q.Add(ctx, eventID.String(), from, to, data)
+			return true, b.q.Add(ctx, eventID.String(), from, to, data, relayOverride)
 		}
 		log.Warn().Err(err).Msg("email delivery failed")
 		return false, err
@@ -80,6 +81,16 @@ func (b *Bot) Sendmail(ctx context.Context, eventID id.EventID, from, to, data s
 // GetDKIMprivkey returns DKIM private key
 func (b *Bot) GetDKIMprivkey(ctx context.Context) string {
 	return b.cfg.GetBot(ctx).DKIMPrivateKey()
+}
+
+// GetRelayConfig returns relay config for specific room (mailbox) if set
+func (b *Bot) GetRelayConfig(ctx context.Context, roomID id.RoomID) *url.URL {
+	cfg, err := b.cfg.GetRoom(ctx, roomID)
+	if err != nil {
+		b.log.Error().Err(err).Str("room_id", roomID.String()).Msg("cannot get room config")
+		return nil
+	}
+	return cfg.Relay()
 }
 
 func (b *Bot) getMapping(mailbox string) (id.RoomID, bool) {
@@ -277,7 +288,7 @@ func (b *Bot) sendAutoreply(ctx context.Context, roomID id.RoomID, threadID id.E
 	ctx = newContext(ctx, threadEvt)
 	recipients := meta.Recipients
 	for _, to := range recipients {
-		queued, err = b.Sendmail(ctx, evt.ID, meta.From, to, data)
+		queued, err = b.Sendmail(ctx, evt.ID, meta.From, to, data, cfg.Relay())
 		if queued {
 			b.log.Info().Err(err).Str("from", meta.From).Str("to", to).Msg("email has been queued")
 			b.saveSentMetadata(ctx, queued, meta.ThreadID, to, eml, cfg, "Autoreply has been sent to "+to+" (queued)")
@@ -361,7 +372,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 	var queued bool
 	recipients := meta.Recipients
 	for _, to := range recipients {
-		queued, err = b.Sendmail(ctx, evt.ID, meta.From, to, data)
+		queued, err = b.Sendmail(ctx, evt.ID, meta.From, to, data, cfg.Relay())
 		if queued {
 			b.log.Info().Err(err).Str("from", meta.From).Str("to", to).Msg("email has been queued")
 			b.saveSentMetadata(ctx, queued, meta.ThreadID, to, eml, cfg)

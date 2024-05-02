@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/rs/zerolog"
 	"gitlab.com/etke.cc/linkpearl"
@@ -22,7 +23,7 @@ type Queue struct {
 	lp       *linkpearl.Linkpearl
 	cfg      *config.Manager
 	log      *zerolog.Logger
-	sendmail func(string, string, string) error
+	sendmail func(string, string, string, *url.URL) error
 }
 
 // New queue
@@ -36,7 +37,7 @@ func New(lp *linkpearl.Linkpearl, cfg *config.Manager, log *zerolog.Logger) *Que
 }
 
 // SetSendmail func
-func (q *Queue) SetSendmail(function func(string, string, string) error) {
+func (q *Queue) SetSendmail(function func(string, string, string, *url.URL) error) {
 	q.sendmail = function
 }
 

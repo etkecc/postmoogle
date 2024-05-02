@@ -35,6 +35,7 @@ so you can use it to send emails from your apps and scripts as well.
 
 - [x] SMTP client
 - [x] SMTP server (you can use Postmoogle as general purpose SMTP server to send emails from your scripts or apps)
+- [x] SMTP Relaying (postmoogle can send emails via relay host), global and per-mailbox
 - [x] Send a message to matrix room with special format to send a new email, even to multiple email addresses at once
 - [x] Reply to matrix thread sends reply into email thread
 - [x] Email signatures
@@ -76,10 +77,10 @@ env vars
 * **POSTMOOGLE_MAILBOXES_ACTIVATION** - activation flow for new mailboxes, [docs/mailboxes.md](docs/mailboxes.md)
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
 * **POSTMOOGLE_ADMINS** - a space-separated list of admin users. See `POSTMOOGLE_USERS` for syntax examples
-* **POSTMOOGLE_RELAY_HOST** - SMTP hostname of relay host (e.g. Sendgrid)
-* **POSTMOOGLE_RELAY_PORT** - SMTP port of relay host
-* **POSTMOOGLE_RELAY_USERNAME** - Username of relay host
-* **POSTMOOGLE_RELAY_PASSWORD** - Password of relay host
+* **POSTMOOGLE_RELAY_HOST** - (global) SMTP hostname of relay host (e.g. Sendgrid)
+* **POSTMOOGLE_RELAY_PORT** - (global) SMTP port of relay host
+* **POSTMOOGLE_RELAY_USERNAME** - (global) Username of relay host
+* **POSTMOOGLE_RELAY_PASSWORD** - (global) Password of relay host
 
 You can find default values in [config/defaults.go](config/defaults.go)
 
@@ -118,7 +119,7 @@ If you want to change them - check available options in the help message (`!pm h
 * **`!pm domain`** - Get or set default domain of the room
 * **`!pm owner`** - Get or set owner of the room
 * **`!pm password`** - Get or set SMTP password of the room's mailbox
-
+* **`!pm relay`** - Get or set SMTP relay of that mailbox. Format: `smtp://user:password@host:port`, e.g. `smtp://54b7bfb9-b95f-44b8-9879-9b560baf4e3a:8528a3a9-bea8-4583-9912-d4357ba565eb@example.com:587`
 ---
 
 #### mailbox options

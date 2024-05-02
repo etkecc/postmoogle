@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"net/url"
 	"strconv"
 
 	"github.com/emersion/go-msgauth/dkim"
@@ -40,7 +41,7 @@ type session struct {
 	ctx      context.Context //nolint:containedctx // that's session
 	conn     *smtp.Conn
 	domains  []string
-	sendmail func(string, string, string) error
+	sendmail func(string, string, string, *url.URL) error
 
 	dir      string
 	tos      []string
@@ -124,7 +125,7 @@ func (s *session) outgoingData(r io.Reader) error {
 	eml := email.FromEnvelope(s.tos[0], envelope)
 	for _, to := range s.tos {
 		eml.RcptTo = to
-		err := s.sendmail(eml.From, to, eml.Compose(s.privkey))
+		err := s.sendmail(eml.From, to, eml.Compose(s.privkey), s.bot.GetRelayConfig(s.ctx, s.fromRoom))
 		if err != nil {
 			return err
 		}

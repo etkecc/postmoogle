@@ -2,6 +2,7 @@ package utils
 
 import (
 	"net"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -38,6 +39,15 @@ func SanitizeDomain(domain string) string {
 	}
 
 	return domains[0]
+}
+
+// SanitizeURL checks that input URL is valid
+func SanitizeURL(str string) string {
+	parsed, err := url.Parse(str)
+	if err != nil {
+		return ""
+	}
+	return parsed.String()
 }
 
 // Bool converts string to boolean

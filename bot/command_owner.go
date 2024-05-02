@@ -51,6 +51,8 @@ func (b *Bot) handleOption(ctx context.Context, cmd []string) {
 		b.setMailbox(ctx, cmd[1])
 	case config.RoomPassword:
 		b.setPassword(ctx)
+	case config.RoomRelay:
+		b.setRelay(ctx)
 	default:
 		b.setOption(ctx, cmd[0], cmd[1])
 	}
@@ -150,6 +152,25 @@ func (b *Bot) setPassword(ctx context.Context) {
 	}
 
 	b.lp.SendNotice(ctx, evt.RoomID, "SMTP password has been set", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+}
+
+func (b *Bot) setRelay(ctx context.Context) {
+	evt := eventFromContext(ctx)
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
+	if err != nil {
+		b.Error(ctx, "failed to retrieve settings: %v", err)
+		return
+	}
+
+	value := b.parseCommand(evt.Content.AsMessage().Body, false)[1] // get original value, without forced lower case
+	cfg.Set(config.RoomRelay, value)
+	err = b.cfg.SetRoom(ctx, evt.RoomID, cfg)
+	if err != nil {
+		b.Error(ctx, "cannot update settings: %v", err)
+		return
+	}
+
+	b.lp.SendNotice(ctx, evt.RoomID, "Relay config has been set", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
 func (b *Bot) setOption(ctx context.Context, name, value string) {

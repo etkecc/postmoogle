@@ -6,13 +6,14 @@ import (
 	"io"
 	"net"
 	"net/smtp"
+	"net/url"
 	"strings"
 
 	"github.com/rs/zerolog"
 )
 
 type MailSender interface {
-	Send(from, to, data string) error
+	Send(from, to, data string, relayOverride *url.URL) error
 }
 
 // SMTP client
@@ -30,16 +31,35 @@ func newClient(cfg *RelayConfig, log *zerolog.Logger) *Client {
 	}
 }
 
+// relayFromURL creates a RelayConfig from a URL
+func relayFromURL(relayURL *url.URL) *RelayConfig {
+	if relayURL == nil {
+		return nil
+	}
+	password, _ := relayURL.User.Password()
+	return &RelayConfig{
+		Host:     relayURL.Hostname(),
+		Port:     relayURL.Port(),
+		Username: relayURL.User.Username(),
+		Password: password,
+	}
+}
+
 // Send email
-func (c Client) Send(from, to, data string) error {
+func (c Client) Send(from, to, data string, relayOverride *url.URL) error {
 	log := c.log.With().Str("from", from).Str("to", to).Logger()
 	log.Debug().Msg("sending email")
 
+	relay := c.config
+	if relayOverrideCfg := relayFromURL(relayOverride); relayOverrideCfg != nil {
+		relay = relayOverrideCfg
+	}
+
 	var conn *smtp.Client
 	var err error
-	if c.config.Host != "" {
+	if relay != nil && relay.Host != "" {
 		log.Debug().Msg("creating relay client...")
-		conn, err = c.createRelayClient(from, to)
+		conn, err = c.createRelayClient(relay, from, to)
 	} else {
 		log.Debug().Msg("trying direct SMTP connection...")
 		conn, err = c.createDirectClient(from, to)
@@ -73,9 +93,9 @@ func (c Client) Send(from, to, data string) error {
 }
 
 // createRelayClientconnects directly to the provided smtp host
-func (c *Client) createRelayClient(from, to string) (*smtp.Client, error) {
+func (c *Client) createRelayClient(config *RelayConfig, from, to string) (*smtp.Client, error) {
 	localname := strings.SplitN(from, "@", 2)[1]
-	target := c.config.Host + ":" + c.config.Port
+	target := config.Host + ":" + config.Port
 	conn, err := smtp.Dial(target)
 	if err != nil {
 		return nil, err
@@ -87,12 +107,12 @@ func (c *Client) createRelayClient(from, to string) (*smtp.Client, error) {
 	}
 
 	if ok, _ := conn.Extension("STARTTLS"); ok {
-		config := &tls.Config{ServerName: c.config.Host} //nolint:gosec // it's smtp, even that is too strict sometimes
-		conn.StartTLS(config)                            //nolint:errcheck // if it doesn't work - we can't do anything anyway
+		tlsConfig := &tls.Config{ServerName: config.Host} //nolint:gosec // it's smtp, even that is too strict sometimes
+		conn.StartTLS(tlsConfig)                          //nolint:errcheck // if it doesn't work - we can't do anything anyway
 	}
 
-	if c.config.Usename != "" {
-		err = conn.Auth(smtp.PlainAuth("", c.config.Usename, c.config.Password, c.config.Host))
+	if config.Username != "" {
+		err = conn.Auth(smtp.PlainAuth("", config.Username, config.Password, config.Host))
 		if err != nil {
 			conn.Close()
 			return nil, err

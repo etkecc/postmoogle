@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
+	"net/url"
 	"strings"
 
+	"gitlab.com/etke.cc/go/healthchecks/v2"
 	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 )
@@ -21,6 +24,7 @@ const (
 	RoomPassword  = "password"
 	RoomSignature = "signature"
 	RoomAutoreply = "autoreply"
+	RoomRelay     = "relay"
 
 	RoomThreadify   = "threadify"
 	RoomStripify    = "stripify"
@@ -67,6 +71,20 @@ func (s Room) Owner() string {
 
 func (s Room) Active() bool {
 	return utils.Bool(s.Get(RoomActive))
+}
+
+// Relay returns the SMTP Relay configuration in a manner of URL: smtp://user:pass@host:port
+func (s Room) Relay() *url.URL {
+	relay := s.Get(RoomRelay)
+	if relay == "" {
+		return nil
+	}
+	u, err := url.Parse(relay)
+	if err != nil {
+		healthchecks.Global().Fail(strings.NewReader(fmt.Sprintf("cannot parse relay URL %q: %v", relay, err)))
+		return nil
+	}
+	return u
 }
 
 func (s Room) Password() string {

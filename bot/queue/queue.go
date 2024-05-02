@@ -2,14 +2,20 @@ package queue
 
 import (
 	"context"
+	"net/url"
 	"strconv"
 )
 
 // Add to queue
-func (q *Queue) Add(ctx context.Context, id, from, to, data string) error {
+func (q *Queue) Add(ctx context.Context, id, from, to, data string, relayOverride ...*url.URL) error {
 	itemkey := acQueueKey + "." + id
+	relay := ""
+	if len(relayOverride) > 0 {
+		relay = relayOverride[0].String()
+	}
 	item := map[string]string{
 		"attempts": "0",
+		"relay":    relay,
 		"data":     data,
 		"from":     from,
 		"to":       to,
@@ -84,7 +90,12 @@ func (q *Queue) try(ctx context.Context, itemkey string, maxRetries int) bool {
 		return true
 	}
 
-	err = q.sendmail(item["from"], item["to"], item["data"])
+	var relayOverride *url.URL
+	if item["relay"] != "" {
+		relayOverride, _ = url.Parse(item["relay"]) //nolint:errcheck // doesn't matter
+	}
+
+	err = q.sendmail(item["from"], item["to"], item["data"], relayOverride)
 	if err == nil {
 		q.log.Info().Str("id", itemkey).Msg("email from queue was delivered")
 		return true

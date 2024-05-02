@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
+	"net/url"
 	"sync"
 	"time"
 
@@ -44,7 +45,7 @@ type TLSConfig struct {
 type RelayConfig struct {
 	Host     string
 	Port     string
-	Usename  string
+	Username string
 	Password string
 }
 
@@ -70,11 +71,12 @@ type matrixbot interface {
 	GetIFOptions(context.Context, id.RoomID) email.IncomingFilteringOptions
 	IncomingEmail(context.Context, *email.Email) error
 	GetDKIMprivkey(context.Context) string
+	GetRelayConfig(context.Context, id.RoomID) *url.URL
 }
 
 // Caller is Sendmail caller
 type Caller interface {
-	SetSendmail(func(string, string, string) error)
+	SetSendmail(func(string, string, string, *url.URL) error)
 }
 
 // NewManager creates new SMTP server manager

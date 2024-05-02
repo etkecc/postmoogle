@@ -148,7 +148,7 @@ func initSMTP(cfg *config.Config) {
 		Relay: &smtp.RelayConfig{
 			Host:     cfg.Relay.Host,
 			Port:     cfg.Relay.Port,
-			Usename:  cfg.Relay.Username,
+			Username: cfg.Relay.Username,
 			Password: cfg.Relay.Password,
 		},
 	})

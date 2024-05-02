@@ -103,6 +103,12 @@ func (b *Bot) initCommands() commandList {
 			description: "Get or set SMTP password of the room's mailbox",
 			allowed:     b.allowOwner,
 		},
+		{
+			key:         config.RoomRelay,
+			description: "Configure SMTP Relay for that mailbox, format: `smtp://user:pass@host:port`",
+			sanitizer:   utils.SanitizeURL,
+			allowed:     b.allowOwner,
+		},
 		{allowed: b.allowOwner, description: "mailbox options"}, // delimiter
 		{
 			key:         config.RoomAutoreply,
@@ -630,7 +636,7 @@ func (b *Bot) runSendCommand(ctx context.Context, cfg config.Room, tos []string,
 			b.lp.SendNotice(ctx, evt.RoomID, "email body is empty", linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 			return
 		}
-		queued, err := b.Sendmail(ctx, evt.ID, from, to, data)
+		queued, err := b.Sendmail(ctx, evt.ID, from, to, data, cfg.Relay())
 		if queued {
 			b.log.Warn().Err(err).Msg("email has been queued")
 			b.saveSentMetadata(ctx, queued, evt.ID, to, eml, cfg)
