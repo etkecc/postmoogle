@@ -418,9 +418,10 @@ func NewWithHub(hub *sentry.Hub, opts ...WriterOption) (*Writer, error) {
 	}
 
 	return &Writer{
-		hub:          hub,
-		levels:       levels,
-		flushTimeout: cfg.flushTimeout,
+		hub:             hub,
+		levels:          levels,
+		flushTimeout:    cfg.flushTimeout,
+		withBreadcrumbs: cfg.breadcrumbs,
 	}, nil
 }
 

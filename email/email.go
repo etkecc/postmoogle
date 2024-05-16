@@ -240,6 +240,7 @@ func (e *Email) Compose(privkey string) string {
 		From("", e.From).
 		To("", e.To).
 		Header("Message-Id", e.MessageID).
+		Header("X-PM-Tag", e.From).
 		Subject(e.Subject)
 	if textSize > 0 {
 		mail = mail.Text([]byte(e.Text))
