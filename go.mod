@@ -31,7 +31,7 @@ require (
 	gitlab.com/etke.cc/linkpearl v0.0.0-20240425105001-435ae2720365
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	maunium.net/go/mautrix v0.18.1
-	modernc.org/sqlite v1.29.9
+	modernc.org/sqlite v1.29.10
 )
 
 require (
@@ -65,7 +65,7 @@ require (
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240304020402-f0dba7c97c2b // indirect
-	modernc.org/libc v1.50.6 // indirect
+	modernc.org/libc v1.50.7 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/strutil v1.2.0 // indirect

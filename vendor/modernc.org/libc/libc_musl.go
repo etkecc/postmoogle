@@ -1036,7 +1036,11 @@ func Xuuid_parse(t *TLS, in uintptr, uu uintptr) int32 {
 
 // void uuid_generate_random(uuid_t out);
 func Xuuid_generate_random(t *TLS, out uintptr) {
-	panic(todo(""))
+	if __ccgo_strace {
+		trc("t=%v out=%v, (%v:)", t, out, origin(2))
+	}
+	x := guuid.New()
+	copy((*RawMem)(unsafe.Pointer(out))[:], x[:])
 }
 
 // void uuid_unparse(uuid_t uu, char *out);
