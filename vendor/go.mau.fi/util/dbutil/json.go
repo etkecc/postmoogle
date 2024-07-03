@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"unsafe"
 )
 
 // JSON is a utility type for using arbitrary JSON data as values in database Exec and Scan calls.
@@ -29,7 +30,7 @@ func (j JSON) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	v, err := json.Marshal(j.Data)
-	return string(v), err
+	return unsafe.String(unsafe.SliceData(v), len(v)), err
 }
 
 // JSONPtr is a convenience function for wrapping a pointer to a value in the JSON utility, but removing typed nils

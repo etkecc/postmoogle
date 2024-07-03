@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build libc.membrk && !libc.memgrind && !(linux && (amd64 || loong64))
-// +build libc.membrk
-// +build !libc.memgrind
-// +build !linux !amd64,!loong64
+//go:build libc.membrk && !libc.memgrind && !((linux && (amd64 || arm64 || loong64)) || windows)
 
 // This is a debug-only version of the memory handling functions. When a
 // program is built with -tags=libc.membrk a simple but safe version of malloc
@@ -22,8 +19,7 @@ import (
 )
 
 const (
-	heapAlign = 16
-	memgrind  = false
+	memgrind = false
 )
 
 var (
@@ -41,9 +37,9 @@ func Xmalloc(t *TLS, n types.Size_t) uintptr {
 		return 0
 	}
 
-	allocMu.Lock()
+	allocatorMu.Lock()
 
-	defer allocMu.Unlock()
+	defer allocatorMu.Unlock()
 
 	n2 := uintptr(n) + uintptrSize // reserve space for recording block size
 	p := roundup(heapP, 16)

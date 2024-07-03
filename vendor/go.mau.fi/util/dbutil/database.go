@@ -104,6 +104,8 @@ type Database struct {
 	Dialect      Dialect
 	UpgradeTable UpgradeTable
 
+	txnCtxKey contextKey
+
 	IgnoreForeignTables       bool
 	IgnoreUnsupportedDatabase bool
 }
@@ -132,6 +134,8 @@ func (db *Database) Child(versionTable string, upgradeTable UpgradeTable, log Da
 		Log:          log,
 		Dialect:      db.Dialect,
 
+		txnCtxKey: db.txnCtxKey,
+
 		IgnoreForeignTables:       true,
 		IgnoreUnsupportedDatabase: db.IgnoreUnsupportedDatabase,
 	}
@@ -149,6 +153,8 @@ func NewWithDB(db *sql.DB, rawDialect string) (*Database, error) {
 
 		IgnoreForeignTables: true,
 		VersionTable:        "version",
+
+		txnCtxKey: contextKey(nextContextKeyDatabaseTransaction.Add(1)),
 	}
 	wrappedDB.LoggingDB.UnderlyingExecable = db
 	wrappedDB.LoggingDB.db = wrappedDB

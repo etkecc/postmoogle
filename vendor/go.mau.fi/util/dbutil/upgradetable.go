@@ -121,40 +121,38 @@ func parseFileHeader(file []byte) (from, to, compat int, message string, txn boo
 //	-- only: sqlite for next 123 lines
 //
 // If the single-line limit is on the second line of the file, the whole file is limited to that dialect.
-var dialectLineFilter = regexp.MustCompile(`^\s*-- only: (postgres|sqlite)(?: for next (\d+) lines| until "(end) only")?`)
+//
+// If the filter ends with `(lines commented)`, then ALL lines chosen by the filter will be uncommented.
+var dialectLineFilter = regexp.MustCompile(`^\s*-- only: (postgres|sqlite)(?: for next (\d+) lines| until "(end) only")?(?: \(lines? (commented)\))?`)
 
 // Constants used to make parseDialectFilter clearer
 const (
 	skipUntilEndTag = -1
 	skipNothing     = 0
-	skipCurrentLine = 1
-	skipNextLine    = 2
+	skipNextLine    = 1
 )
 
-func (db *Database) parseDialectFilter(line []byte) (int, error) {
+func (db *Database) parseDialectFilter(line []byte) (dialect Dialect, lineCount int, uncomment bool, err error) {
 	match := dialectLineFilter.FindSubmatch(line)
 	if match == nil {
-		return skipNothing, nil
+		return
 	}
-	dialect, err := ParseDialect(string(match[1]))
+	dialect, err = ParseDialect(string(match[1]))
 	if err != nil {
-		return skipNothing, err
-	} else if dialect == db.Dialect {
-		// Skip the dialect filter line
-		return skipCurrentLine, nil
-	} else if bytes.Equal(match[3], []byte("end")) {
-		return skipUntilEndTag, nil
-	} else if len(match[2]) == 0 {
-		// Skip the dialect filter and the next line
-		return skipNextLine, nil
-	} else {
-		// Parse number of lines to skip, add 1 for current line
-		lineCount, err := strconv.Atoi(string(match[2]))
-		if err != nil {
-			return skipNothing, fmt.Errorf("invalid line count '%s': %w", match[2], err)
-		}
-		return skipCurrentLine + lineCount, nil
+		return
 	}
+	uncomment = bytes.Equal(match[4], []byte("commented"))
+	if bytes.Equal(match[3], []byte("end")) {
+		lineCount = skipUntilEndTag
+	} else if len(match[2]) == 0 {
+		lineCount = skipNextLine
+	} else {
+		lineCount, err = strconv.Atoi(string(match[2]))
+		if err != nil {
+			err = fmt.Errorf("invalid line count %q: %w", match[2], err)
+		}
+	}
+	return
 }
 
 var endLineFilter = regexp.MustCompile(`^\s*-- end only (postgres|sqlite)$`)
@@ -162,15 +160,16 @@ var endLineFilter = regexp.MustCompile(`^\s*-- end only (postgres|sqlite)$`)
 func (db *Database) filterSQLUpgrade(lines [][]byte) (string, error) {
 	output := make([][]byte, 0, len(lines))
 	for i := 0; i < len(lines); i++ {
-		skipLines, err := db.parseDialectFilter(lines[i])
+		dialect, lineCount, uncomment, err := db.parseDialectFilter(lines[i])
 		if err != nil {
 			return "", err
-		} else if skipLines > 0 {
-			// Current line is implicitly skipped, so reduce one here
-			i += skipLines - 1
-		} else if skipLines == skipUntilEndTag {
+		} else if lineCount == skipNothing {
+			output = append(output, lines[i])
+		} else if lineCount == skipUntilEndTag {
 			startedAt := i
 			startedAtMatch := dialectLineFilter.FindSubmatch(lines[startedAt])
+			// Skip filter start line
+			i++
 			for ; i < len(lines); i++ {
 				if match := endLineFilter.FindSubmatch(lines[i]); match != nil {
 					if !bytes.Equal(match[1], startedAtMatch[1]) {
@@ -178,12 +177,32 @@ func (db *Database) filterSQLUpgrade(lines [][]byte) (string, error) {
 					}
 					break
 				}
+				if dialect == db.Dialect {
+					if uncomment {
+						output = append(output, bytes.TrimPrefix(lines[i], []byte("--")))
+					} else {
+						output = append(output, lines[i])
+					}
+				}
 			}
 			if i == len(lines) {
 				return "", fmt.Errorf(`didn't get end tag matching start %q at line %d`, string(startedAtMatch[1]), startedAt)
 			}
+		} else if dialect != db.Dialect {
+			i += lineCount
 		} else {
-			output = append(output, lines[i])
+			// Skip current line, uncomment the specified number of lines
+			i++
+			targetI := i + lineCount
+			for ; i < targetI; i++ {
+				if uncomment {
+					output = append(output, bytes.TrimPrefix(lines[i], []byte("--")))
+				} else {
+					output = append(output, lines[i])
+				}
+			}
+			// Decrement counter to avoid skipping the next line
+			i--
 		}
 	}
 	return string(bytes.Join(output, []byte("\n"))), nil
@@ -191,7 +210,7 @@ func (db *Database) filterSQLUpgrade(lines [][]byte) (string, error) {
 
 func sqlUpgradeFunc(fileName string, lines [][]byte) upgradeFunc {
 	return func(ctx context.Context, db *Database) error {
-		if skip, err := db.parseDialectFilter(lines[0]); err == nil && skip == skipNextLine {
+		if dialect, skip, _, err := db.parseDialectFilter(lines[0]); err == nil && skip == skipNextLine && dialect != db.Dialect {
 			return nil
 		} else if upgradeSQL, err := db.filterSQLUpgrade(lines); err != nil {
 			panic(fmt.Errorf("failed to parse upgrade %s: %w", fileName, err))

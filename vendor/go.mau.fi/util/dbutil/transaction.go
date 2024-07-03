@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -26,12 +27,17 @@ var (
 	ErrTxnCommit = fmt.Errorf("%w: commit", ErrTxn)
 )
 
-type contextKey int
+type contextKey int64
 
 const (
-	ContextKeyDatabaseTransaction contextKey = iota
-	ContextKeyDoTxnCallerSkip
+	ContextKeyDoTxnCallerSkip contextKey = 1
 )
+
+var nextContextKeyDatabaseTransaction atomic.Uint64
+
+func init() {
+	nextContextKeyDatabaseTransaction.Store(1 << 61)
+}
 
 func (db *Database) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	return db.Conn(ctx).ExecContext(ctx, query, args...)
@@ -56,7 +62,7 @@ func (db *Database) DoTxn(ctx context.Context, opts *sql.TxOptions, fn func(ctx 
 	if ctx == nil {
 		panic("DoTxn() called with nil ctx")
 	}
-	if ctx.Value(ContextKeyDatabaseTransaction) != nil {
+	if ctx.Value(db.txnCtxKey) != nil {
 		zerolog.Ctx(ctx).Trace().Msg("Already in a transaction, not creating a new one")
 		return fn(ctx)
 	}
@@ -82,7 +88,7 @@ func (db *Database) DoTxn(ctx context.Context, opts *sql.TxOptions, fn func(ctx 
 			select {
 			case <-ticker.C:
 				slowLog.Warn().
-					Dur("duration_seconds", time.Since(start)).
+					Float64("duration_seconds", time.Since(start).Seconds()).
 					Msg("Transaction still running")
 			case <-deadlockCh:
 				return
@@ -106,7 +112,7 @@ func (db *Database) DoTxn(ctx context.Context, opts *sql.TxOptions, fn func(ctx 
 	log.Trace().Msg("Transaction started")
 	tx.noTotalLog = true
 	ctx = log.WithContext(ctx)
-	ctx = context.WithValue(ctx, ContextKeyDatabaseTransaction, tx)
+	ctx = context.WithValue(ctx, db.txnCtxKey, tx)
 	err = fn(ctx)
 	if err != nil {
 		log.Trace().Err(err).Msg("Database transaction failed, rolling back")
@@ -131,7 +137,7 @@ func (db *Database) Conn(ctx context.Context) Execable {
 	if ctx == nil {
 		panic("Conn() called with nil ctx")
 	}
-	txn, ok := ctx.Value(ContextKeyDatabaseTransaction).(Transaction)
+	txn, ok := ctx.Value(db.txnCtxKey).(Transaction)
 	if ok {
 		return txn
 	}

@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/emersion/go-msgauth/dkim"
+	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
 	"github.com/jhillyerd/enmime"
 	"github.com/rs/zerolog"
@@ -51,7 +52,18 @@ type session struct {
 	fromRoom id.RoomID
 }
 
-func (s *session) AuthPlain(username, password string) error {
+func (s *session) AuthMechanisms() []string {
+	return []string{sasl.Plain}
+}
+
+//nolint:unparam // it's a part of the interface
+func (s *session) Auth(_ string) (sasl.Server, error) {
+	return sasl.NewPlainServer(func(identity, username, password string) error {
+		return s.authPlain(identity, username, password)
+	}), nil
+}
+
+func (s *session) authPlain(_, username, password string) error {
 	addr := s.conn.Conn().RemoteAddr()
 	if s.bot.IsBanned(s.ctx, addr) {
 		return ErrBanned

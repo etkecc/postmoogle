@@ -1,11 +1,15 @@
-lint:
-  image: registry.gitlab.com/etke.cc/base
-  script:
-    - golangci-lint run ./...
+stages:
+  - test
+  - release
+default:
+  image: registry.gitlab.com/etke.cc/base/build
 
-unit:
-  image: registry.gitlab.com/etke.cc/base
+test:
+  stage: test
   script:
-    - go test -coverprofile=cover.out ./...
-    - go tool cover -func=cover.out
-    - rm -f cover.out
+    - just lint
+    - just test
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - /root/cache/

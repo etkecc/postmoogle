@@ -8,4 +8,3 @@ CREATE FUNCTION delete_data() RETURNS TRIGGER LANGUAGE plpgsql AS $$ BEGIN
 	DELETE FROM test WHERE key <= NEW.data->>'index';
 	RETURN NEW;
 END $$;
--- end only postgres

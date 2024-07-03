@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build linux && (amd64 || loong64)
+//go:build linux && (amd64 || arm64 || loong64)
 
 //go:generate go run generator.go
 
@@ -126,11 +126,6 @@ import (
 	"golang.org/x/sys/unix"
 	"modernc.org/libc/uuid/uuid"
 	"modernc.org/memory"
-)
-
-const (
-	heapAlign = 16
-	heapGuard = 16
 )
 
 var (
@@ -278,15 +273,18 @@ type TLS struct {
 	allocaStack         []int
 	allocas             []uintptr
 	jumpBuffers         []uintptr
+	pendingSignals      chan os.Signal
 	pthread             uintptr // *t__pthread
 	pthreadCleanupItems []pthreadCleanupItem
 	pthreadKeyValues    map[Tpthread_key_t]uintptr
+	sigHandlers         map[int32]uintptr
 	sp                  int
 	stack               []tlsStackSlot
 
 	ID int32
 
-	ownsPthread bool
+	checkSignals bool
+	ownsPthread  bool
 }
 
 var __ccgo_environOnce sync.Once
@@ -311,6 +309,7 @@ func NewTLS() (r *TLS) {
 		ID:          id,
 		ownsPthread: true,
 		pthread:     pthread,
+		sigHandlers: map[int32]uintptr{},
 	}
 }
 
@@ -404,6 +403,29 @@ func (tls *TLS) Alloc(n0 int) (r uintptr) {
 func (tls *TLS) Free(n int) {
 	//TODO shrink stacks if possible. Tcl is currently against.
 	tls.sp--
+	if !tls.checkSignals {
+		return
+	}
+
+	select {
+	case sig := <-tls.pendingSignals:
+		signum := int32(sig.(syscall.Signal))
+		h, ok := tls.sigHandlers[signum]
+		if !ok {
+			break
+		}
+
+		switch h {
+		case SIG_DFL:
+			// nop
+		case SIG_IGN:
+			// nop
+		default:
+			(*(*func(*TLS, int32))(unsafe.Pointer(&struct{ uintptr }{h})))(tls, signum)
+		}
+	default:
+		// nop
+	}
 }
 
 func (tls *TLS) alloca(n Tsize_t) (r uintptr) {
@@ -474,6 +496,10 @@ func Xexit(tls *TLS, code int32) {
 	X__stdio_exit(tls)
 	for _, v := range atExit {
 		v()
+	}
+	atExitHandlersMu.Lock()
+	for _, v := range atExitHandlers {
+		(*(*func(*TLS))(unsafe.Pointer(&struct{ uintptr }{v})))(tls)
 	}
 	os.Exit(int(code))
 }
@@ -647,24 +673,33 @@ func Xfork(t *TLS) int32 {
 const SIG_DFL = 0
 const SIG_IGN = 1
 
-var sigHandlers = map[int32]uintptr{}
-
 func Xsignal(tls *TLS, signum int32, handler uintptr) (r uintptr) {
-	r, sigHandlers[signum] = sigHandlers[signum], handler
-	sigHandlers[signum] = handler
+	r, tls.sigHandlers[signum] = tls.sigHandlers[signum], handler
 	switch handler {
 	case SIG_DFL:
 		gosignal.Reset(syscall.Signal(signum))
 	case SIG_IGN:
 		gosignal.Ignore(syscall.Signal(signum))
 	default:
-		panic(todo(""))
+		if tls.pendingSignals == nil {
+			tls.pendingSignals = make(chan os.Signal, 3)
+			tls.checkSignals = true
+		}
+		gosignal.Notify(tls.pendingSignals, syscall.Signal(signum))
 	}
 	return r
 }
 
+var (
+	atExitHandlersMu sync.Mutex
+	atExitHandlers   []uintptr
+)
+
 func Xatexit(tls *TLS, func_ uintptr) (r int32) {
-	return -1
+	atExitHandlersMu.Lock()
+	atExitHandlers = append(atExitHandlers, func_)
+	atExitHandlersMu.Unlock()
+	return 0
 }
 
 var __sync_synchronize_dummy int32

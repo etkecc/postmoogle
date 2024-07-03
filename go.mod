@@ -12,16 +12,16 @@ require (
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
 	github.com/emersion/go-smtp v0.21.2
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/gabriel-vasile/mimetype v1.4.3
-	github.com/getsentry/sentry-go v0.27.0
+	github.com/gabriel-vasile/mimetype v1.4.4
+	github.com/getsentry/sentry-go v0.28.1
 	github.com/jhillyerd/enmime v1.2.0
 	github.com/kvannotten/mailstrip v0.0.0-20200711213611-0002f5c0467e
 	github.com/lib/pq v1.10.9
 	github.com/mcnijman/go-emailaddress v1.1.1
 	github.com/mileusna/crontab v1.2.0
 	github.com/raja/argon2pw v1.0.2-0.20210910183755-a391af63bd39
-	github.com/rs/zerolog v1.32.0
-	gitlab.com/etke.cc/go/env v1.1.0
+	github.com/rs/zerolog v1.33.0
+	gitlab.com/etke.cc/go/env v1.2.0
 	gitlab.com/etke.cc/go/fswatcher v1.0.0
 	gitlab.com/etke.cc/go/healthchecks/v2 v2.2.0
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
@@ -29,9 +29,9 @@ require (
 	gitlab.com/etke.cc/go/secgen v1.2.0
 	gitlab.com/etke.cc/go/validator v1.0.7
 	gitlab.com/etke.cc/linkpearl v0.0.0-20240425105001-435ae2720365
-	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
+	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	maunium.net/go/mautrix v0.18.1
-	modernc.org/sqlite v1.29.10
+	modernc.org/sqlite v1.30.1
 )
 
 require (
@@ -57,15 +57,15 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	github.com/yuin/goldmark v1.7.1 // indirect
+	github.com/yuin/goldmark v1.7.4 // indirect
 	gitlab.com/etke.cc/go/trysmtp v1.1.3 // indirect
-	go.mau.fi/util v0.4.2 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
+	go.mau.fi/util v0.5.0 // indirect
+	golang.org/x/crypto v0.24.0 // indirect
+	golang.org/x/net v0.26.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240304020402-f0dba7c97c2b // indirect
-	modernc.org/libc v1.50.7 // indirect
+	modernc.org/libc v1.54.1 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/strutil v1.2.0 // indirect
