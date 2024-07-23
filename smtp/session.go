@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"slices"
 	"strconv"
 
 	"github.com/emersion/go-msgauth/dkim"
@@ -34,6 +35,8 @@ var (
 	ErrInvalidEmail = errors.New("please, provide valid email address")
 	// GraylistEnhancedCode is GraylistCode in enhanced code notation
 	GraylistEnhancedCode = smtp.EnhancedCode{4, 5, 1}
+	// ensure that session implements smtp.AuthSession
+	_ smtp.AuthSession = (*session)(nil)
 )
 
 type session struct {
@@ -52,13 +55,20 @@ type session struct {
 	fromRoom id.RoomID
 }
 
+// AuthMechanisms returns the list of supported authentication mechanisms
 func (s *session) AuthMechanisms() []string {
 	return []string{sasl.Plain}
 }
 
-//nolint:unparam // it's a part of the interface
-func (s *session) Auth(_ string) (sasl.Server, error) {
-	return sasl.NewPlainServer(func(identity, username, password string) error {
+func (s *session) Auth(mech string) (sasl.Server, error) {
+	if !slices.Contains(s.AuthMechanisms(), mech) {
+		addr := s.conn.Conn().RemoteAddr()
+		s.log.Info().Str("addr", addr.String()).Msg("banning due to invalid auth mechanism")
+		s.bot.BanAuth(s.ctx, addr)
+		return nil, ErrBanned
+	}
+
+	return NewPlainAuthServer(s.ctx, s.bot, s.conn, func(identity, username, password string) error {
 		return s.authPlain(identity, username, password)
 	}), nil
 }

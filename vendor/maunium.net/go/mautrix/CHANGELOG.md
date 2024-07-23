@@ -1,3 +1,69 @@
+## v0.19.0 (2024-07-16)
+
+* Renamed `master` branch to `main`.
+* *(bridgev2)* Added more features.
+* *(crypto)* Fixed bug with copying `m.relates_to` from wire content to
+  decrypted content.
+* *(mediaproxy)* Added module for implementing simple media repos that proxy
+  requests elsewhere.
+* *(client)* Changed `Members()` to automatically parse event content for all
+  returned events.
+* *(bridge)* Added `/register` call if `/versions` fails with `M_FORBIDDEN`.
+* *(crypto)* Fixed `DecryptMegolmEvent` sometimes calling database without
+  transaction by using the non-context version of `ResolveTrust`.
+* *(crypto/attachment)* Implemented `io.Seeker` in `EncryptStream` to allow
+  using it in retriable HTTP requests.
+* *(event)* Added helper method to add user ID to a `Mentions` object.
+* *(event)* Fixed default power level for invites
+  (thanks to [@rudis] in [#250]).
+* *(client)* Fixed incorrect warning log in `State()` when state store returns
+  no error (thanks to [@rudis] in [#249]).
+* *(crypto/verificationhelper)* Fixed deadlock when ignoring unknown
+  cancellation events (thanks to [@rudis] in [#247]).
+
+[@rudis]: https://github.com/rudis
+[#250]: https://github.com/mautrix/go/pull/250
+[#249]: https://github.com/mautrix/go/pull/249
+[#247]: https://github.com/mautrix/go/pull/247
+
+### beta.1 (2024-06-16)
+
+* *(bridgev2)* Added experimental high-level bridge framework.
+* *(hicli)* Added experimental high-level client framework.
+* **Slightly breaking changes**
+  * *(crypto)* Added room ID and first known index parameters to
+    `SessionReceived` callback.
+  * *(crypto)* Changed `ImportRoomKeyFromBackup` to return the imported
+    session.
+  * *(client)* Added `error` parameter to `ResponseHook`.
+  * *(client)* Changed `Download` to return entire response instead of just an
+    `io.Reader`.
+* *(crypto)* Changed initial olm device sharing to save keys before sharing to
+  ensure keys aren't accidentally regenerated in case the request fails.
+* *(crypto)* Changed `EncryptMegolmEvent` and `ShareGroupSession` to return
+  more errors instead of only logging and ignoring them.
+* *(crypto)* Added option to completely disable megolm ratchet tracking.
+  * The tracking is meant for bots and bridges which may want to delete old
+    keys, but for normal clients it's just unnecessary overhead.
+* *(crypto)* Changed Megolm session storage methods in `Store` to not take
+  sender key as parameter.
+  * This causes a breaking change to the layout of the `MemoryStore` struct.
+    Using MemoryStore in production is not recommended.
+* *(crypto)* Changed `DecryptMegolmEvent` to copy `m.relates_to` in the raw
+  content too instead of only in the parsed struct.
+* *(crypto)* Exported function to parse megolm message index from raw
+  ciphertext bytes.
+* *(crypto/sqlstore)* Fixed schema of `crypto_secrets` table to include
+  account ID.
+* *(crypto/verificationhelper)* Fixed more bugs.
+* *(client)* Added `UpdateRequestOnRetry` hook which is called immediately
+  before retrying a normal HTTP request.
+* *(client)* Added support for MSC3916 media download endpoint.
+  * Support is automatically detected from spec versions. The `SpecVersions`
+    property can either be filled manually, or `Versions` can be called to
+    automatically populate the field with the response.
+* *(event)* Added constants for known room versions.
+
 ## v0.18.1 (2024-04-16)
 
 * *(format)* Added a `context.Context` field to HTMLParser's Context struct.

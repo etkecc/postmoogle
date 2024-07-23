@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"time"
-	"unsafe"
 
 	"github.com/buger/jsonparser"
 	"github.com/getsentry/sentry-go"
@@ -147,17 +146,17 @@ func (w *Writer) parseLogEvent(data []byte) (*sentry.Event, bool) {
 	}
 
 	err := jsonparser.ObjectEach(data, func(key, value []byte, vt jsonparser.ValueType, offset int) error {
-		switch string(key) {
+		switch strKey := string(key); strKey {
 		case zerolog.MessageFieldName:
-			event.Message = bytesToStrUnsafe(value)
+			event.Message = string(value)
 		case zerolog.ErrorFieldName:
 			event.Exception = append(event.Exception, sentry.Exception{
-				Value:      bytesToStrUnsafe(value),
+				Value:      string(value),
 				Stacktrace: newStacktrace(),
 			})
 		case zerolog.LevelFieldName, zerolog.TimestampFieldName:
 		default:
-			event.Extra[string(key)] = bytesToStrUnsafe(value)
+			event.Extra[strKey] = string(value)
 		}
 
 		return nil
@@ -200,10 +199,6 @@ outer:
 	st.Frames = st.Frames[:threshold+1]
 
 	return st
-}
-
-func bytesToStrUnsafe(data []byte) string {
-	return *(*string)(unsafe.Pointer(&data))
 }
 
 // WriterOption configures sentry events writer.

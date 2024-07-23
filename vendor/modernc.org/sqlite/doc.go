@@ -31,6 +31,7 @@
 //	linux	ppc64le 3.46.0
 //	linux	riscv64 3.46.0
 //	linux	s390x   3.46.0
+//	windows	386     3.46.0
 //	windows	amd64   3.46.0
 //	windows	arm64   3.46.0
 //
@@ -49,6 +50,10 @@
 // See the discussion at https://gitlab.com/cznic/sqlite/-/issues/177 for more details.
 //
 // # Changelog
+//
+// 2024-07-22: v1.31.0
+//
+// Support windows/386.
 //
 // 2024-06-04: v1.30.0
 //

@@ -21,7 +21,11 @@ type upgrade struct {
 
 	upgradesTo    int
 	compatVersion int
-	transaction   bool
+	transaction   TxnMode
+}
+
+func (u *upgrade) DangerouslyRun(ctx context.Context, db *Database) (upgradesTo, compat int, err error) {
+	return u.upgradesTo, u.compatVersion, u.fn(ctx, db)
 }
 
 var ErrUnsupportedDatabaseVersion = errors.New("unsupported database schema version")
@@ -153,6 +157,37 @@ func (db *Database) setVersion(ctx context.Context, version, compat int) error {
 	return err
 }
 
+func (db *Database) DoSQLiteTransactionWithoutForeignKeys(ctx context.Context, doUpgrade func(context.Context) error) error {
+	conn, err := db.AcquireConn(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to acquire connection: %w", err)
+	}
+	_, err = conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF")
+	if err != nil {
+		return fmt.Errorf("failed to disable foreign keys: %w", err)
+	}
+	err = db.DoTxn(ctx, &TxnOptions{Conn: conn}, func(ctx context.Context) error {
+		err := doUpgrade(ctx)
+		if err != nil {
+			return err
+		}
+		_, err = conn.ExecContext(ctx, "PRAGMA foreign_key_check")
+		if err != nil {
+			return fmt.Errorf("failed to check foreign keys after upgrade: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		_, _ = conn.ExecContext(ctx, "PRAGMA foreign_keys=ON")
+		return err
+	}
+	_, err = conn.ExecContext(ctx, "PRAGMA foreign_keys=ON")
+	if err != nil {
+		return fmt.Errorf("failed to enable foreign keys: %w", err)
+	}
+	return nil
+}
+
 func (db *Database) Upgrade(ctx context.Context) error {
 	err := db.checkDatabaseOwner(ctx)
 	if err != nil {
@@ -194,10 +229,18 @@ func (db *Database) Upgrade(ctx context.Context) error {
 			return nil
 		}
 		db.Log.DoUpgrade(logVersion, upgradeItem.upgradesTo, upgradeItem.message, upgradeItem.transaction)
-		if upgradeItem.transaction {
-			err = db.DoTxn(ctx, nil, doUpgrade)
-		} else {
+		switch upgradeItem.transaction {
+		case TxnModeOff:
 			err = doUpgrade(ctx)
+		case TxnModeOn:
+			err = db.DoTxn(ctx, nil, doUpgrade)
+		case TxnModeSQLiteForeignKeysOff:
+			switch db.Dialect {
+			case SQLite:
+				err = db.DoSQLiteTransactionWithoutForeignKeys(ctx, doUpgrade)
+			default:
+				err = db.DoTxn(ctx, nil, doUpgrade)
+			}
 		}
 		if err != nil {
 			return err

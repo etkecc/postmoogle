@@ -112,11 +112,12 @@ func (et *Type) GuessClass() TypeClass {
 		StatePowerLevels.Type, StateRoomName.Type, StateRoomAvatar.Type, StateServerACL.Type, StateTopic.Type,
 		StatePinnedEvents.Type, StateTombstone.Type, StateEncryption.Type, StateBridge.Type, StateHalfShotBridge.Type,
 		StateSpaceParent.Type, StateSpaceChild.Type, StatePolicyRoom.Type, StatePolicyServer.Type, StatePolicyUser.Type,
-		StateInsertionMarker.Type:
+		StateInsertionMarker.Type, StateElementFunctionalMembers.Type:
 		return StateEventType
 	case EphemeralEventReceipt.Type, EphemeralEventTyping.Type, EphemeralEventPresence.Type:
 		return EphemeralEventType
 	case AccountDataDirectChats.Type, AccountDataPushRules.Type, AccountDataRoomTags.Type,
+		AccountDataFullyRead.Type, AccountDataIgnoredUserList.Type, AccountDataMarkedUnread.Type,
 		AccountDataSecretStorageKey.Type, AccountDataSecretStorageDefaultKey.Type,
 		AccountDataCrossSigningMaster.Type, AccountDataCrossSigningSelf.Type, AccountDataCrossSigningUser.Type,
 		AccountDataFullyRead.Type, AccountDataMegolmBackupKey.Type:
@@ -193,6 +194,8 @@ var (
 
 	// Deprecated: MSC2716 has been abandoned
 	StateInsertionMarker = Type{"org.matrix.msc2716.marker", StateEventType}
+
+	StateElementFunctionalMembers = Type{"io.element.functional_members", StateEventType}
 )
 
 // Message events
@@ -238,13 +241,14 @@ var (
 	AccountDataRoomTags        = Type{"m.tag", AccountDataEventType}
 	AccountDataFullyRead       = Type{"m.fully_read", AccountDataEventType}
 	AccountDataIgnoredUserList = Type{"m.ignored_user_list", AccountDataEventType}
+	AccountDataMarkedUnread    = Type{"m.marked_unread", AccountDataEventType}
 
 	AccountDataSecretStorageDefaultKey = Type{"m.secret_storage.default_key", AccountDataEventType}
 	AccountDataSecretStorageKey        = Type{"m.secret_storage.key", AccountDataEventType}
 	AccountDataCrossSigningMaster      = Type{string(id.SecretXSMaster), AccountDataEventType}
 	AccountDataCrossSigningUser        = Type{string(id.SecretXSUserSigning), AccountDataEventType}
 	AccountDataCrossSigningSelf        = Type{string(id.SecretXSSelfSigning), AccountDataEventType}
-	AccountDataMegolmBackupKey         = Type{"m.megolm_backup.v1", AccountDataEventType}
+	AccountDataMegolmBackupKey         = Type{string(id.SecretMegolmBackupV1), AccountDataEventType}
 )
 
 // Device-to-device events

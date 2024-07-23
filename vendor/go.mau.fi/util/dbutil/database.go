@@ -73,10 +73,20 @@ type UnderlyingExecable interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
+type UnderlyingExecutableWithTx interface {
+	UnderlyingExecable
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+}
+
 type Execable interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...any) (Rows, error)
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+type Conn interface {
+	Execable
+	internalTxnStarter
 }
 
 type Transaction interface {
@@ -87,11 +97,11 @@ type Transaction interface {
 
 // Expected implementations of Execable
 var (
-	_ UnderlyingExecable = (*sql.Tx)(nil)
-	_ UnderlyingExecable = (*sql.DB)(nil)
-	_ UnderlyingExecable = (*sql.Conn)(nil)
-	_ Execable           = (*LoggingExecable)(nil)
-	_ Transaction        = (*LoggingTxn)(nil)
+	_ UnderlyingExecable         = (*sql.Tx)(nil)
+	_ UnderlyingExecutableWithTx = (*sql.DB)(nil)
+	_ UnderlyingExecutableWithTx = (*sql.Conn)(nil)
+	_ Execable                   = (*LoggingExecable)(nil)
+	_ Transaction                = (*LoggingTxn)(nil)
 )
 
 type Database struct {

@@ -6,7 +6,13 @@
 
 package dbutil
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"runtime"
+
+	"go.mau.fi/util/exzerolog"
+)
 
 var ErrAlreadyIterated = errors.New("this iterator has been already iterated")
 
@@ -39,24 +45,38 @@ type ConvertRowFn[T any] func(Scannable) (T, error)
 //		)
 //	}
 func (crf ConvertRowFn[T]) NewRowIter(rows Rows, err error) RowIter[T] {
-	return NewRowIterWithError(rows, crf, err)
+	return newRowIterWithError(rows, crf, err)
 }
 
 type rowIterImpl[T any] struct {
 	Rows
 	ConvertRow ConvertRowFn[T]
 
-	err error
+	iterated bool
+	caller   string
+	err      error
 }
 
 // NewRowIter creates a new RowIter from the given Rows and scanner function.
 func NewRowIter[T any](rows Rows, convertFn ConvertRowFn[T]) RowIter[T] {
-	return &rowIterImpl[T]{Rows: rows, ConvertRow: convertFn}
+	return newRowIterWithError(rows, convertFn, nil)
 }
 
 // NewRowIterWithError creates a new RowIter from the given Rows and scanner function with default error. If not nil, it will be returned without calling iterator function.
 func NewRowIterWithError[T any](rows Rows, convertFn ConvertRowFn[T], err error) RowIter[T] {
-	return &rowIterImpl[T]{Rows: rows, ConvertRow: convertFn, err: err}
+	return newRowIterWithError(rows, convertFn, err)
+}
+
+func newRowIterWithError[T any](rows Rows, convertFn ConvertRowFn[T], err error) RowIter[T] {
+	ri := &rowIterImpl[T]{Rows: rows, ConvertRow: convertFn, err: err}
+	if err == nil {
+		callerSkip := 2
+		if pc, file, line, ok := runtime.Caller(callerSkip); ok {
+			ri.caller = exzerolog.CallerWithFunctionName(pc, file, line)
+		}
+		runtime.SetFinalizer(ri, (*rowIterImpl[T]).destroy)
+	}
+	return ri
 }
 
 func ScanSingleColumn[T any](rows Scannable) (val T, err error) {
@@ -74,13 +94,22 @@ func ScanDataStruct[T NewableDataStruct[T]](rows Scannable) (T, error) {
 	return val.New().Scan(rows)
 }
 
+func (i *rowIterImpl[T]) destroy() {
+	if !i.iterated {
+		panic(fmt.Errorf("RowIter created at %s wasn't iterated", i.caller))
+	}
+}
+
 func (i *rowIterImpl[T]) Iter(fn func(T) (bool, error)) error {
 	if i == nil {
 		return nil
 	} else if i.Rows == nil || i.err != nil {
 		return i.err
 	}
-	defer i.Rows.Close()
+	defer func() {
+		_ = i.Rows.Close()
+		i.iterated = true
+	}()
 
 	for i.Rows.Next() {
 		if item, err := i.ConvertRow(i.Rows); err != nil {

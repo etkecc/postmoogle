@@ -15,6 +15,7 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog"
+	"go.mau.fi/util/exzerolog"
 
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/event"
@@ -61,7 +62,7 @@ func IsShareError(err error) bool {
 	return err == SessionExpired || err == SessionNotShared || err == NoGroupSession
 }
 
-func parseMessageIndex(ciphertext []byte) (uint, error) {
+func ParseMegolmMessageIndex(ciphertext []byte) (uint, error) {
 	decoded := make([]byte, base64.RawStdEncoding.DecodedLen(len(ciphertext)))
 	var err error
 	_, err = base64.RawStdEncoding.Decode(decoded, ciphertext)
@@ -109,7 +110,7 @@ func (mach *OlmMachine) EncryptMegolmEvent(ctx context.Context, roomID id.RoomID
 	if err != nil {
 		return nil, err
 	}
-	idx, err := parseMessageIndex(ciphertext)
+	idx, err := ParseMegolmMessageIndex(ciphertext)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to get megolm message index of encrypted event")
 	} else {
@@ -136,32 +137,28 @@ func (mach *OlmMachine) EncryptMegolmEvent(ctx context.Context, roomID id.RoomID
 	return encrypted, nil
 }
 
-func (mach *OlmMachine) newOutboundGroupSession(ctx context.Context, roomID id.RoomID) *OutboundGroupSession {
+func (mach *OlmMachine) newOutboundGroupSession(ctx context.Context, roomID id.RoomID) (*OutboundGroupSession, error) {
 	encryptionEvent, err := mach.StateStore.GetEncryptionEvent(ctx, roomID)
 	if err != nil {
 		mach.machOrContextLog(ctx).Err(err).
 			Stringer("room_id", roomID).
 			Msg("Failed to get encryption event in room")
+		return nil, fmt.Errorf("failed to get encryption event in room %s: %w", roomID, err)
 	}
 	session := NewOutboundGroupSession(roomID, encryptionEvent)
 	if !mach.DontStoreOutboundKeys {
 		signingKey, idKey := mach.account.Keys()
-		mach.createGroupSession(ctx, idKey, signingKey, roomID, session.ID(), session.Internal.Key(), session.MaxAge, session.MaxMessages, false)
+		err := mach.createGroupSession(ctx, idKey, signingKey, roomID, session.ID(), session.Internal.Key(), session.MaxAge, session.MaxMessages, false)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return session
+	return session, err
 }
 
 type deviceSessionWrapper struct {
 	session  *OlmSession
 	identity *id.Device
-}
-
-func strishArray[T ~string](arr []T) []string {
-	out := make([]string, len(arr))
-	for i, item := range arr {
-		out[i] = string(item)
-	}
-	return out
 }
 
 // ShareGroupSession shares a group session for a specific room with all the devices of the given user list.
@@ -183,27 +180,30 @@ func (mach *OlmMachine) ShareGroupSession(ctx context.Context, roomID id.RoomID,
 		Logger()
 	ctx = log.WithContext(ctx)
 	if session == nil || session.Expired() {
-		session = mach.newOutboundGroupSession(ctx, roomID)
+		if session, err = mach.newOutboundGroupSession(ctx, roomID); err != nil {
+			return err
+		}
 	}
 	log = log.With().Str("session_id", session.ID().String()).Logger()
 	ctx = log.WithContext(ctx)
-	log.Debug().Strs("users", strishArray(users)).Msg("Sharing group session for room")
+	log.Debug().Array("users", exzerolog.ArrayOfStrs(users)).Msg("Sharing group session for room")
 
 	withheldCount := 0
 	toDeviceWithheld := &mautrix.ReqSendToDevice{Messages: make(map[id.UserID]map[id.DeviceID]*event.Content)}
 	olmSessions := make(map[id.UserID]map[id.DeviceID]deviceSessionWrapper)
 	missingSessions := make(map[id.UserID]map[id.DeviceID]*id.Device)
 	missingUserSessions := make(map[id.DeviceID]*id.Device)
-	var fetchKeys []id.UserID
+	var fetchKeysForUsers []id.UserID
 
 	for _, userID := range users {
 		log := log.With().Str("target_user_id", userID.String()).Logger()
 		devices, err := mach.CryptoStore.GetDevices(ctx, userID)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to get devices of user")
+			log.Err(err).Msg("Failed to get devices of user")
+			return fmt.Errorf("failed to get devices of user %s: %w", userID, err)
 		} else if devices == nil {
 			log.Debug().Msg("GetDevices returned nil, will fetch keys and retry")
-			fetchKeys = append(fetchKeys, userID)
+			fetchKeysForUsers = append(fetchKeysForUsers, userID)
 		} else if len(devices) == 0 {
 			log.Trace().Msg("User has no devices, skipping")
 		} else {
@@ -227,18 +227,19 @@ func (mach *OlmMachine) ShareGroupSession(ctx context.Context, roomID id.RoomID,
 		}
 	}
 
-	if len(fetchKeys) > 0 {
-		log.Debug().Strs("users", strishArray(fetchKeys)).Msg("Fetching missing keys")
-		if keys, err := mach.FetchKeys(ctx, fetchKeys, true); err != nil {
-			log.Err(err).Strs("users", strishArray(fetchKeys)).Msg("Failed to fetch missing keys")
-		} else if keys != nil {
-			for userID, devices := range keys {
-				log.Debug().
-					Int("device_count", len(devices)).
-					Str("target_user_id", userID.String()).
-					Msg("Got device keys for user")
-				missingSessions[userID] = devices
-			}
+	if len(fetchKeysForUsers) > 0 {
+		log.Debug().Array("users", exzerolog.ArrayOfStrs(fetchKeysForUsers)).Msg("Fetching missing keys")
+		keys, err := mach.FetchKeys(ctx, fetchKeysForUsers, true)
+		if err != nil {
+			log.Err(err).Array("users", exzerolog.ArrayOfStrs(fetchKeysForUsers)).Msg("Failed to fetch missing keys")
+			return fmt.Errorf("failed to fetch missing keys: %w", err)
+		}
+		for userID, devices := range keys {
+			log.Debug().
+				Int("device_count", len(devices)).
+				Str("target_user_id", userID.String()).
+				Msg("Got device keys for user")
+			missingSessions[userID] = devices
 		}
 	}
 
@@ -246,7 +247,8 @@ func (mach *OlmMachine) ShareGroupSession(ctx context.Context, roomID id.RoomID,
 		log.Debug().Msg("Creating missing olm sessions")
 		err = mach.createOutboundSessions(ctx, missingSessions)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to create missing olm sessions")
+			log.Err(err).Msg("Failed to create missing olm sessions")
+			return fmt.Errorf("failed to create missing olm sessions: %w", err)
 		}
 	}
 

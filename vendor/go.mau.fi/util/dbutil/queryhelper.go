@@ -117,7 +117,7 @@ func (qh *QueryHelper[T]) scanNew(row Scannable) (T, error) {
 func (qh *QueryHelper[T]) QueryOne(ctx context.Context, query string, args ...any) (val T, err error) {
 	val, err = qh.scanNew(qh.db.QueryRow(ctx, query, args...))
 	if errors.Is(err, sql.ErrNoRows) {
-		err = nil
+		return *new(T), nil
 	}
 	return val, err
 }

@@ -40,25 +40,25 @@ func init() {
 }
 
 func (db *Database) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return db.Conn(ctx).ExecContext(ctx, query, args...)
+	return db.Execable(ctx).ExecContext(ctx, query, args...)
 }
 
 func (db *Database) Query(ctx context.Context, query string, args ...any) (Rows, error) {
-	return db.Conn(ctx).QueryContext(ctx, query, args...)
+	return db.Execable(ctx).QueryContext(ctx, query, args...)
 }
 
 func (db *Database) QueryRow(ctx context.Context, query string, args ...any) *sql.Row {
-	return db.Conn(ctx).QueryRowContext(ctx, query, args...)
+	return db.Execable(ctx).QueryRowContext(ctx, query, args...)
 }
 
-func (db *Database) BeginTx(ctx context.Context, opts *sql.TxOptions) (*LoggingTxn, error) {
+func (db *Database) BeginTx(ctx context.Context, opts *TxnOptions) (*LoggingTxn, error) {
 	if ctx == nil {
 		panic("BeginTx() called with nil ctx")
 	}
 	return db.LoggingDB.BeginTx(ctx, opts)
 }
 
-func (db *Database) DoTxn(ctx context.Context, opts *sql.TxOptions, fn func(ctx context.Context) error) error {
+func (db *Database) DoTxn(ctx context.Context, opts *TxnOptions, fn func(ctx context.Context) error) error {
 	if ctx == nil {
 		panic("DoTxn() called with nil ctx")
 	}
@@ -133,7 +133,7 @@ func (db *Database) DoTxn(ctx context.Context, opts *sql.TxOptions, fn func(ctx 
 	return nil
 }
 
-func (db *Database) Conn(ctx context.Context) Execable {
+func (db *Database) Execable(ctx context.Context) Execable {
 	if ctx == nil {
 		panic("Conn() called with nil ctx")
 	}
@@ -142,4 +142,22 @@ func (db *Database) Conn(ctx context.Context) Execable {
 		return txn
 	}
 	return &db.LoggingDB
+}
+
+func (db *Database) AcquireConn(ctx context.Context) (Conn, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("AcquireConn() called with nil ctx")
+	}
+	_, ok := ctx.Value(db.txnCtxKey).(Transaction)
+	if ok {
+		return nil, fmt.Errorf("cannot acquire connection while in a transaction")
+	}
+	conn, err := db.RawDB.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &LoggingExecable{
+		UnderlyingExecable: conn,
+		db:                 db,
+	}, nil
 }

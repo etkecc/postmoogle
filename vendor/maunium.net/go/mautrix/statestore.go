@@ -37,8 +37,16 @@ type StateStore interface {
 	GetRoomJoinedOrInvitedMembers(ctx context.Context, roomID id.RoomID) ([]id.UserID, error)
 }
 
+type StateStoreUpdater interface {
+	UpdateState(ctx context.Context, evt *event.Event)
+}
+
 func UpdateStateStore(ctx context.Context, store StateStore, evt *event.Event) {
 	if store == nil || evt == nil || evt.StateKey == nil {
+		return
+	}
+	if directUpdater, ok := store.(StateStoreUpdater); ok {
+		directUpdater.UpdateState(ctx, evt)
 		return
 	}
 	// We only care about events without a state key (power levels, encryption) or member events with state key
@@ -268,4 +276,15 @@ func (store *MemoryStateStore) GetEncryptionEvent(_ context.Context, roomID id.R
 func (store *MemoryStateStore) IsEncrypted(ctx context.Context, roomID id.RoomID) (bool, error) {
 	cfg, err := store.GetEncryptionEvent(ctx, roomID)
 	return cfg != nil && cfg.Algorithm == id.AlgorithmMegolmV1, err
+}
+
+func (store *MemoryStateStore) FindSharedRooms(ctx context.Context, userID id.UserID) (rooms []id.RoomID, err error) {
+	store.membersLock.RLock()
+	defer store.membersLock.RUnlock()
+	for roomID, members := range store.Members {
+		if _, ok := members[userID]; ok {
+			rooms = append(rooms, roomID)
+		}
+	}
+	return rooms, nil
 }

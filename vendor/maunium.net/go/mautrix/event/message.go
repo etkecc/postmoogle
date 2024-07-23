@@ -8,6 +8,7 @@ package event
 
 import (
 	"encoding/json"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -20,6 +21,24 @@ import (
 // MessageType is the sub-type of a m.room.message event.
 // https://spec.matrix.org/v1.2/client-server-api/#mroommessage-msgtypes
 type MessageType string
+
+func (mt MessageType) IsText() bool {
+	switch mt {
+	case MsgText, MsgNotice, MsgEmote:
+		return true
+	default:
+		return false
+	}
+}
+
+func (mt MessageType) IsMedia() bool {
+	switch mt {
+	case MsgImage, MsgVideo, MsgAudio, MsgFile, MessageType(EventSticker.Type):
+		return true
+	default:
+		return false
+	}
+}
 
 // Msgtypes
 const (
@@ -118,6 +137,9 @@ type MessageEventContent struct {
 	BeeperGalleryCaptionHTML string                 `json:"com.beeper.gallery.caption_html,omitempty"`
 
 	BeeperLinkPreviews []*BeeperLinkPreview `json:"com.beeper.linkpreviews,omitempty"`
+
+	MSC1767Audio *MSC1767Audio `json:"org.matrix.msc1767.audio,omitempty"`
+	MSC3245Voice *MSC3245Voice `json:"org.matrix.msc3245.voice,omitempty"`
 }
 
 func (content *MessageEventContent) GetRelatesTo() *RelatesTo {
@@ -189,6 +211,12 @@ func (content *MessageEventContent) GetInfo() *FileInfo {
 type Mentions struct {
 	UserIDs []id.UserID `json:"user_ids,omitempty"`
 	Room    bool        `json:"room,omitempty"`
+}
+
+func (m *Mentions) Add(userID id.UserID) {
+	if userID != "" && !slices.Contains(m.UserIDs, userID) {
+		m.UserIDs = append(m.UserIDs, userID)
+	}
 }
 
 type EncryptedFileInfo struct {

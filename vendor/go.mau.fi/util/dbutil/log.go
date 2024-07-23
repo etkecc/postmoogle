@@ -13,7 +13,7 @@ type DatabaseLogger interface {
 	QueryTiming(ctx context.Context, method, query string, args []any, nrows int, duration time.Duration, err error)
 	WarnUnsupportedVersion(current, compat, latest int)
 	PrepareUpgrade(current, compat, latest int)
-	DoUpgrade(from, to int, message string, txn bool)
+	DoUpgrade(from, to int, message string, txn TxnMode)
 	// Deprecated: legacy warning method, return errors instead
 	Warn(msg string, args ...any)
 }
@@ -22,10 +22,10 @@ type noopLogger struct{}
 
 var NoopLogger DatabaseLogger = &noopLogger{}
 
-func (n noopLogger) WarnUnsupportedVersion(_, _, _ int)   {}
-func (n noopLogger) PrepareUpgrade(_, _, _ int)           {}
-func (n noopLogger) DoUpgrade(_, _ int, _ string, _ bool) {}
-func (n noopLogger) Warn(msg string, args ...any)         {}
+func (n noopLogger) WarnUnsupportedVersion(_, _, _ int)      {}
+func (n noopLogger) PrepareUpgrade(_, _, _ int)              {}
+func (n noopLogger) DoUpgrade(_, _ int, _ string, _ TxnMode) {}
+func (n noopLogger) Warn(msg string, args ...any)            {}
 
 func (n noopLogger) QueryTiming(_ context.Context, _, _ string, _ []any, _ int, _ time.Duration, _ error) {
 }
@@ -81,11 +81,11 @@ func (z zeroLogger) PrepareUpgrade(current, compat, latest int) {
 	}
 }
 
-func (z zeroLogger) DoUpgrade(from, to int, message string, txn bool) {
+func (z zeroLogger) DoUpgrade(from, to int, message string, txn TxnMode) {
 	z.l.Info().
 		Int("from", from).
 		Int("to", to).
-		Bool("single_txn", txn).
+		Str("txn_mode", string(txn)).
 		Str("description", message).
 		Msg("Upgrading database")
 }

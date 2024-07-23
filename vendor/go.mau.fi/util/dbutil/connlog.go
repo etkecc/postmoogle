@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -96,6 +97,14 @@ func (le *LoggingExecable) QueryRowContext(ctx context.Context, query string, ar
 	return row
 }
 
+func (le *LoggingExecable) beginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
+	txBeginner, ok := le.UnderlyingExecable.(UnderlyingExecutableWithTx)
+	if !ok {
+		return nil, fmt.Errorf("can't start transaction with a %T", le.UnderlyingExecable)
+	}
+	return txBeginner.BeginTx(ctx, opts)
+}
+
 // loggingDB is a wrapper for LoggingExecable that allows access to BeginTx.
 //
 // While LoggingExecable has a pointer to the database and could use BeginTx, it's not technically safe since
@@ -104,13 +113,36 @@ type loggingDB struct {
 	LoggingExecable
 }
 
-func (ld *loggingDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*LoggingTxn, error) {
-	targetDB := ld.db.RawDB
-	if opts != nil && opts.ReadOnly && ld.db.ReadOnlyDB != nil {
-		targetDB = ld.db.ReadOnlyDB
+type internalTxnStarter interface {
+	beginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+}
+
+type TxnOptions struct {
+	Isolation sql.IsolationLevel
+	ReadOnly  bool
+	Conn      Conn
+}
+
+func (ld *loggingDB) BeginTx(ctx context.Context, opts *TxnOptions) (*LoggingTxn, error) {
+	if opts == nil {
+		opts = &TxnOptions{}
 	}
+	sqlOpts := &sql.TxOptions{
+		Isolation: opts.Isolation,
+		ReadOnly:  opts.ReadOnly,
+	}
+	var tx *sql.Tx
+	var err error
 	start := time.Now()
-	tx, err := targetDB.BeginTx(ctx, opts)
+	if opts.Conn != nil {
+		tx, err = opts.Conn.beginTx(ctx, sqlOpts)
+	} else {
+		targetDB := ld.db.RawDB
+		if opts.ReadOnly && ld.db.ReadOnlyDB != nil {
+			targetDB = ld.db.ReadOnlyDB
+		}
+		tx, err = targetDB.BeginTx(ctx, sqlOpts)
+	}
 	ld.db.Log.QueryTiming(ctx, "Begin", "", nil, -1, time.Since(start), err)
 	if err != nil {
 		return nil, err

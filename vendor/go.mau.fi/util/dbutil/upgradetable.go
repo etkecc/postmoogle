@@ -18,6 +18,14 @@ import (
 	"strings"
 )
 
+type TxnMode string
+
+const (
+	TxnModeOn                   TxnMode = "on"
+	TxnModeOff                  TxnMode = "off"
+	TxnModeSQLiteForeignKeysOff TxnMode = "sqlite-fkey-off"
+)
+
 type UpgradeTable []upgrade
 
 func (ut *UpgradeTable) extend(toSize int) {
@@ -30,7 +38,7 @@ func (ut *UpgradeTable) extend(toSize int) {
 	}
 }
 
-func (ut *UpgradeTable) Register(from, to, compat int, message string, txn bool, fn upgradeFunc) {
+func (ut *UpgradeTable) Register(from, to, compat int, message string, txn TxnMode, fn upgradeFunc) {
 	if from < 0 {
 		from += to
 	}
@@ -72,7 +80,7 @@ var upgradeHeaderRegex = regexp.MustCompile(`^-- (?:v(\d+) -> )?v(\d+)(?: \(comp
 //	// do dangerous stuff
 var transactionDisableRegex = regexp.MustCompile(`^-- transaction: (\w*)`)
 
-func parseFileHeader(file []byte) (from, to, compat int, message string, txn bool, lines [][]byte, err error) {
+func parseFileHeader(file []byte) (from, to, compat int, message string, txn TxnMode, lines [][]byte, err error) {
 	lines = bytes.Split(file, []byte("\n"))
 	if len(lines) < 2 {
 		err = errors.New("upgrade file too short")
@@ -99,14 +107,17 @@ func parseFileHeader(file []byte) (from, to, compat int, message string, txn boo
 			from = -1
 		}
 		message = string(match[4])
-		txn = true
+		txn = "on"
 		match = transactionDisableRegex.FindSubmatch(lines[0])
 		if match != nil {
 			lines = lines[1:]
-			if string(match[1]) != "off" {
+			txn = TxnMode(match[1])
+			switch txn {
+			case TxnModeOff, TxnModeOn, TxnModeSQLiteForeignKeysOff:
+				// ok
+			default:
 				err = fmt.Errorf("invalid value %q for transaction flag", match[1])
 			}
-			txn = false
 		}
 	}
 	return
@@ -156,6 +167,16 @@ func (db *Database) parseDialectFilter(line []byte) (dialect Dialect, lineCount 
 }
 
 var endLineFilter = regexp.MustCompile(`^\s*-- end only (postgres|sqlite)$`)
+
+func (db *Database) Internals() *publishDatabaseInternals {
+	return (*publishDatabaseInternals)(db)
+}
+
+type publishDatabaseInternals Database
+
+func (di *publishDatabaseInternals) FilterSQLUpgrade(lines [][]byte) (string, error) {
+	return (*Database)(di).filterSQLUpgrade(lines)
+}
 
 func (db *Database) filterSQLUpgrade(lines [][]byte) (string, error) {
 	output := make([][]byte, 0, len(lines))
@@ -235,7 +256,7 @@ func splitSQLUpgradeFunc(sqliteData, postgresData string) upgradeFunc {
 	}
 }
 
-func parseSplitSQLUpgrade(name string, fs fullFS, skipNames map[string]struct{}) (from, to, compat int, message string, txn bool, fn upgradeFunc) {
+func parseSplitSQLUpgrade(name string, fs fullFS, skipNames map[string]struct{}) (from, to, compat int, message string, txn TxnMode, fn upgradeFunc) {
 	postgresName := fmt.Sprintf("%s.postgres.sql", name)
 	sqliteName := fmt.Sprintf("%s.sqlite.sql", name)
 	skipNames[postgresName] = struct{}{}
@@ -261,7 +282,7 @@ func parseSplitSQLUpgrade(name string, fs fullFS, skipNames map[string]struct{})
 	} else if message != sqliteMessage {
 		panic(fmt.Errorf("mismatching message in postgres and sqlite versions of %s: %q != %q", name, message, sqliteMessage))
 	} else if txn != sqliteTxn {
-		panic(fmt.Errorf("mismatching transaction flag in postgres and sqlite versions of %s: %t != %t", name, txn, sqliteTxn))
+		panic(fmt.Errorf("mismatching transaction flag in postgres and sqlite versions of %s: %s != %s", name, txn, sqliteTxn))
 	}
 	fn = splitSQLUpgradeFunc(string(sqliteData), string(postgresData))
 	return

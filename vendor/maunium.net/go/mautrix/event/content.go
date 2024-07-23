@@ -40,6 +40,8 @@ var TypeMap = map[Type]reflect.Type{
 	StateSpaceChild:        reflect.TypeOf(SpaceChildEventContent{}),
 	StateInsertionMarker:   reflect.TypeOf(InsertionMarkerContent{}),
 
+	StateElementFunctionalMembers: reflect.TypeOf(ElementFunctionalMembersContent{}),
+
 	EventMessage:   reflect.TypeOf(MessageEventContent{}),
 	EventSticker:   reflect.TypeOf(MessageEventContent{}),
 	EventEncrypted: reflect.TypeOf(EncryptedEventContent{}),
@@ -52,6 +54,7 @@ var TypeMap = map[Type]reflect.Type{
 	AccountDataDirectChats:     reflect.TypeOf(DirectChatsEventContent{}),
 	AccountDataFullyRead:       reflect.TypeOf(FullyReadEventContent{}),
 	AccountDataIgnoredUserList: reflect.TypeOf(IgnoredUserListEventContent{}),
+	AccountDataMarkedUnread:    reflect.TypeOf(MarkedUnreadEventContent{}),
 
 	EphemeralEventTyping:   reflect.TypeOf(TypingEventContent{}),
 	EphemeralEventReceipt:  reflect.TypeOf(ReceiptEventContent{}),
@@ -211,6 +214,7 @@ func init() {
 	gob.Register(&BridgeEventContent{})
 	gob.Register(&SpaceChildEventContent{})
 	gob.Register(&SpaceParentEventContent{})
+	gob.Register(&ElementFunctionalMembersContent{})
 	gob.Register(&RoomNameEventContent{})
 	gob.Register(&RoomAvatarEventContent{})
 	gob.Register(&TopicEventContent{})
@@ -352,6 +356,13 @@ func (content *Content) AsSpaceParent() *SpaceParentEventContent {
 	}
 	return casted
 }
+func (content *Content) AsElementFunctionalMembers() *ElementFunctionalMembersContent {
+	casted, ok := content.Parsed.(*ElementFunctionalMembersContent)
+	if !ok {
+		return &ElementFunctionalMembersContent{}
+	}
+	return casted
+}
 func (content *Content) AsMessage() *MessageEventContent {
 	casted, ok := content.Parsed.(*MessageEventContent)
 	if !ok {
@@ -405,6 +416,13 @@ func (content *Content) AsIgnoredUserList() *IgnoredUserListEventContent {
 	casted, ok := content.Parsed.(*IgnoredUserListEventContent)
 	if !ok {
 		return &IgnoredUserListEventContent{}
+	}
+	return casted
+}
+func (content *Content) AsMarkedUnread() *MarkedUnreadEventContent {
+	casted, ok := content.Parsed.(*MarkedUnreadEventContent)
+	if !ok {
+		return &MarkedUnreadEventContent{}
 	}
 	return casted
 }
