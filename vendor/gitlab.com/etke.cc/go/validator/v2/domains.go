@@ -9,12 +9,11 @@ import (
 
 // based on W3C email regex, ref: https://www.w3.org/TR/2016/REC-html51-20161101/sec-forms.html#email-state-typeemail
 var domainRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$`)
-var privateSuffix = []string{".etke.host", ".onmatrix.chat"}
 
 // Domain checks if domain is valid
 func (v *V) Domain(domain string) bool {
 	if domain == "" {
-		return !v.enforce.Domain
+		return !v.cfg.Domain.Enforce
 	}
 
 	if !v.DomainString(domain) {
@@ -27,12 +26,12 @@ func (v *V) Domain(domain string) bool {
 // DomainString checks if domain string / value is valid using string checks like length and regexp
 func (v *V) DomainString(domain string) bool {
 	if len(domain) < 4 || len(domain) > 77 {
-		v.log.Info("domain %s invalid, reason: length", domain)
+		v.cfg.Log("domain %s invalid, reason: length", domain)
 		return false
 	}
 
 	if !domainRegex.MatchString(domain) {
-		v.log.Info("domain %s invalid, reason: regexp", domain)
+		v.cfg.Log("domain %s invalid, reason: regexp", domain)
 		return false
 	}
 
@@ -61,7 +60,7 @@ func (v *V) GetBase(domain string) string {
 
 // hasSuffix checks if domain has a suffix from public suffix list or from predefined suffix list
 func (v *V) hasSuffix(domain string) bool {
-	for _, suffix := range privateSuffix {
+	for _, suffix := range v.cfg.Domain.PrivateSuffixes {
 		if strings.HasSuffix(domain, suffix) {
 			return true
 		}

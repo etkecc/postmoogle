@@ -27,7 +27,7 @@ require (
 	gitlab.com/etke.cc/go/mxidwc v1.0.0
 	gitlab.com/etke.cc/go/psd v1.1.2
 	gitlab.com/etke.cc/go/secgen v1.2.0
-	gitlab.com/etke.cc/go/validator v1.0.7
+	gitlab.com/etke.cc/go/validator/v2 v2.2.0
 	gitlab.com/etke.cc/linkpearl v0.0.0-20240716084747-f2a547f02d54
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	maunium.net/go/mautrix v0.19.0

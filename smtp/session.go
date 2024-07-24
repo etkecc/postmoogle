@@ -15,7 +15,7 @@ import (
 	"github.com/emersion/go-smtp"
 	"github.com/jhillyerd/enmime"
 	"github.com/rs/zerolog"
-	"gitlab.com/etke.cc/go/validator"
+	"gitlab.com/etke.cc/go/validator/v2"
 	"gitlab.com/etke.cc/postmoogle/email"
 	"gitlab.com/etke.cc/postmoogle/utils"
 	"maunium.net/go/mautrix/id"
@@ -171,7 +171,7 @@ func (s *session) incomingData(r io.Reader) error {
 	addr := s.getAddr(envelope)
 	reader.Seek(0, io.SeekStart) //nolint:errcheck // becase we're sure that's ok
 	validations := s.bot.GetIFOptions(s.ctx, s.roomID)
-	if !validateIncoming(s.from, s.tos[0], addr, s.log, validations) {
+	if !validateIncoming(s.from, envelope.GetHeader("Return-Path"), addr, s.log, validations) {
 		s.bot.BanAuth(s.ctx, addr)
 		return ErrBanned
 	}
@@ -288,7 +288,7 @@ func (s *session) getAddr(envelope *enmime.Envelope) net.Addr {
 	return realAddr
 }
 
-func validateIncoming(from, to string, senderAddr net.Addr, log *zerolog.Logger, options email.IncomingFilteringOptions) bool {
+func validateIncoming(from, returnPath string, senderAddr net.Addr, log *zerolog.Logger, options email.IncomingFilteringOptions) bool {
 	var sender net.IP
 	switch netaddr := senderAddr.(type) {
 	case *net.TCPAddr:
@@ -298,13 +298,18 @@ func validateIncoming(from, to string, senderAddr net.Addr, log *zerolog.Logger,
 		sender = net.ParseIP(host)
 	}
 
-	enforce := validator.Enforce{
-		Email: true,
-		MX:    options.SpamcheckMX(),
-		SPF:   options.SpamcheckSPF(),
-		SMTP:  options.SpamcheckSMTP(),
+	vcfg := &validator.Config{
+		Log: log.Warn().Msgf,
+		Email: validator.Email{
+			Enforce:  true,
+			Spamlist: options.Spamlist(),
+			MX:       options.SpamcheckMX(),
+			SPF:      options.SpamcheckSPF(),
+			SMTP:     options.SpamcheckSMTP(),
+			From:     from,
+		},
 	}
-	v := validator.New(options.Spamlist(), enforce, to, &validatorLoggerWrapper{log: log})
+	v := validator.New(vcfg)
 
-	return v.Email(from, sender)
+	return v.Email(from, returnPath, sender)
 }

@@ -2,22 +2,7 @@ package smtp
 
 import (
 	"strings"
-
-	"github.com/rs/zerolog"
 )
-
-// validatorLoggerWrapper is a wrapper around zerolog.Logger to implement validator.Logger interface
-type validatorLoggerWrapper struct {
-	log *zerolog.Logger
-}
-
-func (l validatorLoggerWrapper) Info(msg string, args ...any) {
-	l.log.Info().Msgf(msg, args...)
-}
-
-func (l validatorLoggerWrapper) Error(msg string, args ...any) {
-	l.log.Error().Msgf(msg, args...)
-}
 
 // loggerWrapper is a wrapper around any logger to implement smtp.Logger interface
 type loggerWrapper struct {
