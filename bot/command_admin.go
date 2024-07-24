@@ -380,6 +380,33 @@ func (b *Bot) runBanlistAuth(ctx context.Context, commandSlice []string) { //nol
 	b.lp.SendNotice(ctx, evt.RoomID, "auth banning has been updated", linkpearl.RelatesTo(evt.ID))
 }
 
+func (b *Bot) runBanlistDNSBL(ctx context.Context, commandSlice []string) { //nolint:dupl // not in that case
+	evt := eventFromContext(ctx)
+	cfg := b.cfg.GetBot(ctx)
+	if len(commandSlice) < 2 {
+		var msg strings.Builder
+		msg.WriteString("Currently: `")
+		msg.WriteString(cfg.Get(config.BotBanlistDNSBL))
+		msg.WriteString("`\n\n")
+
+		if !cfg.BanlistDNSBL() {
+			msg.WriteString("To enable automatic banning by using DNS Blacklists, send `")
+			msg.WriteString(b.prefix)
+			msg.WriteString(" banlist:dnsbl true` (banlist itself must be enabled!)\n\n")
+		}
+
+		b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))
+		return
+	}
+	value := utils.SanitizeBoolString(commandSlice[1])
+	cfg.Set(config.BotBanlistDNSBL, value)
+	err := b.cfg.SetBot(ctx, cfg)
+	if err != nil {
+		b.Error(ctx, "cannot set bot config: %v", err)
+	}
+	b.lp.SendNotice(ctx, evt.RoomID, "dns blacklists banning has been updated", linkpearl.RelatesTo(evt.ID))
+}
+
 func (b *Bot) runBanlistAuto(ctx context.Context, commandSlice []string) { //nolint:dupl // not in that case
 	evt := eventFromContext(ctx)
 	cfg := b.cfg.GetBot(ctx)

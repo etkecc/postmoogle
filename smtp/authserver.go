@@ -40,12 +40,6 @@ func (a *PlainAuthServer) Next(response []byte) (challenge []byte, done bool, er
 		err = sasl.ErrUnexpectedClientResponse
 		return
 	}
-	addr := a.conn.Conn().RemoteAddr()
-	if a.bot.IsBanned(a.ctx, addr) {
-		err = ErrBanned
-		return
-	}
-
 	// No initial response, send an empty challenge
 	if response == nil {
 		return []byte{}, false, nil
@@ -55,7 +49,7 @@ func (a *PlainAuthServer) Next(response []byte) (challenge []byte, done bool, er
 
 	parts := bytes.Split(response, []byte("\x00"))
 	if len(parts) != 3 {
-		a.bot.BanAuth(a.ctx, addr)
+		a.bot.BanAuth(a.ctx, a.conn.Conn().RemoteAddr())
 		err = errors.New("sasl: invalid response. Don't bother me anymore, kupo")
 		return
 	}

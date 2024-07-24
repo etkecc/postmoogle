@@ -224,18 +224,18 @@ var (
 	userenvapi                = syscall.NewLazyDLL("userenv.dll")
 	procGetProfilesDirectoryW = userenvapi.NewProc("GetProfilesDirectoryW")
 
-	modcrt          = syscall.NewLazyDLL("msvcrt.dll")
-	procAccess      = modcrt.NewProc("_access")
-	procChmod       = modcrt.NewProc("_chmod")
-	procGmtime      = modcrt.NewProc("gmtime")
-	procGmtime32    = modcrt.NewProc("_gmtime32")
-	procGmtime64    = modcrt.NewProc("_gmtime64")
-	procStat64i32   = modcrt.NewProc("_stat64i32")
-	procStati64     = modcrt.NewProc("_stati64")
-	procStrftime    = modcrt.NewProc("strftime")
-	procStrtod      = modcrt.NewProc("strtod")
+	modcrt        = syscall.NewLazyDLL("msvcrt.dll")
+	procAccess    = modcrt.NewProc("_access")
+	procChmod     = modcrt.NewProc("_chmod")
+	procGmtime    = modcrt.NewProc("gmtime")
+	procGmtime32  = modcrt.NewProc("_gmtime32")
+	procGmtime64  = modcrt.NewProc("_gmtime64")
+	procStat64i32 = modcrt.NewProc("_stat64i32")
+	procStati64   = modcrt.NewProc("_stati64")
+	procStrftime  = modcrt.NewProc("strftime")
+	procStrtod    = modcrt.NewProc("strtod")
 
-	moducrt = syscall.NewLazyDLL("ucrtbase.dll")
+	moducrt         = syscall.NewLazyDLL("ucrtbase.dll")
 	procFindfirst32 = moducrt.NewProc("_findfirst32")
 	procFindnext32  = moducrt.NewProc("_findnext32")
 )
@@ -6786,7 +6786,6 @@ func X_stati64(t *TLS, path, buffer uintptr) int32 {
 	}
 	return int32(r0)
 }
-
 
 // int _fstati64(int fd, struct _stati64 *buffer);
 func X_fstati64(t *TLS, fd int32, buffer uintptr) int32 {

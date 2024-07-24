@@ -2,10 +2,6 @@ module gitlab.com/etke.cc/postmoogle
 
 go 1.21.0
 
-toolchain go1.22.0
-
-// replace gitlab.com/etke.cc/linkpearl => ../linkpearl
-
 require (
 	github.com/archdx/zerolog-sentry v1.8.4
 	github.com/emersion/go-msgauth v0.6.8
@@ -65,7 +61,7 @@ require (
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240722195230-4a140ff9c08e // indirect
-	modernc.org/libc v1.55.3 // indirect
+	modernc.org/libc v1.55.4 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/strutil v1.2.0 // indirect

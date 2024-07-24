@@ -75,9 +75,6 @@ func (s *session) Auth(mech string) (sasl.Server, error) {
 
 func (s *session) authPlain(_, username, password string) error {
 	addr := s.conn.Conn().RemoteAddr()
-	if s.bot.IsBanned(s.ctx, addr) {
-		return ErrBanned
-	}
 	if !email.AddressValid(username) {
 		s.log.Debug().Str("address", username).Msg("address is invalid")
 		s.bot.BanAuth(s.ctx, addr)

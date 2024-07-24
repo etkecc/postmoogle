@@ -35,6 +35,7 @@ const (
 	commandBanlistTotals  = "banlist:totals"
 	commandBanlistAuto    = "banlist:auto"
 	commandBanlistAuth    = "banlist:auth"
+	commandBanlistDNSBL   = "banlist:dnsbl"
 	commandBanlistAdd     = "banlist:add"
 	commandBanlistRemove  = "banlist:remove"
 	commandBanlistReset   = "banlist:reset"
@@ -337,6 +338,11 @@ func (b *Bot) initCommands() commandList {
 			allowed:     b.allowAdmin,
 		},
 		{
+			key:         commandBanlistDNSBL,
+			description: "Enable/disable automatic banning of IP addresses when they are listed in DNS Blacklists",
+			allowed:     b.allowAdmin,
+		},
+		{
 			key:         commandBanlistAuto,
 			description: "Enable/disable automatic banning of IP addresses when they try to send invalid emails",
 			allowed:     b.allowAdmin,
@@ -433,6 +439,8 @@ func (b *Bot) handle(ctx context.Context) {
 		b.runBanlist(ctx, commandSlice)
 	case commandBanlistAuth:
 		b.runBanlistAuth(ctx, commandSlice)
+	case commandBanlistDNSBL:
+		b.runBanlistDNSBL(ctx, commandSlice)
 	case commandBanlistAuto:
 		b.runBanlistAuto(ctx, commandSlice)
 	case commandBanlistTotals:

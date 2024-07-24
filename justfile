@@ -39,7 +39,7 @@ test packages="./...":
 
 # run app
 run:
-    @go run ./cmd
+    @CGO_ENABLED=0 go run -ldflags '-extldflags "-static"' -tags timetzdata,goolm ./cmd
 
 # build app
 build:
