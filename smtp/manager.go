@@ -67,7 +67,6 @@ type matrixbot interface {
 	IsTrusted(net.Addr) bool
 	BanAuto(context.Context, net.Addr)
 	BanAuth(context.Context, net.Addr)
-	BanDNSBL(context.Context, net.Addr)
 	GetMapping(context.Context, string) (id.RoomID, bool)
 	GetIFOptions(context.Context, id.RoomID) email.IncomingFilteringOptions
 	IncomingEmail(context.Context, *email.Email) error
@@ -174,7 +173,7 @@ func (m *Manager) Stop() {
 }
 
 func (m *Manager) listen(port string, tlsConfig *tls.Config) {
-	lwrapper, err := NewListener(port, tlsConfig, m.bot.IsBanned, m.bot.BanDNSBL, m.log)
+	lwrapper, err := NewListener(port, tlsConfig, m.bot.IsBanned, m.log)
 	if err != nil {
 		m.log.Error().Err(err).Str("port", port).Msg("cannot start listener")
 		m.errs <- err

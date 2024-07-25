@@ -5,6 +5,7 @@ type IncomingFilteringOptions interface {
 	SpamcheckDKIM() bool
 	SpamcheckSMTP() bool
 	SpamcheckSPF() bool
+	SpamcheckRBL() bool
 	SpamcheckMX() bool
 	Spamlist() []string
 }

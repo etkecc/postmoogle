@@ -10,32 +10,6 @@ import (
 	"gitlab.com/etke.cc/postmoogle/email"
 )
 
-const (
-	// NoUserCode SMTP code
-	NoUserCode = 550
-	// BannedCode SMTP code
-	BannedCode = 554
-)
-
-var (
-	// NoUserEnhancedCode enhanced SMTP code
-	NoUserEnhancedCode = smtp.EnhancedCode{5, 5, 0}
-	// BannedEnhancedCode enhanced SMTP code
-	BannedEnhancedCode = smtp.EnhancedCode{5, 5, 4}
-	// ErrBanned returned to banned hosts
-	ErrBanned = &smtp.SMTPError{
-		Code:         BannedCode,
-		EnhancedCode: BannedEnhancedCode,
-		Message:      "please, don't bother me anymore, kupo.",
-	}
-	// ErrNoUser returned when no such mailbox found
-	ErrNoUser = &smtp.SMTPError{
-		Code:         NoUserCode,
-		EnhancedCode: NoUserEnhancedCode,
-		Message:      "no such user here, kupo.",
-	}
-)
-
 type mailServer struct {
 	bot     matrixbot
 	log     *zerolog.Logger

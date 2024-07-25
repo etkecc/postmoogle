@@ -3,7 +3,6 @@ package smtp
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io"
 	"net"
 	"net/url"
@@ -22,22 +21,14 @@ import (
 )
 
 const (
-	// GraylistCode SMTP code
-	GraylistCode = 451
 	// Incoming is the direction of the email
 	Incoming = "incoming"
 	// Outgoing is the direction of the email
 	Outoing = "outgoing"
 )
 
-var (
-	// ErrInvalidEmail for invalid emails :)
-	ErrInvalidEmail = errors.New("please, provide valid email address")
-	// GraylistEnhancedCode is GraylistCode in enhanced code notation
-	GraylistEnhancedCode = smtp.EnhancedCode{4, 5, 1}
-	// ensure that session implements smtp.AuthSession
-	_ smtp.AuthSession = (*session)(nil)
-)
+// ensure that session implements smtp.AuthSession
+var _ smtp.AuthSession = (*session)(nil)
 
 type session struct {
 	log      *zerolog.Logger
@@ -95,27 +86,38 @@ func (s *session) authPlain(_, username, password string) error {
 
 func (s *session) Mail(from string, _ *smtp.MailOptions) error {
 	if s.dir == Outoing {
-		if err := s.validateOutgoingMail(from); err != nil {
-			return err
-		}
-	} else {
-		if !email.AddressValid(from) {
-			s.log.Debug().Str("from", from).Msg("address is invalid")
-			s.bot.BanAuto(s.ctx, s.conn.Conn().RemoteAddr())
-			return ErrBanned
-		}
-		s.from = email.Address(from)
-		s.log.Debug().Str("from", from).Msg("incoming mail")
+		return s.validateOutgoingMail(from)
 	}
+
+	// incoming mail
+	if !email.AddressValid(from) {
+		s.log.Debug().Str("from", from).Msg("address is invalid")
+		s.bot.BanAuto(s.ctx, s.conn.Conn().RemoteAddr())
+		return ErrBanned
+	}
+	s.from = email.Address(from)
+	s.log.Debug().Str("from", from).Msg("incoming mail")
 	return nil
 }
 
 func (s *session) Rcpt(to string, _ *smtp.RcptOptions) error {
 	s.tos = append(s.tos, to)
 	s.log.Debug().Str("to", to).Msg("mail")
-	if s.dir != Outoing {
-		if err := s.validateIncomingRcpt(to); err != nil {
-			return err
+	if s.dir == Outoing {
+		return nil
+	}
+	if err := s.validateIncomingRcpt(to); err != nil {
+		return err
+	}
+
+	if s.bot.GetIFOptions(s.ctx, s.roomID).SpamcheckRBL() {
+		s.log.Info().Msg("checking dns blacklists...")
+		if listed, reasons := CheckDNSBLs(s.ctx, s.log, s.conn.Conn().RemoteAddr()); listed {
+			s.log.Info().Strs("reasons", reasons).Msg("rejected incoming email (DNS Blacklist)")
+			if len(reasons) > 0 {
+				return extendErrRBL(reasons)
+			}
+			return ErrRBL
 		}
 	}
 
@@ -173,11 +175,7 @@ func (s *session) incomingData(r io.Reader) error {
 		return ErrBanned
 	}
 	if s.bot.IsGreylisted(s.ctx, addr) {
-		return &smtp.SMTPError{
-			Code:         GraylistCode,
-			EnhancedCode: GraylistEnhancedCode,
-			Message:      "You have been greylisted, try again a bit later.",
-		}
+		return ErrGreylisted
 	}
 	if validations.SpamcheckDKIM() {
 		results, verr := dkim.Verify(reader)

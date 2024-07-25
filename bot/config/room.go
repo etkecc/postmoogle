@@ -39,10 +39,11 @@ const (
 	RoomNoSubject   = "nosubject"
 	RoomNoThreads   = "nothreads"
 
+	RoomSpamcheckRBL  = "spamcheck:rbl"
 	RoomSpamcheckDKIM = "spamcheck:dkim"
-	RoomSpamcheckMX   = "spamcheck:mx"
 	RoomSpamcheckSMTP = "spamcheck:smtp"
 	RoomSpamcheckSPF  = "spamcheck:spf"
+	RoomSpamcheckMX   = "spamcheck:mx"
 
 	RoomSpamlist = "spamlist"
 )
@@ -145,6 +146,10 @@ func (s Room) NoFiles() bool {
 
 func (s Room) NoInlines() bool {
 	return utils.Bool(s.Get(RoomNoInlines))
+}
+
+func (s Room) SpamcheckRBL() bool {
+	return utils.Bool(s.Get(RoomSpamcheckRBL))
 }
 
 func (s Room) SpamcheckDKIM() bool {

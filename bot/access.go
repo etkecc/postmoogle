@@ -189,28 +189,6 @@ func (b *Bot) BanAuth(ctx context.Context, addr net.Addr) {
 	}
 }
 
-// Ban an address listed in DNS Blacklists automatically
-func (b *Bot) BanDNSBL(ctx context.Context, addr net.Addr) {
-	if !b.cfg.GetBot(ctx).BanlistEnabled() {
-		return
-	}
-
-	if !b.cfg.GetBot(ctx).BanlistDNSBL() {
-		return
-	}
-
-	if b.IsTrusted(addr) {
-		return
-	}
-	b.log.Debug().Str("addr", addr.String()).Msg("attempting to automatically ban")
-	banlist := b.cfg.GetBanlist(ctx)
-	banlist.Add(addr)
-	err := b.cfg.SetBanlist(ctx, banlist)
-	if err != nil {
-		b.log.Error().Err(err).Str("addr", addr.String()).Msg("cannot update banlist")
-	}
-}
-
 // Ban an address manually
 func (b *Bot) BanManually(ctx context.Context, addr net.Addr) {
 	if !b.cfg.GetBot(ctx).BanlistEnabled() {

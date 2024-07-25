@@ -108,6 +108,9 @@ func initMatrix(cfg *config.Config) {
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot initialize SQL database")
 	}
+	if cfg.DB.Dialect == "sqlite" {
+		db.SetMaxOpenConns(1)
+	}
 
 	lp, err := linkpearl.New(&linkpearl.Config{
 		Homeserver:        cfg.Homeserver,

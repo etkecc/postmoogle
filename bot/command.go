@@ -35,7 +35,6 @@ const (
 	commandBanlistTotals  = "banlist:totals"
 	commandBanlistAuto    = "banlist:auto"
 	commandBanlistAuth    = "banlist:auth"
-	commandBanlistDNSBL   = "banlist:dnsbl"
 	commandBanlistAdd     = "banlist:add"
 	commandBanlistRemove  = "banlist:remove"
 	commandBanlistReset   = "banlist:reset"
@@ -256,6 +255,12 @@ func (b *Bot) initCommands() commandList {
 			sanitizer:   utils.SanitizeBoolString,
 			allowed:     b.allowOwner,
 		},
+		{
+			key:         config.RoomSpamcheckRBL,
+			description: "reject incoming emails from hosts listed in DNS blocklists (`true` - enable, `false` - disable)",
+			sanitizer:   utils.SanitizeBoolString,
+			allowed:     b.allowOwner,
+		},
 		{allowed: b.allowOwner, description: "mailbox anti-spam"}, // delimiter
 		{
 			key:         commandSpamlist,
@@ -335,11 +340,6 @@ func (b *Bot) initCommands() commandList {
 		{
 			key:         commandBanlistAuth,
 			description: "Enable/disable automatic banning of IP addresses when they try to auth with invalid credentials",
-			allowed:     b.allowAdmin,
-		},
-		{
-			key:         commandBanlistDNSBL,
-			description: "Enable/disable automatic banning of IP addresses when they are listed in DNS Blacklists",
 			allowed:     b.allowAdmin,
 		},
 		{
@@ -439,8 +439,6 @@ func (b *Bot) handle(ctx context.Context) {
 		b.runBanlist(ctx, commandSlice)
 	case commandBanlistAuth:
 		b.runBanlistAuth(ctx, commandSlice)
-	case commandBanlistDNSBL:
-		b.runBanlistDNSBL(ctx, commandSlice)
 	case commandBanlistAuto:
 		b.runBanlistAuto(ctx, commandSlice)
 	case commandBanlistTotals:

@@ -17,14 +17,12 @@ type Listener struct {
 	tlsMu    sync.Mutex
 	listener net.Listener
 	isBanned func(context.Context, net.Addr) bool
-	banDNSBL func(context.Context, net.Addr)
 }
 
 func NewListener(
 	port string,
 	tlsConfig *tls.Config,
 	isBanned func(context.Context, net.Addr) bool,
-	banDNSBL func(context.Context, net.Addr),
 	log *zerolog.Logger,
 ) (*Listener, error) {
 	actual, err := net.Listen("tcp", ":"+port)
@@ -38,7 +36,6 @@ func NewListener(
 		tls:      tlsConfig,
 		listener: actual,
 		isBanned: isBanned,
-		banDNSBL: banDNSBL,
 	}, nil
 }
 
@@ -66,15 +63,6 @@ func (l *Listener) Accept() (net.Conn, error) {
 		if l.isBanned(ctx, conn.RemoteAddr()) {
 			conn.Close()
 			log.Info().Msg("rejected connection (already banned)")
-			continue
-		}
-
-		log.Info().Msg("checking dns blacklists...")
-		if CheckDNSBLs(ctx, l.log, conn.RemoteAddr()) {
-			//nolint:gocritic // TODO
-			// conn.Close()
-			// l.banDNSBL(ctx, conn.RemoteAddr())
-			log.Info().Msg("should rejected connection (DNS Blacklist); but won't do it for now (for testing purposes)")
 			continue
 		}
 

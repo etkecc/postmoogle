@@ -26,6 +26,7 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] SMTP verification
 - [x] DKIM verification
 - [x] SPF verification
+- [x] RBL verification
 - [x] MX verification
 - [x] Spamlist of emails (wildcards supported)
 - [x] Spamlist of hosts (per server only)
@@ -149,6 +150,7 @@ If you want to change them - check available options in the help message (`!pm h
 
 * **`!pm spamcheck:mx`** - only accept email from servers which seem prepared to receive it (those having valid MX records) (`true` - enable, `false` - disable)
 * **`!pm spamcheck:spf`** - only accept email from senders which authorized to send it (those matching SPF records) (`true` - enable, `false` - disable)
+* **`!pm spamcheck:rbl`** - reject incoming emails from hosts listed in DNS blocklists (`true` - enable, `false` - disable)
 * **`!pm spamcheck:dkim`** - only accept correctly authorized emails (without DKIM signature at all or with valid DKIM signature) (`true` - enable, `false` - disable)
 * **`!pm spamcheck:smtp`** - only accept email from servers which seem prepared to receive it (those listening on an SMTP port) (`true` - enable, `false` - disable)
 

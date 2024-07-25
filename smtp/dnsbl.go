@@ -51,7 +51,7 @@ type DNSBLResult struct {
 }
 
 // CheckDNSBLs checks if the given IP address is listed in any of the DNSBLs, and returns a decision, based on the results
-func CheckDNSBLs(ctx context.Context, log *zerolog.Logger, addr net.Addr, optionalTimeout ...time.Duration) bool {
+func CheckDNSBLs(ctx context.Context, log *zerolog.Logger, addr net.Addr, optionalTimeout ...time.Duration) (blocked bool, reasons []string) {
 	ttl := DNSBLTimeout
 	if len(optionalTimeout) > 0 {
 		ttl = optionalTimeout[0]
@@ -77,6 +77,7 @@ func CheckDNSBLs(ctx context.Context, log *zerolog.Logger, addr net.Addr, option
 		}
 		if r.Listed {
 			listed++
+			reasons = append(reasons, r.Reasons)
 			listedRBLs = append(listedRBLs, r.RBL)
 		} else {
 			unlisted++
@@ -95,7 +96,7 @@ func CheckDNSBLs(ctx context.Context, log *zerolog.Logger, addr net.Addr, option
 		Bool("blocked", decision).
 		Msg("DNSBL results")
 
-	return decision
+	return decision, reasons
 }
 
 // check checks if the given IP address is listed in any of the DNSBLs

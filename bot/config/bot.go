@@ -23,7 +23,6 @@ const (
 	BotBanlistEnabled      = "banlist:enabled"
 	BotBanlistAuto         = "banlist:auto"
 	BotBanlistAuth         = "banlist:auth"
-	BotBanlistDNSBL        = "banlist:dnsbl"
 	BotGreylist            = "greylist"
 	BotMautrix015Migration = "mautrix015migration"
 )
@@ -83,11 +82,6 @@ func (s Bot) BanlistAuto() bool {
 // BanlistAuth option
 func (s Bot) BanlistAuth() bool {
 	return utils.Bool(s.Get(BotBanlistAuth))
-}
-
-// BanlistDNSBL option
-func (s Bot) BanlistDNSBL() bool {
-	return utils.Bool(s.Get(BotBanlistDNSBL))
 }
 
 // Greylist option (duration in minutes)
