@@ -3,7 +3,7 @@
 <!-- vim-markdown-toc GitLab -->
 
 * [Logs](#logs)
-  * [get most active hosts](#get-most-active-hosts)
+    * [get most active hosts](#get-most-active-hosts)
 
 <!-- vim-markdown-toc -->
 
@@ -15,14 +15,10 @@ Even if you use postmoogle as an internal mail server and contact "outside inter
 you will see lots of connections to your SMTP servers from random hosts over internet that do... nothing?
 They don't send any valid emails or do something meaningful, thus you can safely assume they are spammers.
 
-To get top X (in example: top 10) hosts with biggest count of attempts to connect to your postmoogle instance, follow the steps:
-
-1. enable debug log: `export POSTMOOGLE_LOGLEVEL=debug`
-2. restart postmoogle and wait some time to get stats
-3. run the following bash one-liner to show top 10 hosts by connections count:
+To get top X (in example: top 10) hosts with biggest count of attempts to connect to your postmoogle instance, run the following one-liner:
 
 ```bash
-journalctl -o cat -u postmoogle | grep "smtp.DEBUG accepted connection from " | grep -oE "[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}" | sort | uniq -ci | sort -rn | head -n 10
+journalctl -o cat -u postmoogle | grep "accepted connection" | grep -oE "[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:" | sort | uniq -ci | sort -rn | head -n 10
     253 111.111.111.111
     183 222.222.222.222
      39 333.333.333.333

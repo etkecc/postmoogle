@@ -196,8 +196,5 @@ func (req *DNSBLRequest) decision(total, listed, unlisted int) bool {
 		return false
 	}
 
-	if listed < unlisted {
-		return false
-	}
-	return true
+	return listed > 1 || listed > unlisted
 }
