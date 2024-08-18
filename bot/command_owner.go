@@ -49,6 +49,8 @@ func (b *Bot) handleOption(ctx context.Context, cmd []string) {
 		return
 	case config.RoomMailbox:
 		b.setMailbox(ctx, cmd[1])
+	case config.RoomAliases:
+		b.setAliases(ctx, cmd[1])
 	case config.RoomPassword:
 		b.setPassword(ctx)
 	case config.RoomRelay:
@@ -126,6 +128,48 @@ func (b *Bot) setMailbox(ctx context.Context, value string) {
 	}
 
 	msg := fmt.Sprintf("mailbox of this room set to `%s`", value)
+	b.lp.SendNotice(ctx, evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
+}
+
+func (b *Bot) setAliases(ctx context.Context, value string) {
+	evt := eventFromContext(ctx)
+	aliases := strings.Split(value, ",")
+	for _, alias := range aliases {
+		existingID, ok := b.getMapping(alias)
+		if (ok && existingID != "" && existingID != evt.RoomID) || b.isReserved(alias) {
+			b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, "")))
+			return
+		}
+	}
+
+	cfg, err := b.cfg.GetRoom(ctx, evt.RoomID)
+	if err != nil {
+		b.Error(ctx, "failed to retrieve settings: %v", err)
+		return
+	}
+	old := cfg.Get(config.RoomAliases)
+	oldAliases := utils.StringSlice(old)
+	cfg.Set(config.RoomAliases, value)
+	cfg.Set(config.RoomOwner, evt.Sender.String())
+	if old != "" {
+		b.rooms.Delete(old)
+	}
+	valueParts := make([]string, 0, len(aliases))
+	for _, alias := range aliases {
+		if !slices.Contains(oldAliases, alias) {
+			b.ActivateAlias(ctx, evt.Sender, evt.RoomID, value)
+		}
+		valueParts = append(valueParts, fmt.Sprintf("%s@%s", alias, utils.SanitizeDomain(cfg.Domain())))
+	}
+	value = utils.SliceString(valueParts)
+
+	err = b.cfg.SetRoom(ctx, evt.RoomID, cfg)
+	if err != nil {
+		b.Error(ctx, "cannot update settings: %v", err)
+		return
+	}
+
+	msg := fmt.Sprintf("aliases of this room set to `%s`", value)
 	b.lp.SendNotice(ctx, evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 

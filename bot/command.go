@@ -26,6 +26,7 @@ const (
 	commandUsers          = config.BotUsers
 	commandQueueBatch     = config.BotQueueBatch
 	commandQueueRetries   = config.BotQueueRetries
+	commandAliasesRemove  = "aliases:remove"
 	commandSpamlist       = "spam:list"
 	commandSpamlistAdd    = "spam:add"
 	commandSpamlistRemove = "spam:remove"
@@ -84,6 +85,12 @@ func (b *Bot) initCommands() commandList {
 			key:         config.RoomMailbox,
 			description: "Get or set mailbox of the room",
 			sanitizer:   utils.Mailbox,
+			allowed:     b.allowOwner,
+		},
+		{
+			key:         config.RoomAliases,
+			description: "Show/edit comma-separated aliases of the room",
+			sanitizer:   utils.SanitizeStringSlice,
 			allowed:     b.allowOwner,
 		},
 		{

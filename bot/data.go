@@ -10,6 +10,16 @@ import (
 	"gitlab.com/etke.cc/postmoogle/bot/config"
 )
 
+func (b *Bot) addRoom(roomID id.RoomID, cfg config.Room) {
+	b.rooms.Store(cfg.Mailbox(), roomID)
+	aliases := cfg.Aliases()
+	if len(aliases) > 0 {
+		for _, alias := range aliases {
+			b.rooms.Store(alias, roomID)
+		}
+	}
+}
+
 func (b *Bot) syncRooms(ctx context.Context) error {
 	adminRooms := []id.RoomID{}
 
@@ -28,10 +38,8 @@ func (b *Bot) syncRooms(ctx context.Context) error {
 		if serr != nil {
 			continue
 		}
-		mailbox := cfg.Mailbox()
-		active := cfg.Active()
-		if mailbox != "" && active {
-			b.rooms.Store(mailbox, roomID)
+		if cfg.Mailbox() != "" && cfg.Active() {
+			b.addRoom(roomID, cfg)
 		}
 
 		if cfg.Owner() != "" && b.allowAdmin(ctx, id.UserID(cfg.Owner()), "") {

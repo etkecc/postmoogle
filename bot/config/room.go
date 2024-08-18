@@ -20,6 +20,7 @@ const (
 	RoomActive    = ".active"
 	RoomOwner     = "owner"
 	RoomMailbox   = "mailbox"
+	RoomAliases   = "aliases"
 	RoomDomain    = "domain"
 	RoomPassword  = "password"
 	RoomSignature = "signature"
@@ -60,6 +61,10 @@ func (s Room) Set(key, value string) {
 
 func (s Room) Mailbox() string {
 	return s.Get(RoomMailbox)
+}
+
+func (s Room) Aliases() []string {
+	return utils.StringSlice(s.Get(RoomAliases))
 }
 
 func (s Room) Domain() string {

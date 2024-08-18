@@ -8,7 +8,7 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
-type activationFlow func(context.Context, id.UserID, id.RoomID, string) bool
+type activationFlow func(context.Context, id.UserID, id.RoomID, string, bool) bool
 
 func (b *Bot) getActivationFlow() activationFlow {
 	switch b.mbxc.Activation {
@@ -24,17 +24,22 @@ func (b *Bot) getActivationFlow() activationFlow {
 // ActivateMailbox using the configured flow
 func (b *Bot) ActivateMailbox(ctx context.Context, ownerID id.UserID, roomID id.RoomID, mailbox string) bool {
 	flow := b.getActivationFlow()
-	return flow(ctx, ownerID, roomID, mailbox)
+	return flow(ctx, ownerID, roomID, mailbox, false)
 }
 
-func (b *Bot) activateNone(_ context.Context, ownerID id.UserID, roomID id.RoomID, mailbox string) bool {
+func (b *Bot) ActivateAlias(ctx context.Context, ownerID id.UserID, roomID id.RoomID, alias string) bool {
+	flow := b.getActivationFlow()
+	return flow(ctx, ownerID, roomID, alias, true)
+}
+
+func (b *Bot) activateNone(_ context.Context, ownerID id.UserID, roomID id.RoomID, mailbox string, _ bool) bool {
 	b.log.Debug().Str("mailbox", mailbox).Str("roomID", roomID.String()).Str("ownerID", ownerID.String()).Msg("activating mailbox through the flow 'none'")
 	b.rooms.Store(mailbox, roomID)
 
 	return true
 }
 
-func (b *Bot) activateNotify(ctx context.Context, ownerID id.UserID, roomID id.RoomID, mailbox string) bool {
+func (b *Bot) activateNotify(ctx context.Context, ownerID id.UserID, roomID id.RoomID, mailbox string, alias bool) bool {
 	b.log.Debug().Str("mailbox", mailbox).Str("roomID", roomID.String()).Str("ownerID", ownerID.String()).Msg("activating mailbox through the flow 'notify'")
 	b.rooms.Store(mailbox, roomID)
 	if len(b.adminRooms) == 0 {
@@ -42,6 +47,9 @@ func (b *Bot) activateNotify(ctx context.Context, ownerID id.UserID, roomID id.R
 	}
 
 	msg := fmt.Sprintf("Mailbox %q has been registered by %q for the room %q", mailbox, ownerID, roomID)
+	if alias {
+		msg = fmt.Sprintf("Alias %q has been registered by %q for the room %q", mailbox, ownerID, roomID)
+	}
 	for _, adminRoom := range b.adminRooms {
 		content := format.RenderMarkdown(msg, true, true)
 		_, err := b.lp.Send(ctx, adminRoom, &content)
