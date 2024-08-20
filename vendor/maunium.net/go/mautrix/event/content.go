@@ -55,6 +55,7 @@ var TypeMap = map[Type]reflect.Type{
 	AccountDataFullyRead:       reflect.TypeOf(FullyReadEventContent{}),
 	AccountDataIgnoredUserList: reflect.TypeOf(IgnoredUserListEventContent{}),
 	AccountDataMarkedUnread:    reflect.TypeOf(MarkedUnreadEventContent{}),
+	AccountDataBeeperMute:      reflect.TypeOf(BeeperMuteEventContent{}),
 
 	EphemeralEventTyping:   reflect.TypeOf(TypingEventContent{}),
 	EphemeralEventReceipt:  reflect.TypeOf(ReceiptEventContent{}),
@@ -240,6 +241,15 @@ func init() {
 	gob.Register(&ForwardedRoomKeyEventContent{})
 	gob.Register(&RoomKeyRequestEventContent{})
 	gob.Register(&RoomKeyWithheldEventContent{})
+}
+
+func CastOrDefault[T any](content *Content) *T {
+	casted, ok := content.Parsed.(*T)
+	if ok {
+		return casted
+	}
+	casted2, _ := content.Parsed.(T)
+	return &casted2
 }
 
 // Helper cast functions below

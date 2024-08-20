@@ -569,7 +569,9 @@ func ParseErrorResponse(req *http.Request, res *http.Response) ([]byte, error) {
 		return contents, err
 	}
 
-	respErr := &RespError{}
+	respErr := &RespError{
+		StatusCode: res.StatusCode,
+	}
 	if _ = json.Unmarshal(contents, respErr); respErr.ErrCode == "" {
 		respErr = nil
 	}
@@ -1929,6 +1931,12 @@ func (cli *Client) SendReceipt(ctx context.Context, roomID id.RoomID, eventID id
 func (cli *Client) SetReadMarkers(ctx context.Context, roomID id.RoomID, content interface{}) (err error) {
 	urlPath := cli.BuildClientURL("v3", "rooms", roomID, "read_markers")
 	_, err = cli.MakeRequest(ctx, http.MethodPost, urlPath, content, nil)
+	return
+}
+
+func (cli *Client) SetBeeperInboxState(ctx context.Context, roomID id.RoomID, content *ReqSetBeeperInboxState) (err error) {
+	urlPath := cli.BuildClientURL("unstable", "com.beeper.inbox", "user", cli.UserID, "rooms", roomID, "inbox_state")
+	_, err = cli.MakeRequest(ctx, http.MethodPut, urlPath, content, nil)
 	return
 }
 

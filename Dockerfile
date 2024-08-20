@@ -1,14 +1,15 @@
-FROM registry.gitlab.com/etke.cc/base/build AS builder
+FROM ghcr.io/etkecc/base/build AS builder
 
-WORKDIR /postmoogle
+WORKDIR /app
 COPY . .
 RUN just build
 
-FROM registry.gitlab.com/etke.cc/base/app
+FROM scratch
 
 ENV POSTMOOGLE_DB_DSN /data/postmoogle.db
 
-COPY --from=builder /postmoogle/postmoogle /bin/postmoogle
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /app/postmoogle /bin/postmoogle
 
 USER app
 

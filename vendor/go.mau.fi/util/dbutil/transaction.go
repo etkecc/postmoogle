@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/petermattis/goid"
 	"github.com/rs/zerolog"
 
 	"go.mau.fi/util/exerrors"
@@ -51,6 +52,10 @@ func (db *Database) QueryRow(ctx context.Context, query string, args ...any) *sq
 	return db.Execable(ctx).QueryRowContext(ctx, query, args...)
 }
 
+var ErrTransactionDeadlock = errors.New("attempt to start new transaction in goroutine with transaction")
+var ErrQueryDeadlock = errors.New("attempt to query without context in goroutine with transaction")
+var ErrAcquireDeadlock = errors.New("attempt to acquire connection without context in goroutine with transaction")
+
 func (db *Database) BeginTx(ctx context.Context, opts *TxnOptions) (*LoggingTxn, error) {
 	if ctx == nil {
 		panic("BeginTx() called with nil ctx")
@@ -65,6 +70,12 @@ func (db *Database) DoTxn(ctx context.Context, opts *TxnOptions, fn func(ctx con
 	if ctx.Value(db.txnCtxKey) != nil {
 		zerolog.Ctx(ctx).Trace().Msg("Already in a transaction, not creating a new one")
 		return fn(ctx)
+	} else if db.DeadlockDetection {
+		goroutineID := goid.Get()
+		if !db.txnDeadlockMap.Add(goroutineID) {
+			panic(ErrTransactionDeadlock)
+		}
+		defer db.txnDeadlockMap.Remove(goroutineID)
 	}
 
 	log := zerolog.Ctx(ctx).With().Str("db_txn_id", random.String(12)).Logger()
@@ -141,6 +152,9 @@ func (db *Database) Execable(ctx context.Context) Execable {
 	if ok {
 		return txn
 	}
+	if db.DeadlockDetection && db.txnDeadlockMap.Has(goid.Get()) {
+		panic(ErrQueryDeadlock)
+	}
 	return &db.LoggingDB
 }
 
@@ -151,6 +165,9 @@ func (db *Database) AcquireConn(ctx context.Context) (Conn, error) {
 	_, ok := ctx.Value(db.txnCtxKey).(Transaction)
 	if ok {
 		return nil, fmt.Errorf("cannot acquire connection while in a transaction")
+	}
+	if db.DeadlockDetection && db.txnDeadlockMap.Has(goid.Get()) {
+		panic(ErrAcquireDeadlock)
 	}
 	conn, err := db.RawDB.Conn(ctx)
 	if err != nil {
