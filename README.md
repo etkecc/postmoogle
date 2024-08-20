@@ -1,4 +1,4 @@
-# Postmoogle [![Matrix](https://img.shields.io/matrix/postmoogle:etke.cc?logo=matrix&style=for-the-badge&server_fqdn=matrix.org)](https://matrix.to/#/#postmoogle:etke.cc)[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/etkecc) [![coverage report](https://gitlab.com/etke.cc/postmoogle/badges/main/coverage.svg)](https://gitlab.com/etke.cc/postmoogle/-/commits/main) [![Go Report Card](https://goreportcard.com/badge/gitlab.com/etke.cc/postmoogle)](https://goreportcard.com/report/gitlab.com/etke.cc/postmoogle) [![Go Reference](https://pkg.go.dev/badge/gitlab.com/etke.cc/postmoogle.svg)](https://pkg.go.dev/gitlab.com/etke.cc/postmoogle)
+# Postmoogle [![Matrix](https://img.shields.io/matrix/postmoogle:etke.cc?logo=matrix&style=for-the-badge&server_fqdn=matrix.org)](https://matrix.to/#/#postmoogle:etke.cc)
 
 > [more about that name](https://finalfantasy.fandom.com/wiki/The_Little_Postmoogle_That_Could)
 
@@ -198,8 +198,3 @@ If you want to change them - check available options in the help message (`!pm h
 * **`!pm banlist:reset`** - Reset banlist
 
 </details>
-
-
-## Where to get
-
-[docker registry](https://gitlab.com/etke.cc/postmoogle/container_registry), [etke.cc](https://etke.cc)
