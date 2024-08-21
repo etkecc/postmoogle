@@ -343,6 +343,7 @@ func (b *Bot) SendEmailReply(ctx context.Context) {
 		ctx = threadIDToContext(ctx, meta.ThreadID)
 	}
 	content := evt.Content.AsMessage()
+	b.clearReply(content)
 	if meta.Subject == "" {
 		meta.Subject = strings.SplitN(content.Body, "\n", 1)[0]
 	}
@@ -646,5 +647,21 @@ func (b *Bot) setLastEventID(ctx context.Context, roomID id.RoomID, threadID, ev
 	err := b.lp.SetRoomAccountData(ctx, roomID, key, map[string]string{"eventID": eventID.String()})
 	if err != nil {
 		b.log.Error().Err(err).Str("key", key).Msg("cannot save thread ID")
+	}
+}
+
+// clearReply removes quotation of previous message in reply message, to avoid confusion
+func (b *Bot) clearReply(content *event.MessageEventContent) {
+	index := strings.Index(content.Body, "> <@")
+	formattedIndex := strings.Index(content.FormattedBody, "</mx-reply>")
+	if index >= 0 {
+		index = strings.Index(content.Body, "\n\n")
+		// 2 is length of "\n\n"
+		content.Body = content.Body[index+2:]
+	}
+
+	if formattedIndex >= 0 {
+		// 11 is length of "</mx-reply>"
+		content.FormattedBody = content.FormattedBody[formattedIndex+11:]
 	}
 }
