@@ -84,7 +84,7 @@ env vars
 * **POSTMOOGLE_RELAY_USERNAME** - (global) Username of relay host
 * **POSTMOOGLE_RELAY_PASSWORD** - (global) Password of relay host
 
-You can find default values in [config/defaults.go](config/defaults.go)
+You can find default values in [internal/config/defaults.go](internal/config/defaults.go)
 
 </details>
 
