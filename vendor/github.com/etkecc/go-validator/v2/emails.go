@@ -122,6 +122,7 @@ func (v *V) emailNoSMTP(ctx context.Context, email string, errchan chan error) {
 			return
 		}
 
+		trysmtp.SMTPAddrs = []string{":25"}
 		client, err := trysmtp.Connect(v.cfg.Email.From, email)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "45") {

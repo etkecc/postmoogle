@@ -83,6 +83,7 @@ type ReqLogin struct {
 	Token                    string         `json:"token,omitempty"`
 	DeviceID                 id.DeviceID    `json:"device_id,omitempty"`
 	InitialDeviceDisplayName string         `json:"initial_device_display_name,omitempty"`
+	RefreshToken             bool           `json:"refresh_token,omitempty"`
 
 	// Whether or not the returned credentials should be stored in the Client
 	StoreCredentials bool `json:"-"`
@@ -225,7 +226,7 @@ func (otk *OneTimeKey) MarshalJSON() ([]byte, error) {
 
 type ReqUploadKeys struct {
 	DeviceKeys  *DeviceKeys             `json:"device_keys,omitempty"`
-	OneTimeKeys map[id.KeyID]OneTimeKey `json:"one_time_keys"`
+	OneTimeKeys map[id.KeyID]OneTimeKey `json:"one_time_keys,omitempty"`
 }
 
 type ReqKeysSignatures struct {
@@ -466,4 +467,9 @@ type ReqKeyBackupData struct {
 	ForwardedCount    int             `json:"forwarded_count"`
 	IsVerified        bool            `json:"is_verified"`
 	SessionData       json.RawMessage `json:"session_data"`
+}
+
+type ReqReport struct {
+	Reason string `json:"reason,omitempty"`
+	Score  int    `json:"score,omitempty"`
 }

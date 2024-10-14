@@ -69,7 +69,7 @@ func (e *Envelope) GetHeaderValues(name string) []string {
 // If the header exists already, all existing values are replaced.
 func (e *Envelope) SetHeader(name string, value []string) error {
 	if name == "" {
-		return fmt.Errorf("provide non-empty header name")
+		return errors.New("provide non-empty header name")
 	}
 
 	for i, v := range value {
@@ -86,7 +86,7 @@ func (e *Envelope) SetHeader(name string, value []string) error {
 // If the header does not exist already, it will be created.
 func (e *Envelope) AddHeader(name string, value string) error {
 	if name == "" {
-		return fmt.Errorf("provide non-empty header name")
+		return errors.New("provide non-empty header name")
 	}
 
 	e.header.Add(name, mime.BEncoding.Encode("utf-8", value))
@@ -96,7 +96,7 @@ func (e *Envelope) AddHeader(name string, value string) error {
 // DeleteHeader deletes given header.
 func (e *Envelope) DeleteHeader(name string) error {
 	if name == "" {
-		return fmt.Errorf("provide non-empty header name")
+		return errors.New("provide non-empty header name")
 	}
 
 	e.header.Del(name)
@@ -106,7 +106,7 @@ func (e *Envelope) DeleteHeader(name string) error {
 // AddressList returns a mail.Address slice with RFC 2047 encoded names converted to UTF-8
 func (e *Envelope) AddressList(key string) ([]*mail.Address, error) {
 	if e.header == nil {
-		return nil, fmt.Errorf("no headers available")
+		return nil, errors.New("no headers available")
 	}
 	if !AddressHeaders[strings.ToLower(key)] {
 		return nil, fmt.Errorf("%s is not an address header", key)
@@ -191,9 +191,7 @@ func (p Parser) EnvelopeFromPart(root *Part) (*Envelope, error) {
 			}
 		} else {
 			// Only text, no attachments
-			if err := parseTextOnlyBody(root, e); err != nil {
-				return nil, err
-			}
+			parseTextOnlyBody(root, e)
 		}
 	}
 
@@ -203,11 +201,14 @@ func (p Parser) EnvelopeFromPart(root *Part) (*Envelope, error) {
 		e.Root.addWarning(
 			ErrorPlainTextFromHTML,
 			"Message did not contain a text/plain part")
-		var err error
-		if e.Text, err = html2text.FromString(e.HTML); err != nil {
-			e.Text = "" // Down-conversion shouldn't fail
-			p := e.Root.BreadthMatchFirst(matchHTMLBodyPart)
-			p.addError(ErrorPlainTextFromHTML, "Failed to downconvert HTML: %v", err)
+
+		if !p.disableTextConversion {
+			var err error
+			if e.Text, err = html2text.FromString(e.HTML); err != nil {
+				e.Text = "" // Down-conversion shouldn't fail
+				p := e.Root.BreadthMatchFirst(matchHTMLBodyPart)
+				p.addError(ErrorPlainTextFromHTML, "Failed to downconvert HTML: %v", err)
+			}
 		}
 	}
 
@@ -225,7 +226,7 @@ func (p Parser) EnvelopeFromPart(root *Part) (*Envelope, error) {
 
 // parseTextOnlyBody parses a plain text message in root that has MIME-like headers, but
 // only contains a single part - no boundaries, etc.  The result is placed in e.
-func parseTextOnlyBody(root *Part, e *Envelope) error {
+func parseTextOnlyBody(root *Part, e *Envelope) {
 	// Determine character set
 	var charset string
 	var isHTML bool
@@ -255,14 +256,10 @@ func parseTextOnlyBody(root *Part, e *Envelope) error {
 					root.addWarning(ErrorCharsetConversion, err.Error())
 				}
 			}
-			// Converted from charset in HTML
-			return nil
 		}
 	} else {
 		e.Text = string(root.Content)
 	}
-
-	return nil
 }
 
 // parseMultiPartBody parses a multipart message in root.  The result is placed in e.
@@ -278,7 +275,7 @@ func parseMultiPartBody(root *Part, e *Envelope) error {
 	}
 	boundary := params[hpBoundary]
 	if boundary == "" {
-		return fmt.Errorf("unable to locate boundary param in Content-Type header")
+		return errors.New("unable to locate boundary param in Content-Type header")
 	}
 
 	// Locate text body

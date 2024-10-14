@@ -2,6 +2,7 @@ package trysmtp
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/smtp"
@@ -50,7 +51,7 @@ func unwrapErrors(errs []error) error {
 		}
 	}
 
-	return fmt.Errorf(text.String())
+	return errors.New(text.String())
 }
 
 func initClient(localname, hostname string) (*smtp.Client, error) {
@@ -102,7 +103,10 @@ func trySMTP(localname, mxhost, addr string) (*smtp.Client, error) {
 		return nil, fmt.Errorf("%s: %w", target, err)
 	}
 	if ok, _ := conn.Extension("STARTTLS"); ok {
-		config := &tls.Config{ServerName: mxhost}
+		config := &tls.Config{
+			ServerName:         mxhost,
+			InsecureSkipVerify: true, // we are using InsecureSkipVerify, because invalid SSL certs are too common in email world, alas
+		}
 		conn.StartTLS(config) //nolint:errcheck // if it doesn't work - we can't do anything anyway
 	}
 

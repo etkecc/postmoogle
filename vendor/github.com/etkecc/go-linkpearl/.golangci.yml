@@ -76,6 +76,7 @@ linters:
     - bidichk
     - bodyclose
     - containedctx
+    - copyloopvar
     - decorder
     - dogsled
     - dupl
@@ -86,7 +87,6 @@ linters:
     - errname
     - errorlint
     - exhaustive
-    - exportloopref
     - forcetypeassert
     - gocognit
     - gocritic

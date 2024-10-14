@@ -33,6 +33,10 @@ var ErrForeignTables = errors.New("the database contains foreign tables")
 var ErrNotOwned = errors.New("the database is owned by")
 var ErrUnsupportedDialect = errors.New("unsupported database dialect")
 
+func DangerousInternalUpgradeVersionTable(ctx context.Context, db *Database) error {
+	return db.upgradeVersionTable(ctx)
+}
+
 func (db *Database) upgradeVersionTable(ctx context.Context) error {
 	if compatColumnExists, err := db.ColumnExists(ctx, db.VersionTable, "compat"); err != nil {
 		return fmt.Errorf("failed to check if version table is up to date: %w", err)

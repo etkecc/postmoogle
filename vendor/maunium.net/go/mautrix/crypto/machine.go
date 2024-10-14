@@ -65,8 +65,9 @@ type OlmMachine struct {
 	megolmEncryptLock sync.Mutex
 	megolmDecryptLock sync.Mutex
 
-	otkUploadLock sync.Mutex
-	lastOTKUpload time.Time
+	otkUploadLock       sync.Mutex
+	lastOTKUpload       time.Time
+	receivedOTKsForSelf bool
 
 	CrossSigningKeys    *CrossSigningKeysCache
 	crossSigningPubkeys *CrossSigningPublicKeysCache
@@ -208,13 +209,14 @@ func (mach *OlmMachine) OwnIdentity() *id.Device {
 	}
 }
 
-type asEventProcessor interface {
+type ASEventProcessor interface {
 	On(evtType event.Type, handler func(ctx context.Context, evt *event.Event))
 	OnOTK(func(ctx context.Context, otk *mautrix.OTKCount))
 	OnDeviceList(func(ctx context.Context, lists *mautrix.DeviceLists, since string))
+	Dispatch(ctx context.Context, evt *event.Event)
 }
 
-func (mach *OlmMachine) AddAppserviceListener(ep asEventProcessor) {
+func (mach *OlmMachine) AddAppserviceListener(ep ASEventProcessor) {
 	// ToDeviceForwardedRoomKey and ToDeviceRoomKey should only be present inside encrypted to-device events
 	ep.On(event.ToDeviceEncrypted, mach.HandleToDeviceEvent)
 	ep.On(event.ToDeviceRoomKeyRequest, mach.HandleToDeviceEvent)
@@ -244,15 +246,28 @@ func (mach *OlmMachine) HandleDeviceLists(ctx context.Context, dl *mautrix.Devic
 	}
 }
 
+func (mach *OlmMachine) otkCountIsForCrossSigningKey(otkCount *mautrix.OTKCount) bool {
+	if mach.crossSigningPubkeys == nil || otkCount.UserID != mach.Client.UserID {
+		return false
+	}
+	switch id.Ed25519(otkCount.DeviceID) {
+	case mach.crossSigningPubkeys.MasterKey, mach.crossSigningPubkeys.UserSigningKey, mach.crossSigningPubkeys.SelfSigningKey:
+		return true
+	}
+	return false
+}
+
 func (mach *OlmMachine) HandleOTKCounts(ctx context.Context, otkCount *mautrix.OTKCount) {
 	if (len(otkCount.UserID) > 0 && otkCount.UserID != mach.Client.UserID) || (len(otkCount.DeviceID) > 0 && otkCount.DeviceID != mach.Client.DeviceID) {
-		// TODO This log probably needs to be silence-able if someone wants to use encrypted appservices with multiple e2ee sessions
-		mach.Log.Warn().
-			Str("target_user_id", otkCount.UserID.String()).
-			Str("target_device_id", otkCount.DeviceID.String()).
-			Msg("Dropping OTK counts targeted to someone else")
+		if otkCount.UserID != mach.Client.UserID || (!mach.receivedOTKsForSelf && !mach.otkCountIsForCrossSigningKey(otkCount)) {
+			mach.Log.Warn().
+				Str("target_user_id", otkCount.UserID.String()).
+				Str("target_device_id", otkCount.DeviceID.String()).
+				Msg("Dropping OTK counts targeted to someone else")
+		}
 		return
 	}
+	mach.receivedOTKsForSelf = true
 
 	minCount := mach.account.Internal.MaxNumberOfOneTimeKeys() / 2
 	if otkCount.SignedCurve25519 < int(minCount) {

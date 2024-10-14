@@ -72,6 +72,20 @@ func (s *Set[T]) Has(item T) bool {
 	return exists
 }
 
+// Pop removes the given item from the set. The return value is true if the item was in the set, or false otherwise.
+func (s *Set[T]) Pop(item T) bool {
+	if s == nil {
+		return false
+	}
+	s.l.Lock()
+	_, exists := s.m[item]
+	if exists {
+		delete(s.m, item)
+	}
+	s.l.Unlock()
+	return exists
+}
+
 // Remove removes the given item from the set.
 func (s *Set[T]) Remove(item T) {
 	if s == nil {
@@ -80,4 +94,43 @@ func (s *Set[T]) Remove(item T) {
 	s.l.Lock()
 	delete(s.m, item)
 	s.l.Unlock()
+}
+
+// ReplaceAll replaces this set with the given set. If the given set is nil, the set is cleared.
+func (s *Set[T]) ReplaceAll(newSet *Set[T]) {
+	if s == nil {
+		return
+	}
+	s.l.Lock()
+	if newSet == nil {
+		s.m = make(map[T]empty)
+	} else {
+		s.m = newSet.m
+	}
+	s.l.Unlock()
+}
+
+func (s *Set[T]) Size() int {
+	if s == nil {
+		return 0
+	}
+	s.l.RLock()
+	size := len(s.m)
+	s.l.RUnlock()
+	return size
+}
+
+func (s *Set[T]) AsList() []T {
+	if s == nil {
+		return nil
+	}
+	s.l.RLock()
+	list := make([]T, len(s.m))
+	i := 0
+	for item := range s.m {
+		list[i] = item
+		i++
+	}
+	s.l.RUnlock()
+	return list
 }

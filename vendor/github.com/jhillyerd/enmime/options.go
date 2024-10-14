@@ -88,3 +88,27 @@ func (o stripMediaTypeInvalidCharactersOption) apply(p *Parser) {
 func StripMediaTypeInvalidCharacters(stripMediaTypeInvalidCharacters bool) Option {
 	return stripMediaTypeInvalidCharactersOption(stripMediaTypeInvalidCharacters)
 }
+
+type disableTextConversionOption bool
+
+func (o disableTextConversionOption) apply(p *Parser) {
+	p.disableTextConversion = bool(o)
+}
+
+// DisableTextConversion sets the disableTextConversion option. When true, there will be no
+// automated down conversion of HTML to text when a plain/text body is missing.
+func DisableTextConversion(disableTextConversion bool) Option {
+	return disableTextConversionOption(disableTextConversion)
+}
+
+type disableCharacterDetectionOption bool
+
+func (o disableCharacterDetectionOption) apply(p *Parser) {
+	p.disableCharacterDetection = bool(o)
+}
+
+// DisableCharacterDetection sets the disableCharacterDetection option. When true, the parser will use the
+// defined character set if it is defined in the message part.
+func DisableCharacterDetection(disableCharacterDetection bool) Option {
+	return disableCharacterDetectionOption(disableCharacterDetection)
+}

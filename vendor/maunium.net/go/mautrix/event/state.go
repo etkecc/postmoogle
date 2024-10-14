@@ -26,8 +26,9 @@ type RoomNameEventContent struct {
 // RoomAvatarEventContent represents the content of a m.room.avatar state event.
 // https://spec.matrix.org/v1.2/client-server-api/#mroomavatar
 type RoomAvatarEventContent struct {
-	URL  id.ContentURIString `json:"url"`
-	Info *FileInfo           `json:"info,omitempty"`
+	URL         id.ContentURIString `json:"url,omitempty"`
+	Info        *FileInfo           `json:"info,omitempty"`
+	MSC3414File *EncryptedFileInfo  `json:"org.matrix.msc3414.file,omitempty"`
 }
 
 // ServerACLEventContent represents the content of a m.room.server_acl state event.
@@ -156,6 +157,8 @@ type BridgeInfoSection struct {
 	DisplayName string              `json:"displayname,omitempty"`
 	AvatarURL   id.ContentURIString `json:"avatar_url,omitempty"`
 	ExternalURL string              `json:"external_url,omitempty"`
+
+	Receiver string `json:"fi.mau.receiver,omitempty"`
 }
 
 // BridgeEventContent represents the content of a m.bridge state event.
@@ -182,12 +185,20 @@ type SpaceParentEventContent struct {
 	Canonical bool     `json:"canonical,omitempty"`
 }
 
+type PolicyRecommendation string
+
+const (
+	PolicyRecommendationBan         PolicyRecommendation = "m.ban"
+	PolicyRecommendationUnstableBan PolicyRecommendation = "org.matrix.mjolnir.ban"
+	PolicyRecommendationUnban       PolicyRecommendation = "fi.mau.meowlnir.unban"
+)
+
 // ModPolicyContent represents the content of a m.room.rule.user, m.room.rule.room, and m.room.rule.server state event.
 // https://spec.matrix.org/v1.2/client-server-api/#moderation-policy-lists
 type ModPolicyContent struct {
-	Entity         string `json:"entity"`
-	Reason         string `json:"reason"`
-	Recommendation string `json:"recommendation"`
+	Entity         string               `json:"entity"`
+	Reason         string               `json:"reason"`
+	Recommendation PolicyRecommendation `json:"recommendation"`
 }
 
 // Deprecated: MSC2716 has been abandoned
