@@ -26,6 +26,7 @@ func Hostname(email string) string {
 
 // EmailParts parses email address into mailbox, subaddress, and hostname
 func EmailParts(email string) (mailbox, sub, hostname string) {
+	email = strings.ToLower(strings.TrimSpace(email))
 	address, err := emailaddress.Parse(email)
 	if err == nil {
 		mailbox = address.LocalPart

@@ -110,14 +110,6 @@ func (db *Database) ColumnExists(ctx context.Context, table, column string) (exi
 	return
 }
 
-func (db *Database) tableExistsNoError(ctx context.Context, table string) bool {
-	exists, err := db.TableExists(ctx, table)
-	if err != nil {
-		panic(fmt.Errorf("failed to check if table exists: %w", err))
-	}
-	return exists
-}
-
 const createOwnerTable = `
 CREATE TABLE IF NOT EXISTS database_owner (
 	key   INTEGER PRIMARY KEY DEFAULT 0,
@@ -128,9 +120,13 @@ CREATE TABLE IF NOT EXISTS database_owner (
 func (db *Database) checkDatabaseOwner(ctx context.Context) error {
 	var owner string
 	if !db.IgnoreForeignTables {
-		if db.tableExistsNoError(ctx, "state_groups_state") {
+		if exists, err := db.TableExists(ctx, "state_groups_state"); err != nil {
+			return fmt.Errorf("failed to check if state_groups_state exists: %w", err)
+		} else if exists {
 			return fmt.Errorf("%w (found state_groups_state, likely belonging to Synapse)", ErrForeignTables)
-		} else if db.tableExistsNoError(ctx, "roomserver_rooms") {
+		} else if exists, err = db.TableExists(ctx, "roomserver_rooms"); err != nil {
+			return fmt.Errorf("failed to check if roomserver_rooms exists: %w", err)
+		} else if exists {
 			return fmt.Errorf("%w (found roomserver_rooms, likely belonging to Dendrite)", ErrForeignTables)
 		}
 	}

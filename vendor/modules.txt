@@ -30,7 +30,7 @@ github.com/dustin/go-humanize
 # github.com/emersion/go-msgauth v0.6.8
 ## explicit; go 1.18
 github.com/emersion/go-msgauth/dkim
-# github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
+# github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 ## explicit; go 1.12
 github.com/emersion/go-sasl
 # github.com/emersion/go-smtp v0.21.3
@@ -43,10 +43,10 @@ github.com/etkecc/go-env/dotenv
 # github.com/etkecc/go-fswatcher v1.0.1
 ## explicit; go 1.20
 github.com/etkecc/go-fswatcher
-# github.com/etkecc/go-healthchecks/v2 v2.2.1
+# github.com/etkecc/go-healthchecks/v2 v2.2.2
 ## explicit; go 1.18
 github.com/etkecc/go-healthchecks/v2
-# github.com/etkecc/go-linkpearl v0.0.0-20240916112808-1ff87355b2b3
+# github.com/etkecc/go-linkpearl v0.0.0-20241016081935-715b568101ef
 ## explicit; go 1.22.0
 github.com/etkecc/go-linkpearl
 # github.com/etkecc/go-mxidwc v1.0.1
@@ -55,7 +55,7 @@ github.com/etkecc/go-mxidwc
 # github.com/etkecc/go-psd v0.0.0-20241014083754-1bc4ec777ba8
 ## explicit; go 1.21.0
 github.com/etkecc/go-psd
-# github.com/etkecc/go-secgen v1.3.0
+# github.com/etkecc/go-secgen v1.4.0
 ## explicit; go 1.19
 github.com/etkecc/go-secgen
 # github.com/etkecc/go-trysmtp v1.1.5
@@ -155,7 +155,7 @@ github.com/ncruces/go-strftime
 # github.com/olekukonko/tablewriter v0.0.5
 ## explicit; go 1.12
 github.com/olekukonko/tablewriter
-# github.com/petermattis/goid v0.0.0-20240813172612-4fcff4a6cae7
+# github.com/petermattis/goid v0.0.0-20241025130422-66cb2e6d7274
 ## explicit; go 1.17
 github.com/petermattis/goid
 # github.com/pkg/errors v0.9.1
@@ -194,7 +194,7 @@ github.com/tidwall/pretty
 # github.com/tidwall/sjson v1.2.5
 ## explicit; go 1.14
 github.com/tidwall/sjson
-# github.com/yuin/goldmark v1.7.6
+# github.com/yuin/goldmark v1.7.8
 ## explicit; go 1.19
 github.com/yuin/goldmark
 github.com/yuin/goldmark/ast
@@ -205,7 +205,7 @@ github.com/yuin/goldmark/renderer
 github.com/yuin/goldmark/renderer/html
 github.com/yuin/goldmark/text
 github.com/yuin/goldmark/util
-# go.mau.fi/util v0.8.0
+# go.mau.fi/util v0.8.1
 ## explicit; go 1.22.0
 go.mau.fi/util/base58
 go.mau.fi/util/confusable
@@ -288,7 +288,7 @@ golang.org/x/tools/internal/versions
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
-# maunium.net/go/mautrix v0.21.0
+# maunium.net/go/mautrix v0.21.1
 ## explicit; go 1.22.0
 maunium.net/go/mautrix
 maunium.net/go/mautrix/crypto

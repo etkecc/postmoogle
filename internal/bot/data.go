@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"maunium.net/go/mautrix/id"
@@ -11,10 +12,12 @@ import (
 )
 
 func (b *Bot) addRoom(roomID id.RoomID, cfg config.Room) {
-	b.rooms.Store(cfg.Mailbox(), roomID)
+	mailbox := strings.ToLower(strings.TrimSpace(cfg.Mailbox()))
+	b.rooms.Store(mailbox, roomID)
 	aliases := cfg.Aliases()
 	if len(aliases) > 0 {
 		for _, alias := range aliases {
+			alias = strings.ToLower(strings.TrimSpace(alias))
 			b.rooms.Store(alias, roomID)
 		}
 	}

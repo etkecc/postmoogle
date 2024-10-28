@@ -25,6 +25,7 @@ func MessageID(eventID id.EventID, domain string) string {
 
 // Address gets email address from a valid email address notation (eg: "Jane Doe" <jane@example.com> -> jane@example.com)
 func Address(email string) string {
+	email = strings.ToLower(strings.TrimSpace(email))
 	addr, _ := mail.ParseAddress(email) //nolint:errcheck // if it fails here, nothing will help
 	if addr == nil {
 		list := AddressList(email)
@@ -42,6 +43,7 @@ func AddressList(emailList string) []string {
 	if emailList == "" {
 		return []string{}
 	}
+	emailList = strings.ToLower(strings.TrimSpace(emailList))
 	list, _ := mail.ParseAddressList(emailList) //nolint:errcheck // if it fails here, nothing will help
 	if len(list) == 0 {
 		return []string{}

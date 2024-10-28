@@ -4,7 +4,7 @@ default:
 
 # update go deps
 update *flags:
-    go get {{flags}} .
+    go get {{ flags }} .
     go mod tidy
 
 # run linter

@@ -26,7 +26,7 @@ var DefaultErrLog = func(operation string, err error) {
 
 // New healthchecks client
 func New(options ...Option) *Client {
-	rid, _ := uuid.NewRandom()
+	rid, _ := uuid.NewRandom() //nolint:errcheck // ignore error
 	c := &Client{
 		rid: rid.String(),
 	}

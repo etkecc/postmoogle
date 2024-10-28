@@ -7,15 +7,15 @@ toolchain go1.23.1
 require (
 	github.com/archdx/zerolog-sentry v1.8.4
 	github.com/emersion/go-msgauth v0.6.8
-	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
+	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/emersion/go-smtp v0.21.3
 	github.com/etkecc/go-env v1.2.1
 	github.com/etkecc/go-fswatcher v1.0.1
-	github.com/etkecc/go-healthchecks/v2 v2.2.1
-	github.com/etkecc/go-linkpearl v0.0.0-20240916112808-1ff87355b2b3
+	github.com/etkecc/go-healthchecks/v2 v2.2.2
+	github.com/etkecc/go-linkpearl v0.0.0-20241016081935-715b568101ef
 	github.com/etkecc/go-mxidwc v1.0.1
 	github.com/etkecc/go-psd v0.0.0-20241014083754-1bc4ec777ba8
-	github.com/etkecc/go-secgen v1.3.0
+	github.com/etkecc/go-secgen v1.4.0
 	github.com/etkecc/go-validator/v2 v2.2.4
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gabriel-vasile/mimetype v1.4.6
@@ -29,7 +29,7 @@ require (
 	github.com/rs/zerolog v1.33.0
 	github.com/swaggo/swag v1.16.3
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
-	maunium.net/go/mautrix v0.21.0
+	maunium.net/go/mautrix v0.21.1
 	modernc.org/sqlite v1.33.1
 )
 
@@ -59,7 +59,7 @@ require (
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/petermattis/goid v0.0.0-20240813172612-4fcff4a6cae7 // indirect
+	github.com/petermattis/goid v0.0.0-20241025130422-66cb2e6d7274 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
@@ -68,8 +68,8 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	github.com/yuin/goldmark v1.7.6 // indirect
-	go.mau.fi/util v0.8.0 // indirect
+	github.com/yuin/goldmark v1.7.8 // indirect
+	go.mau.fi/util v0.8.1 // indirect
 	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect

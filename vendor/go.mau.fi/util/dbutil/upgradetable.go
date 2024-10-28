@@ -78,7 +78,7 @@ var upgradeHeaderRegex = regexp.MustCompile(`^-- (?:v(\d+) -> )?v(\d+)(?: \(comp
 //	-- v5: Upgrade without transaction
 //	-- transaction: off
 //	// do dangerous stuff
-var transactionDisableRegex = regexp.MustCompile(`^-- transaction: (\w*)`)
+var transactionDisableRegex = regexp.MustCompile(`^-- transaction: ([a-z-]*)`)
 
 func parseFileHeader(file []byte) (from, to, compat int, message string, txn TxnMode, lines [][]byte, err error) {
 	lines = bytes.Split(file, []byte("\n"))

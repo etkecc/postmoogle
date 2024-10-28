@@ -420,6 +420,10 @@ func (params *FullRequest) compileRequest(ctx context.Context) (*http.Request, e
 		params.RequestLength = int64(len(params.RequestBytes))
 	} else if params.RequestLength > 0 && params.RequestBody != nil {
 		logBody = fmt.Sprintf("<%d bytes>", params.RequestLength)
+		if rsc, ok := params.RequestBody.(io.ReadSeekCloser); ok {
+			// Prevent HTTP from closing the request body, it might be needed for retries
+			reqBody = nopCloseSeeker{rsc}
+		}
 	} else if params.Method != http.MethodGet && params.Method != http.MethodHead {
 		params.RequestJSON = struct{}{}
 		logBody = params.RequestJSON
@@ -1465,6 +1469,18 @@ func (cli *Client) State(ctx context.Context, roomID id.RoomID) (stateMap RoomSt
 	return
 }
 
+// StateAsArray gets all the state in a room as an array. It does not update the state store.
+// Use State to get the events as a map and also update the state store.
+func (cli *Client) StateAsArray(ctx context.Context, roomID id.RoomID) (state []*event.Event, err error) {
+	_, err = cli.MakeRequest(ctx, http.MethodGet, cli.BuildClientURL("v3", "rooms", roomID, "state"), nil, &state)
+	if err == nil {
+		for _, evt := range state {
+			evt.Type.Class = event.StateEventType
+		}
+	}
+	return
+}
+
 // GetMediaConfig fetches the configuration of the content repository, such as upload limitations.
 func (cli *Client) GetMediaConfig(ctx context.Context) (resp *RespMediaConfig, err error) {
 	_, err = cli.MakeRequest(ctx, http.MethodGet, cli.BuildClientURL("v1", "media", "config"), nil, &resp)
@@ -1612,6 +1628,9 @@ func (cli *Client) uploadMediaToURL(ctx context.Context, data ReqUploadMedia) (*
 	if data.ContentBytes != nil {
 		data.ContentLength = int64(len(data.ContentBytes))
 		reader = bytes.NewReader(data.ContentBytes)
+	} else if rsc, ok := reader.(io.ReadSeekCloser); ok {
+		// Prevent HTTP from closing the request body, it might be needed for retries
+		reader = nopCloseSeeker{rsc}
 	}
 	readerSeeker, canSeek := reader.(io.ReadSeeker)
 	if !canSeek {
@@ -1654,6 +1673,14 @@ func (cli *Client) uploadMediaToURL(ctx context.Context, data ReqUploadMedia) (*
 	}
 
 	return m, nil
+}
+
+type nopCloseSeeker struct {
+	io.ReadSeeker
+}
+
+func (nopCloseSeeker) Close() error {
+	return nil
 }
 
 // UploadMedia uploads the given data to the content repository and returns an MXC URI.
@@ -1809,11 +1836,10 @@ func (cli *Client) Hierarchy(ctx context.Context, roomID id.RoomID, req *ReqHier
 
 // Messages returns a list of message and state events for a room. It uses
 // pagination query parameters to paginate history in the room.
-// See https://spec.matrix.org/v1.2/client-server-api/#get_matrixclientv3roomsroomidmessages
+// See https://spec.matrix.org/v1.12/client-server-api/#get_matrixclientv3roomsroomidmessages
 func (cli *Client) Messages(ctx context.Context, roomID id.RoomID, from, to string, dir Direction, filter *FilterPart, limit int) (resp *RespMessages, err error) {
 	query := map[string]string{
-		"from": from,
-		"dir":  string(dir),
+		"dir": string(dir),
 	}
 	if filter != nil {
 		filterJSON, err := json.Marshal(filter)
@@ -1821,6 +1847,9 @@ func (cli *Client) Messages(ctx context.Context, roomID id.RoomID, from, to stri
 			return nil, err
 		}
 		query["filter"] = string(filterJSON)
+	}
+	if from != "" {
+		query["from"] = from
 	}
 	if to != "" {
 		query["to"] = to

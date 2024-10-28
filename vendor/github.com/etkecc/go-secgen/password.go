@@ -2,6 +2,7 @@ package secgen
 
 import (
 	"crypto/rand"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
 	"math/big"
@@ -21,6 +22,12 @@ func Password(length int) string {
 	}
 
 	return password.String()
+}
+
+// Passphrase generates secure passphrase, based on shared secret and salt
+func Passphrase(sharedSecret, salt string) string {
+	hash := sha512.Sum512([]byte(sharedSecret + salt))
+	return base64.StdEncoding.EncodeToString(hash[:])[:64]
 }
 
 // Base64Bytes generates secure bytes with the given length and returns it as a base64 string
