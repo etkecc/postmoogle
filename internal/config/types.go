@@ -22,8 +22,8 @@ type Config struct {
 	LogLevel string
 	// DataSecret is account data secret key (password) to encrypt all account data values
 	DataSecret string
-	// NoEncryption disabled encryption support
-	NoEncryption bool
+	// DKIM config
+	DKIM DKIM
 	// Prefix for commands
 	Prefix string
 	// MaxSize of an email (including attachments)
@@ -48,6 +48,12 @@ type Config struct {
 	Monitoring Monitoring
 
 	Relay Relay
+}
+
+// DKIM config
+type DKIM struct {
+	PrivKey   string
+	Signature string
 }
 
 // DB config

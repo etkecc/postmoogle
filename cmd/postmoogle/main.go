@@ -127,7 +127,7 @@ func initMatrix(cfg *config.Config) {
 	}
 
 	psdc := psd.NewClient(cfg.PSD.URL, cfg.PSD.Login, cfg.PSD.Password)
-	mxc = mxconfig.New(lp, &log)
+	mxc = mxconfig.New(lp, &log, cfg.DKIM.PrivKey, cfg.DKIM.Signature)
 	q = queue.New(lp, mxc, &log)
 	mxb, err = bot.New(q, lp, &log, mxc, psdc, cfg.Proxies, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
 	if err != nil {

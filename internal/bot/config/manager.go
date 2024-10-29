@@ -12,17 +12,21 @@ import (
 
 // Manager of configs
 type Manager struct {
-	mu  utils.Mutex
-	log *zerolog.Logger
-	lp  *linkpearl.Linkpearl
+	mu            utils.Mutex
+	dkimPrivKey   string
+	dkimSignature string
+	log           *zerolog.Logger
+	lp            *linkpearl.Linkpearl
 }
 
 // New config manager
-func New(lp *linkpearl.Linkpearl, log *zerolog.Logger) *Manager {
+func New(lp *linkpearl.Linkpearl, log *zerolog.Logger, dkimPrivKey, dkimSignature string) *Manager {
 	m := &Manager{
-		mu:  utils.NewMutex(),
-		lp:  lp,
-		log: log,
+		mu:            utils.NewMutex(),
+		lp:            lp,
+		log:           log,
+		dkimPrivKey:   dkimPrivKey,
+		dkimSignature: dkimSignature,
 	}
 
 	return m
@@ -38,7 +42,11 @@ func (m *Manager) GetBot(ctx context.Context) Bot {
 	}
 	if config == nil {
 		config = make(Bot, 0)
-		return config
+	}
+
+	if config.DKIMPrivateKey() == "" {
+		config.Set(BotDKIMPrivateKey, m.dkimPrivKey)
+		config.Set(BotDKIMSignature, m.dkimSignature)
 	}
 
 	return config
