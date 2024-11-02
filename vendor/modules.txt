@@ -15,7 +15,7 @@ github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 ## explicit
 github.com/PuerkitoBio/urlesc
-# github.com/archdx/zerolog-sentry v1.8.4
+# github.com/archdx/zerolog-sentry v1.8.5
 ## explicit; go 1.20
 github.com/archdx/zerolog-sentry
 # github.com/buger/jsonparser v1.1.1
@@ -46,6 +46,9 @@ github.com/etkecc/go-fswatcher
 # github.com/etkecc/go-healthchecks/v2 v2.2.2
 ## explicit; go 1.18
 github.com/etkecc/go-healthchecks/v2
+# github.com/etkecc/go-kit v1.4.0
+## explicit; go 1.22
+github.com/etkecc/go-kit
 # github.com/etkecc/go-linkpearl v0.0.0-20241016081935-715b568101ef
 ## explicit; go 1.22.0
 github.com/etkecc/go-linkpearl
@@ -64,9 +67,10 @@ github.com/etkecc/go-trysmtp
 # github.com/etkecc/go-validator/v2 v2.2.4
 ## explicit; go 1.22.0
 github.com/etkecc/go-validator/v2
-# github.com/fsnotify/fsnotify v1.7.0
+# github.com/fsnotify/fsnotify v1.8.0
 ## explicit; go 1.17
 github.com/fsnotify/fsnotify
+github.com/fsnotify/fsnotify/internal
 # github.com/gabriel-vasile/mimetype v1.4.6
 ## explicit; go 1.20
 github.com/gabriel-vasile/mimetype

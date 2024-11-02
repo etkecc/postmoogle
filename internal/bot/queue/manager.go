@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/url"
 
+	"github.com/etkecc/go-kit"
 	"github.com/etkecc/go-linkpearl"
 	"github.com/rs/zerolog"
 
 	"github.com/etkecc/postmoogle/internal/bot/config"
-	"github.com/etkecc/postmoogle/internal/utils"
 )
 
 const (
@@ -19,7 +19,7 @@ const (
 
 // Queue manager
 type Queue struct {
-	mu       utils.Mutex
+	mu       *kit.Mutex
 	lp       *linkpearl.Linkpearl
 	cfg      *config.Manager
 	log      *zerolog.Logger
@@ -29,7 +29,7 @@ type Queue struct {
 // New queue
 func New(lp *linkpearl.Linkpearl, cfg *config.Manager, log *zerolog.Logger) *Queue {
 	return &Queue{
-		mu:  utils.Mutex{},
+		mu:  kit.NewMutex(),
 		lp:  lp,
 		cfg: cfg,
 		log: log,

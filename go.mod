@@ -5,19 +5,20 @@ go 1.22.0
 toolchain go1.23.1
 
 require (
-	github.com/archdx/zerolog-sentry v1.8.4
+	github.com/archdx/zerolog-sentry v1.8.5
 	github.com/emersion/go-msgauth v0.6.8
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/emersion/go-smtp v0.21.3
 	github.com/etkecc/go-env v1.2.1
 	github.com/etkecc/go-fswatcher v1.0.1
 	github.com/etkecc/go-healthchecks/v2 v2.2.2
+	github.com/etkecc/go-kit v1.4.0
 	github.com/etkecc/go-linkpearl v0.0.0-20241016081935-715b568101ef
 	github.com/etkecc/go-mxidwc v1.0.1
 	github.com/etkecc/go-psd v0.0.0-20241014083754-1bc4ec777ba8
 	github.com/etkecc/go-secgen v1.4.0
 	github.com/etkecc/go-validator/v2 v2.2.4
-	github.com/fsnotify/fsnotify v1.7.0
+	github.com/fsnotify/fsnotify v1.8.0
 	github.com/gabriel-vasile/mimetype v1.4.6
 	github.com/getsentry/sentry-go v0.29.1
 	github.com/jhillyerd/enmime v1.3.0

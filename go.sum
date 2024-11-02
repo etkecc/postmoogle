@@ -10,8 +10,8 @@ github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tN
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 h1:d+Bc7a5rLufV/sSk/8dngufqelfh6jnri85riMAaF/M=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
-github.com/archdx/zerolog-sentry v1.8.4 h1:Thxb8Crm+JaV1kcAF2KEcpKwkMtQaj+GazhktFgGTUc=
-github.com/archdx/zerolog-sentry v1.8.4/go.mod h1:XrFHGe1CH5DQk/XSySu/IJSi5C9XR6+zpc97zVf/c4c=
+github.com/archdx/zerolog-sentry v1.8.5 h1:W24e5+yfZiQ83yd9OjBw+o6ERUzyUlCpoBS97gUlwK8=
+github.com/archdx/zerolog-sentry v1.8.5/go.mod h1:XrFHGe1CH5DQk/XSySu/IJSi5C9XR6+zpc97zVf/c4c=
 github.com/buger/jsonparser v1.1.1 h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=
 github.com/buger/jsonparser v1.1.1/go.mod h1:6RYKKt7H4d4+iWqouImQ9R2FZql3VbhNgx27UK13J/0=
 github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a h1:MISbI8sU/PSK/ztvmWKFcI7UGb5/HQT7B+i3a2myKgI=
@@ -36,6 +36,8 @@ github.com/etkecc/go-fswatcher v1.0.1 h1:n9hqtjzTS3ETb9hcZe1EqYA1lkkhlzZlztu3hXw
 github.com/etkecc/go-fswatcher v1.0.1/go.mod h1:O5TODJ9z6Qb7X+snqHbB+F0Pah6G497Wdg0SFE/UYpE=
 github.com/etkecc/go-healthchecks/v2 v2.2.2 h1:YV7e+Ga8JY3aZX4Qf6Q1Ca+DnqbT5Drjli3PufB4J1g=
 github.com/etkecc/go-healthchecks/v2 v2.2.2/go.mod h1:IowWGN4F6By6z0eh63+639OscylgtdvT9ITjfN6hnZA=
+github.com/etkecc/go-kit v1.4.0 h1:1fjxYVJ1GIXUgPh1e62ovM4a5Ts7Hjvz78nvJMSIhZg=
+github.com/etkecc/go-kit v1.4.0/go.mod h1:yikghi8YaYbTjRXNtx82g0LFv90YqZi2vLf5Chw0ysg=
 github.com/etkecc/go-linkpearl v0.0.0-20241016081935-715b568101ef h1:c+7TLGW847a/7nOxNg8ICXBa8DB3WnnH9mAN9d2Ntuw=
 github.com/etkecc/go-linkpearl v0.0.0-20241016081935-715b568101ef/go.mod h1:VEzhQeweZez8RKYSEYQhULddGeaNsaVcuWzlb1k8EFM=
 github.com/etkecc/go-mxidwc v1.0.1 h1:t4Kq3FxSlQjt1i7RpzE5q3cOWjJ0vrTzzGZRSpgh8mg=
@@ -48,8 +50,8 @@ github.com/etkecc/go-trysmtp v1.1.5 h1:MQ4l4bE9nWUqRKoJOalGHGLkb/hRmzbcBMlClufEO
 github.com/etkecc/go-trysmtp v1.1.5/go.mod h1:J4zQu+kgM37xQY148wUz0Dm6y+YhtzMghAv/AaXt0sQ=
 github.com/etkecc/go-validator/v2 v2.2.4 h1:E4sE4FpYPVP6VRvnndni+8qUXbeSuHxkniFsi6uCRFQ=
 github.com/etkecc/go-validator/v2 v2.2.4/go.mod h1:5VX2VICgMALoFBiGc02p/6RjQ8ifRxZ0KOuLAH5fTe0=
-github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
-github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
+github.com/fsnotify/fsnotify v1.8.0 h1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=
+github.com/fsnotify/fsnotify v1.8.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/gabriel-vasile/mimetype v1.4.6 h1:3+PzJTKLkvgjeTbts6msPJt4DixhT4YtFNf1gtGe3zc=
 github.com/gabriel-vasile/mimetype v1.4.6/go.mod h1:JX1qVKqZd40hUPpAfiNTe0Sne7hdfKSbOqqmkq8GCXc=
 github.com/getsentry/sentry-go v0.29.1 h1:DyZuChN8Hz3ARxGVV8ePaNXh1dQ7d76AiB117xcREwA=

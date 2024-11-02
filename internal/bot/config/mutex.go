@@ -1,5 +1,5 @@
 package config
 
-import "github.com/etkecc/postmoogle/internal/utils"
+import "github.com/etkecc/go-kit"
 
-var mu = utils.NewMutex()
+var mu = kit.NewMutex()

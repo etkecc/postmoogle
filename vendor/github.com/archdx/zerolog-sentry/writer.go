@@ -231,6 +231,7 @@ type config struct {
 	flushTimeout     time.Duration
 	beforeSend       sentry.EventProcessor
 	tracesSampleRate float64
+	attachStacktrace bool
 }
 
 // WithLevels configures zerolog levels that have to be sent to Sentry.
@@ -302,6 +303,13 @@ func WithTracing() WriterOption {
 func WithTracingSampleRate(tsr float64) WriterOption {
 	return optionFunc(func(cfg *config) {
 		cfg.tracesSampleRate = tsr
+	})
+}
+
+// WithAttachStacktrace enabled AttachStacktrace.
+func WithAttachStacktrace() WriterOption {
+	return optionFunc(func(cfg *config) {
+		cfg.attachStacktrace = true
 	})
 }
 
@@ -378,6 +386,7 @@ func New(dsn string, opts ...WriterOption) (*Writer, error) {
 		MaxErrorDepth:    cfg.maxErrorDepth,
 		BeforeSend:       cfg.beforeSend,
 		TracesSampleRate: cfg.tracesSampleRate,
+		AttachStacktrace: cfg.attachStacktrace,
 	})
 	if err != nil {
 		return nil, err

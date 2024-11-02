@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sync"
 
+	"github.com/etkecc/go-kit"
 	"github.com/etkecc/go-linkpearl"
 	"github.com/etkecc/go-psd"
 	"github.com/rs/zerolog"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/etkecc/postmoogle/internal/bot/config"
 	"github.com/etkecc/postmoogle/internal/bot/queue"
-	"github.com/etkecc/postmoogle/internal/utils"
 )
 
 // Mailboxes config
@@ -42,7 +42,7 @@ type Bot struct {
 	cfg                     *config.Manager
 	log                     *zerolog.Logger
 	lp                      *linkpearl.Linkpearl
-	mu                      utils.Mutex
+	mu                      *kit.Mutex
 	q                       *queue.Queue
 	handledMembershipEvents sync.Map
 }
@@ -71,7 +71,7 @@ func New(
 		cfg:        cfg,
 		log:        log,
 		lp:         lp,
-		mu:         utils.NewMutex(),
+		mu:         kit.NewMutex(),
 		q:          q,
 	}
 	users, err := b.initBotUsers(context.Background())
