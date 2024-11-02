@@ -32,11 +32,17 @@ type Bot map[string]string
 
 // Get option
 func (s Bot) Get(key string) string {
+	mu.Lock("config_bot")
+	defer mu.Unlock("config_bot")
+
 	return s[strings.ToLower(strings.TrimSpace(key))]
 }
 
 // Set option
 func (s Bot) Set(key, value string) {
+	mu.Lock("config_bot")
+	defer mu.Unlock("config_bot")
+
 	s[strings.ToLower(strings.TrimSpace(key))] = value
 }
 

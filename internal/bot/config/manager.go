@@ -6,13 +6,10 @@ import (
 	"github.com/etkecc/go-linkpearl"
 	"github.com/rs/zerolog"
 	"maunium.net/go/mautrix/id"
-
-	"github.com/etkecc/postmoogle/internal/utils"
 )
 
 // Manager of configs
 type Manager struct {
-	mu            utils.Mutex
 	dkimPrivKey   string
 	dkimSignature string
 	log           *zerolog.Logger
@@ -22,7 +19,6 @@ type Manager struct {
 // New config manager
 func New(lp *linkpearl.Linkpearl, log *zerolog.Logger, dkimPrivKey, dkimSignature string) *Manager {
 	m := &Manager{
-		mu:            utils.NewMutex(),
 		lp:            lp,
 		log:           log,
 		dkimPrivKey:   dkimPrivKey,
@@ -34,6 +30,9 @@ func New(lp *linkpearl.Linkpearl, log *zerolog.Logger, dkimPrivKey, dkimSignatur
 
 // GetBot config
 func (m *Manager) GetBot(ctx context.Context) Bot {
+	mu.Lock("manager_bot")
+	defer mu.Unlock("manager_bot")
+
 	var err error
 	var config Bot
 	config, err = m.lp.GetAccountData(ctx, acBotKey)
@@ -54,11 +53,17 @@ func (m *Manager) GetBot(ctx context.Context) Bot {
 
 // SetBot config
 func (m *Manager) SetBot(ctx context.Context, cfg Bot) error {
+	mu.Lock("manager_bot")
+	defer mu.Unlock("manager_bot")
+
 	return m.lp.SetAccountData(ctx, acBotKey, cfg)
 }
 
 // GetRoom config
 func (m *Manager) GetRoom(ctx context.Context, roomID id.RoomID) (Room, error) {
+	mu.Lock("manager_room_" + roomID.String())
+	defer mu.Unlock("manager_room_" + roomID.String())
+
 	config, err := m.lp.GetRoomAccountData(ctx, roomID, acRoomKey)
 	if err != nil {
 		m.log.Warn().Err(err).Str("room_id", roomID.String()).Msg("cannot get room settings")
@@ -72,6 +77,9 @@ func (m *Manager) GetRoom(ctx context.Context, roomID id.RoomID) (Room, error) {
 
 // SetRoom config
 func (m *Manager) SetRoom(ctx context.Context, roomID id.RoomID, cfg Room) error {
+	mu.Lock("manager_room_" + roomID.String())
+	defer mu.Unlock("manager_room_" + roomID.String())
+
 	return m.lp.SetRoomAccountData(ctx, roomID, acRoomKey, cfg)
 }
 
@@ -81,8 +89,8 @@ func (m *Manager) GetBanlist(ctx context.Context) List {
 		return make(List, 0)
 	}
 
-	m.mu.Lock("banlist")
-	defer m.mu.Unlock("banlist")
+	mu.Lock("manager_banlist")
+	defer mu.Unlock("manager_banlist")
 	config, err := m.lp.GetAccountData(ctx, acBanlistKey)
 	if err != nil {
 		m.log.Error().Err(err).Msg("cannot get banlist")
@@ -100,8 +108,8 @@ func (m *Manager) SetBanlist(ctx context.Context, cfg List) error {
 		return nil
 	}
 
-	m.mu.Lock("banlist")
-	defer m.mu.Unlock("banlist")
+	mu.Lock("manager_banlist")
+	defer mu.Unlock("manager_banlist")
 	if cfg == nil {
 		cfg = make(List, 0)
 	}
