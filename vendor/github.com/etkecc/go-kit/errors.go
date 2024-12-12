@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 )
 
 // ErrorResponse represents an error response
 //
 //nolint:errname // ErrorResponse is a valid name
 type ErrorResponse struct {
-	Err string `json:"error"`
+	StatusCode int    `json:"-"`     // HTTP status code, optional, not serialized
+	Err        string `json:"error"` // Error message
 }
 
 // Error returns the error message
@@ -19,12 +21,17 @@ func (e ErrorResponse) Error() string {
 }
 
 // NewErrorResponse creates a new error response
-func NewErrorResponse(err error) *ErrorResponse {
-	if err == nil {
-		return &ErrorResponse{Err: "unknown error"}
+func NewErrorResponse(err error, optionalStatusCode ...int) *ErrorResponse {
+	statusCode := http.StatusBadRequest
+	if len(optionalStatusCode) > 0 && optionalStatusCode[0] > 0 {
+		statusCode = optionalStatusCode[0]
 	}
 
-	return &ErrorResponse{Err: err.Error()}
+	if err == nil {
+		return &ErrorResponse{Err: "unknown error", StatusCode: statusCode}
+	}
+
+	return &ErrorResponse{Err: err.Error(), StatusCode: statusCode}
 }
 
 // MatrixError represents an error response from the Matrix API

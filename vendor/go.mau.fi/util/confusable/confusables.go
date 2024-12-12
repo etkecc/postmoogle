@@ -134,6 +134,8 @@ func GetReplacement(input rune) string {
 		return "k̔"
 	case 410:
 		return "l̵"
+	case 411:
+		return "λ̸"
 	case 413:
 		return "N̦"
 	case 414:
@@ -2850,6 +2852,8 @@ func GetReplacement(input rune) string {
 		return "+"
 	case 5872:
 		return "Φ"
+	case 5940:
+		return "᜕"
 	case 5941:
 		return "/"
 	case 6051:
@@ -3088,6 +3092,8 @@ func GetReplacement(input rune) string {
 		return "ả"
 	case 7837:
 		return "f"
+	case 7838:
+		return "ß"
 	case 7935:
 		return "y"
 	case 8061:
@@ -4852,6 +4858,8 @@ func GetReplacement(input rune) string {
 		return "口"
 	case 12539:
 		return "·"
+	case 12582:
+		return "儿"
 	case 12593:
 		return "ᄀ"
 	case 12594:
@@ -5690,6 +5698,14 @@ func GetReplacement(input rune) string {
 		return "Ꙍ"
 	case 42935:
 		return "ω"
+	case 42966:
+		return "ß"
+	case 42970:
+		return "Ʌ"
+	case 42971:
+		return "λ"
+	case 42972:
+		return "Ʌ̸"
 	case 42999:
 		return "ー"
 	case 43056:
@@ -9032,6 +9048,78 @@ func GetReplacement(input rune) string {
 		return "'"
 	case 94034:
 		return "'"
+	case 117974:
+		return "A"
+	case 117975:
+		return "B"
+	case 117976:
+		return "C"
+	case 117977:
+		return "D"
+	case 117978:
+		return "E"
+	case 117979:
+		return "F"
+	case 117980:
+		return "G"
+	case 117981:
+		return "H"
+	case 117982:
+		return "l"
+	case 117983:
+		return "J"
+	case 117984:
+		return "K"
+	case 117985:
+		return "L"
+	case 117986:
+		return "M"
+	case 117987:
+		return "N"
+	case 117988:
+		return "O"
+	case 117989:
+		return "P"
+	case 117990:
+		return "Q"
+	case 117991:
+		return "R"
+	case 117992:
+		return "S"
+	case 117993:
+		return "T"
+	case 117994:
+		return "U"
+	case 117995:
+		return "V"
+	case 117996:
+		return "W"
+	case 117997:
+		return "X"
+	case 117998:
+		return "Y"
+	case 117999:
+		return "Z"
+	case 118000:
+		return "O"
+	case 118001:
+		return "l"
+	case 118002:
+		return "2"
+	case 118003:
+		return "3"
+	case 118004:
+		return "4"
+	case 118005:
+		return "5"
+	case 118006:
+		return "6"
+	case 118007:
+		return "7"
+	case 118008:
+		return "8"
+	case 118009:
+		return "9"
 	case 119060:
 		return "{"
 	case 119149:

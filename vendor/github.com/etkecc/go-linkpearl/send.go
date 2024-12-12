@@ -2,6 +2,7 @@ package linkpearl
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"maunium.net/go/mautrix"
@@ -10,12 +11,44 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
+const (
+	// MaxRetries is the maximum number of retries for sending a message
+	MaxRetries = 5
+	// DefaultTypingTimeout is the step delay for sending message retries
+	RetryDelay = 5 * time.Second
+)
+
+// SendMessageEvent sends a message event to the roomID and automatically retries if the server returns a 502 or 404 error
+func (l *Linkpearl) SendMessageEvent(ctx context.Context, roomID id.RoomID, eventType event.Type, contentJSON any, currentAttempt ...int) (resp *mautrix.RespSendEvent, err error) {
+	attempt := 1
+	if len(currentAttempt) > 0 {
+		attempt = currentAttempt[0]
+	}
+
+	resp, err = l.api.SendMessageEvent(ctx, roomID, eventType, contentJSON)
+	if err == nil {
+		return resp, nil
+	}
+	err = UnwrapError(err)
+	if (strings.Contains(err.Error(), "HTTP 502") || strings.Contains(err.Error(), "HTTP 404")) && attempt <= MaxRetries {
+		l.log.Warn().
+			Err(err).
+			Str("roomID", roomID.String()).
+			Int("attempt", attempt).
+			Int("of", MaxRetries).
+			Msg("cannot send event, sleeping and retrying")
+		time.Sleep(RetryDelay * time.Duration(attempt))
+		return l.SendMessageEvent(ctx, roomID, eventType, contentJSON, attempt+1)
+	}
+	return nil, err
+}
+
 // Send a message to the roomID and automatically try to encrypt it, if the destination room is encrypted
 //
 //nolint:unparam // it's public interface
 func (l *Linkpearl) Send(ctx context.Context, roomID id.RoomID, content any) (id.EventID, error) {
 	l.log.Debug().Str("roomID", roomID.String()).Any("content", content).Msg("sending event")
-	resp, err := l.api.SendMessageEvent(ctx, roomID, event.EventMessage, content)
+	resp, err := l.SendMessageEvent(ctx, roomID, event.EventMessage, content)
 	if err != nil {
 		return "", UnwrapError(err)
 	}

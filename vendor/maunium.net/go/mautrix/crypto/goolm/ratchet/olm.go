@@ -2,8 +2,12 @@
 package ratchet
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"fmt"
 	"io"
+
+	"golang.org/x/crypto/hkdf"
 
 	"maunium.net/go/mautrix/crypto/goolm/cipher"
 	"maunium.net/go/mautrix/crypto/goolm/crypto"
@@ -70,7 +74,7 @@ func New() *Ratchet {
 
 // InitializeAsBob initializes this ratchet from a receiving point of view (only first message).
 func (r *Ratchet) InitializeAsBob(sharedSecret []byte, theirRatchetKey crypto.Curve25519PublicKey) error {
-	derivedSecretsReader := crypto.HKDFSHA256(sharedSecret, nil, KdfInfo.Root)
+	derivedSecretsReader := hkdf.New(sha256.New, sharedSecret, nil, KdfInfo.Root)
 	derivedSecrets := make([]byte, 2*sharedKeyLength)
 	if _, err := io.ReadFull(derivedSecretsReader, derivedSecrets); err != nil {
 		return err
@@ -83,7 +87,7 @@ func (r *Ratchet) InitializeAsBob(sharedSecret []byte, theirRatchetKey crypto.Cu
 
 // InitializeAsAlice initializes this ratchet from a sending point of view (only first message).
 func (r *Ratchet) InitializeAsAlice(sharedSecret []byte, ourRatchetKey crypto.Curve25519KeyPair) error {
-	derivedSecretsReader := crypto.HKDFSHA256(sharedSecret, nil, KdfInfo.Root)
+	derivedSecretsReader := hkdf.New(sha256.New, sharedSecret, nil, KdfInfo.Root)
 	derivedSecrets := make([]byte, 2*sharedKeyLength)
 	if _, err := io.ReadFull(derivedSecretsReader, derivedSecrets); err != nil {
 		return err
@@ -94,11 +98,11 @@ func (r *Ratchet) InitializeAsAlice(sharedSecret []byte, ourRatchetKey crypto.Cu
 	return nil
 }
 
-// Encrypt encrypts the message in a message.Message with MAC. If reader is nil, crypto/rand is used for key generations.
+// Encrypt encrypts the message in a message.Message with MAC.
 func (r *Ratchet) Encrypt(plaintext []byte) ([]byte, error) {
 	var err error
 	if !r.SenderChains.IsSet {
-		newRatchetKey, err := crypto.Curve25519GenerateKey(nil)
+		newRatchetKey, err := crypto.Curve25519GenerateKey()
 		if err != nil {
 			return nil, err
 		}
@@ -124,15 +128,10 @@ func (r *Ratchet) Encrypt(plaintext []byte) ([]byte, error) {
 	message.RatchetKey = r.SenderChains.ratchetKey().PublicKey
 	message.Ciphertext = encryptedText
 	//creating the mac is done in encode
-	output, err := message.EncodeAndMAC(messageKey.Key, RatchetCipher)
-	if err != nil {
-		return nil, err
-	}
-
-	return output, nil
+	return message.EncodeAndMAC(messageKey.Key, RatchetCipher)
 }
 
-// Decrypt decrypts the ciphertext and verifies the MAC.  If reader is nil, crypto/rand is used for key generations.
+// Decrypt decrypts the ciphertext and verifies the MAC.
 func (r *Ratchet) Decrypt(input []byte) ([]byte, error) {
 	message := &message.Message{}
 	//The mac is not verified here, as we do not know the key yet
@@ -153,53 +152,42 @@ func (r *Ratchet) Decrypt(input []byte) ([]byte, error) {
 			break
 		}
 	}
-	var result []byte
 	if receiverChainFromMessage == nil {
 		//Advancing the chain is done in this method
-		result, err = r.decryptForNewChain(message, input)
-		if err != nil {
-			return nil, err
-		}
+		return r.decryptForNewChain(message, input)
 	} else if receiverChainFromMessage.chainKey().Index > message.Counter {
 		// No need to advance the chain
 		// Chain already advanced beyond the key for this message
 		// Check if the message keys are in the skipped key list.
-		foundSkippedKey := false
 		for curSkippedIndex := range r.SkippedMessageKeys {
-			if message.Counter == r.SkippedMessageKeys[curSkippedIndex].MKey.Index {
-				// Found the key for this message. Check the MAC.
-				verified, err := message.VerifyMACInline(r.SkippedMessageKeys[curSkippedIndex].MKey.Key, RatchetCipher, input)
-				if err != nil {
-					return nil, err
-				}
-				if !verified {
-					return nil, fmt.Errorf("decrypt from skipped message keys: %w", olm.ErrBadMAC)
-				}
-				result, err = RatchetCipher.Decrypt(r.SkippedMessageKeys[curSkippedIndex].MKey.Key, message.Ciphertext)
-				if err != nil {
-					return nil, fmt.Errorf("cipher decrypt: %w", err)
-				}
-				if len(result) != 0 {
-					// Remove the key from the skipped keys now that we've
-					// decoded the message it corresponds to.
-					r.SkippedMessageKeys[curSkippedIndex] = r.SkippedMessageKeys[len(r.SkippedMessageKeys)-1]
-					r.SkippedMessageKeys = r.SkippedMessageKeys[:len(r.SkippedMessageKeys)-1]
-				}
-				foundSkippedKey = true
+			if message.Counter != r.SkippedMessageKeys[curSkippedIndex].MKey.Index {
+				continue
+			}
+
+			// Found the key for this message. Check the MAC.
+			verified, err := message.VerifyMACInline(r.SkippedMessageKeys[curSkippedIndex].MKey.Key, RatchetCipher, input)
+			if err != nil {
+				return nil, err
+			}
+			if !verified {
+				return nil, fmt.Errorf("decrypt from skipped message keys: %w", olm.ErrBadMAC)
+			}
+			result, err := RatchetCipher.Decrypt(r.SkippedMessageKeys[curSkippedIndex].MKey.Key, message.Ciphertext)
+			if err != nil {
+				return nil, fmt.Errorf("cipher decrypt: %w", err)
+			} else if len(result) != 0 {
+				// Remove the key from the skipped keys now that we've
+				// decoded the message it corresponds to.
+				r.SkippedMessageKeys[curSkippedIndex] = r.SkippedMessageKeys[len(r.SkippedMessageKeys)-1]
+				r.SkippedMessageKeys = r.SkippedMessageKeys[:len(r.SkippedMessageKeys)-1]
+				return result, nil
 			}
 		}
-		if !foundSkippedKey {
-			return nil, fmt.Errorf("decrypt: %w", olm.ErrMessageKeyNotFound)
-		}
+		return nil, fmt.Errorf("decrypt: %w", olm.ErrMessageKeyNotFound)
 	} else {
 		//Advancing the chain is done in this method
-		result, err = r.decryptForExistingChain(receiverChainFromMessage, message, input)
-		if err != nil {
-			return nil, err
-		}
+		return r.decryptForExistingChain(receiverChainFromMessage, message, input)
 	}
-
-	return result, nil
 }
 
 // advanceRootKey created the next root key and returns the next chainKey
@@ -208,7 +196,7 @@ func (r *Ratchet) advanceRootKey(newRatchetKey crypto.Curve25519KeyPair, oldRatc
 	if err != nil {
 		return nil, err
 	}
-	derivedSecretsReader := crypto.HKDFSHA256(sharedSecret, r.RootKey, KdfInfo.Ratchet)
+	derivedSecretsReader := hkdf.New(sha256.New, sharedSecret, r.RootKey, KdfInfo.Ratchet)
 	derivedSecrets := make([]byte, 2*sharedKeyLength)
 	if _, err := io.ReadFull(derivedSecretsReader, derivedSecrets); err != nil {
 		return nil, err
@@ -219,10 +207,12 @@ func (r *Ratchet) advanceRootKey(newRatchetKey crypto.Curve25519KeyPair, oldRatc
 
 // createMessageKeys returns the messageKey derived from the chainKey
 func (r Ratchet) createMessageKeys(chainKey chainKey) messageKey {
-	res := messageKey{}
-	res.Key = crypto.HMACSHA256(chainKey.Key, []byte{messageKeySeed})
-	res.Index = chainKey.Index
-	return res
+	hash := hmac.New(sha256.New, chainKey.Key)
+	hash.Write([]byte{messageKeySeed})
+	return messageKey{
+		Key:   hash.Sum(nil),
+		Index: chainKey.Index,
+	}
 }
 
 // decryptForExistingChain returns the decrypted message by using the chain. The MAC of the rawMessage is verified.
@@ -281,11 +271,7 @@ func (r *Ratchet) decryptForNewChain(message *message.Message, rawMessage []byte
 	*/
 	r.SenderChains = senderChain{}
 
-	decrypted, err := r.decryptForExistingChain(&r.ReceiverChains[0], message, rawMessage)
-	if err != nil {
-		return nil, err
-	}
-	return decrypted, nil
+	return r.decryptForExistingChain(&r.ReceiverChains[0], message, rawMessage)
 }
 
 // PickleAsJSON returns a ratchet as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
@@ -298,135 +284,75 @@ func (r *Ratchet) UnpickleAsJSON(pickled, key []byte) error {
 	return utilities.UnpickleAsJSON(r, pickled, key, olmPickleVersion)
 }
 
-// UnpickleLibOlm decodes the unencryted value and populates the Ratchet accordingly. It returns the number of bytes read.
-func (r *Ratchet) UnpickleLibOlm(value []byte, includesChainIndex bool) (int, error) {
-	//read ratchet data
-	curPos := 0
-	readBytes, err := r.RootKey.UnpickleLibOlm(value)
-	if err != nil {
-		return 0, err
+// UnpickleLibOlm unpickles the unencryted value and populates the [Ratchet]
+// accordingly.
+func (r *Ratchet) UnpickleLibOlm(decoder *libolmpickle.Decoder, includesChainIndex bool) error {
+	if err := r.RootKey.UnpickleLibOlm(decoder); err != nil {
+		return err
 	}
-	curPos += readBytes
-	countSenderChains, readBytes, err := libolmpickle.UnpickleUInt32(value[curPos:]) //Length of sender chain
+	senderChainsCount, err := decoder.ReadUInt32()
 	if err != nil {
-		return 0, err
+		return err
 	}
-	curPos += readBytes
-	for i := uint32(0); i < countSenderChains; i++ {
+
+	for i := uint32(0); i < senderChainsCount; i++ {
 		if i == 0 {
-			//only first is stored
-			readBytes, err := r.SenderChains.UnpickleLibOlm(value[curPos:])
-			if err != nil {
-				return 0, err
-			}
-			curPos += readBytes
+			// only the first sender key is stored
+			err = r.SenderChains.UnpickleLibOlm(decoder)
 			r.SenderChains.IsSet = true
 		} else {
-			dummy := senderChain{}
-			readBytes, err := dummy.UnpickleLibOlm(value[curPos:])
-			if err != nil {
-				return 0, err
-			}
-			curPos += readBytes
+			// just eat the values
+			err = (&senderChain{}).UnpickleLibOlm(decoder)
 		}
-	}
-	countReceivChains, readBytes, err := libolmpickle.UnpickleUInt32(value[curPos:]) //Length of recevier chain
-	if err != nil {
-		return 0, err
-	}
-	curPos += readBytes
-	r.ReceiverChains = make([]receiverChain, countReceivChains)
-	for i := uint32(0); i < countReceivChains; i++ {
-		readBytes, err := r.ReceiverChains[i].UnpickleLibOlm(value[curPos:])
 		if err != nil {
-			return 0, err
+			return err
 		}
-		curPos += readBytes
 	}
-	countSkippedMessageKeys, readBytes, err := libolmpickle.UnpickleUInt32(value[curPos:]) //Length of skippedMessageKeys
+
+	receiverChainCount, err := decoder.ReadUInt32()
 	if err != nil {
-		return 0, err
+		return err
 	}
-	curPos += readBytes
-	r.SkippedMessageKeys = make([]skippedMessageKey, countSkippedMessageKeys)
-	for i := uint32(0); i < countSkippedMessageKeys; i++ {
-		readBytes, err := r.SkippedMessageKeys[i].UnpickleLibOlm(value[curPos:])
-		if err != nil {
-			return 0, err
+	r.ReceiverChains = make([]receiverChain, receiverChainCount)
+	for i := uint32(0); i < receiverChainCount; i++ {
+		if err := r.ReceiverChains[i].UnpickleLibOlm(decoder); err != nil {
+			return err
 		}
-		curPos += readBytes
 	}
-	// pickle v 0x80000001 includes a chain index; pickle v1 does not.
+
+	skippedMessageKeysCount, err := decoder.ReadUInt32()
+	if err != nil {
+		return err
+	}
+	r.SkippedMessageKeys = make([]skippedMessageKey, skippedMessageKeysCount)
+	for i := uint32(0); i < skippedMessageKeysCount; i++ {
+		if err := r.SkippedMessageKeys[i].UnpickleLibOlm(decoder); err != nil {
+			return err
+		}
+	}
+
+	// pickle version 0x80000001 includes a chain index; pickle version 1 does not.
 	if includesChainIndex {
-		_, readBytes, err := libolmpickle.UnpickleUInt32(value[curPos:])
-		if err != nil {
-			return 0, err
-		}
-		curPos += readBytes
+		_, err = decoder.ReadUInt32()
+		return err
 	}
-	return curPos, nil
+	return nil
 }
 
-// PickleLibOlm encodes the ratchet into target. target has to have a size of at least PickleLen() and is written to from index 0.
-// It returns the number of bytes written.
-func (r Ratchet) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < r.PickleLen() {
-		return 0, fmt.Errorf("pickle ratchet: %w", olm.ErrValueTooShort)
-	}
-	written, err := r.RootKey.PickleLibOlm(target)
-	if err != nil {
-		return 0, fmt.Errorf("pickle ratchet: %w", err)
-	}
-	if r.SenderChains.IsSet {
-		written += libolmpickle.PickleUInt32(1, target[written:]) //Length of sender chain, always 1
-		writtenSender, err := r.SenderChains.PickleLibOlm(target[written:])
-		if err != nil {
-			return 0, fmt.Errorf("pickle ratchet: %w", err)
-		}
-		written += writtenSender
-	} else {
-		written += libolmpickle.PickleUInt32(0, target[written:]) //Length of sender chain
-	}
-	written += libolmpickle.PickleUInt32(uint32(len(r.ReceiverChains)), target[written:])
+// PickleLibOlm pickles the ratchet into the encoder.
+func (r Ratchet) PickleLibOlm(encoder *libolmpickle.Encoder) {
+	r.RootKey.PickleLibOlm(encoder)
+	r.SenderChains.PickleLibOlm(encoder)
+
+	// Receiver Chains
+	encoder.WriteUInt32(uint32(len(r.ReceiverChains)))
 	for _, curChain := range r.ReceiverChains {
-		writtenChain, err := curChain.PickleLibOlm(target[written:])
-		if err != nil {
-			return 0, fmt.Errorf("pickle ratchet: %w", err)
-		}
-		written += writtenChain
+		curChain.PickleLibOlm(encoder)
 	}
-	written += libolmpickle.PickleUInt32(uint32(len(r.SkippedMessageKeys)), target[written:])
+
+	// Skipped Message Keys
+	encoder.WriteUInt32(uint32(len(r.SkippedMessageKeys)))
 	for _, curChain := range r.SkippedMessageKeys {
-		writtenChain, err := curChain.PickleLibOlm(target[written:])
-		if err != nil {
-			return 0, fmt.Errorf("pickle ratchet: %w", err)
-		}
-		written += writtenChain
+		curChain.PickleLibOlm(encoder)
 	}
-	return written, nil
-}
-
-// PickleLen returns the actual number of bytes the pickled ratchet will have.
-func (r Ratchet) PickleLen() int {
-	length := r.RootKey.PickleLen()
-	if r.SenderChains.IsSet {
-		length += libolmpickle.PickleUInt32Len(1)
-		length += r.SenderChains.PickleLen()
-	} else {
-		length += libolmpickle.PickleUInt32Len(0)
-	}
-	length += libolmpickle.PickleUInt32Len(uint32(len(r.ReceiverChains)))
-	length += len(r.ReceiverChains) * receiverChain{}.PickleLen()
-	length += libolmpickle.PickleUInt32Len(uint32(len(r.SkippedMessageKeys)))
-	length += len(r.SkippedMessageKeys) * skippedMessageKey{}.PickleLen()
-	return length
-}
-
-// PickleLen returns the minimum number of bytes the pickled ratchet must have.
-func (r Ratchet) PickleLenMin() int {
-	length := r.RootKey.PickleLen()
-	length += libolmpickle.PickleUInt32Len(0)
-	length += libolmpickle.PickleUInt32Len(0)
-	length += libolmpickle.PickleUInt32Len(0)
-	return length
 }

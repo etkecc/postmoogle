@@ -2,29 +2,23 @@ package crypto
 
 import (
 	"encoding/base64"
-	"fmt"
-	"io"
 
 	"maunium.net/go/mautrix/crypto/ed25519"
 	"maunium.net/go/mautrix/crypto/goolm/libolmpickle"
-	"maunium.net/go/mautrix/crypto/olm"
 	"maunium.net/go/mautrix/id"
 )
 
 const (
-	ED25519SignatureSize = ed25519.SignatureSize //The length of a signature
+	Ed25519SignatureSize = ed25519.SignatureSize //The length of a signature
 )
 
-// Ed25519GenerateKey creates a new ed25519 key pair. If reader is nil, the random data is taken from crypto/rand.
-func Ed25519GenerateKey(reader io.Reader) (Ed25519KeyPair, error) {
-	publicKey, privateKey, err := ed25519.GenerateKey(reader)
-	if err != nil {
-		return Ed25519KeyPair{}, err
-	}
+// Ed25519GenerateKey creates a new ed25519 key pair.
+func Ed25519GenerateKey() (Ed25519KeyPair, error) {
+	publicKey, privateKey, err := ed25519.GenerateKey(nil)
 	return Ed25519KeyPair{
 		PrivateKey: Ed25519PrivateKey(privateKey),
 		PublicKey:  Ed25519PublicKey(publicKey),
-	}, nil
+	}, err
 }
 
 // Ed25519GenerateFromPrivate creates a new ed25519 key pair with the private key given.
@@ -56,7 +50,7 @@ func (c Ed25519KeyPair) B64Encoded() id.Ed25519 {
 }
 
 // Sign returns the signature for the message.
-func (c Ed25519KeyPair) Sign(message []byte) []byte {
+func (c Ed25519KeyPair) Sign(message []byte) ([]byte, error) {
 	return c.PrivateKey.Sign(message)
 }
 
@@ -65,51 +59,26 @@ func (c Ed25519KeyPair) Verify(message, givenSignature []byte) bool {
 	return c.PublicKey.Verify(message, givenSignature)
 }
 
-// PickleLibOlm encodes the key pair into target. target has to have a size of at least PickleLen() and is written to from index 0.
-// It returns the number of bytes written.
-func (c Ed25519KeyPair) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < c.PickleLen() {
-		return 0, fmt.Errorf("pickle ed25519 key pair: %w", olm.ErrValueTooShort)
-	}
-	written, err := c.PublicKey.PickleLibOlm(target)
-	if err != nil {
-		return 0, fmt.Errorf("pickle ed25519 key pair: %w", err)
-	}
-
-	if len(c.PrivateKey) != ed25519.PrivateKeySize {
-		written += libolmpickle.PickleBytes(make([]byte, ed25519.PrivateKeySize), target[written:])
+// PickleLibOlm pickles the key pair into the encoder.
+func (c Ed25519KeyPair) PickleLibOlm(encoder *libolmpickle.Encoder) {
+	c.PublicKey.PickleLibOlm(encoder)
+	if len(c.PrivateKey) == ed25519.PrivateKeySize {
+		encoder.Write(c.PrivateKey)
 	} else {
-		written += libolmpickle.PickleBytes(c.PrivateKey, target[written:])
+		encoder.WriteEmptyBytes(ed25519.PrivateKeySize)
 	}
-	return written, nil
 }
 
-// UnpickleLibOlm decodes the unencryted value and populates the key pair accordingly. It returns the number of bytes read.
-func (c *Ed25519KeyPair) UnpickleLibOlm(value []byte) (int, error) {
-	//unpickle PubKey
-	read, err := c.PublicKey.UnpickleLibOlm(value)
-	if err != nil {
-		return 0, err
-	}
-	//unpickle PrivateKey
-	privKey, readPriv, err := libolmpickle.UnpickleBytes(value[read:], ed25519.PrivateKeySize)
-	if err != nil {
-		return read, err
-	}
-	c.PrivateKey = privKey
-	return read + readPriv, nil
-}
-
-// PickleLen returns the number of bytes the pickled key pair will have.
-func (c Ed25519KeyPair) PickleLen() int {
-	lenPublic := c.PublicKey.PickleLen()
-	var lenPrivate int
-	if len(c.PrivateKey) != ed25519.PrivateKeySize {
-		lenPrivate = libolmpickle.PickleBytesLen(make([]byte, ed25519.PrivateKeySize))
+// UnpickleLibOlm unpickles the unencryted value and populates the key pair accordingly.
+func (c *Ed25519KeyPair) UnpickleLibOlm(decoder *libolmpickle.Decoder) error {
+	if err := c.PublicKey.UnpickleLibOlm(decoder); err != nil {
+		return err
+	} else if privKey, err := decoder.ReadBytes(ed25519.PrivateKeySize); err != nil {
+		return err
 	} else {
-		lenPrivate = libolmpickle.PickleBytesLen(c.PrivateKey)
+		c.PrivateKey = privKey
+		return nil
 	}
-	return lenPublic + lenPrivate
 }
 
 // Curve25519PrivateKey represents the private key for ed25519 usage. This is just a wrapper.
@@ -127,12 +96,8 @@ func (c Ed25519PrivateKey) PubKey() Ed25519PublicKey {
 }
 
 // Sign returns the signature for the message.
-func (c Ed25519PrivateKey) Sign(message []byte) []byte {
-	signature, err := ed25519.PrivateKey(c).Sign(nil, message, &ed25519.Options{})
-	if err != nil {
-		panic(err)
-	}
-	return signature
+func (c Ed25519PrivateKey) Sign(message []byte) ([]byte, error) {
+	return ed25519.PrivateKey(c).Sign(nil, message, &ed25519.Options{})
 }
 
 // Ed25519PublicKey represents the public key for ed25519 usage. This is just a wrapper.
@@ -153,32 +118,19 @@ func (c Ed25519PublicKey) Verify(message, givenSignature []byte) bool {
 	return ed25519.Verify(ed25519.PublicKey(c), message, givenSignature)
 }
 
-// PickleLibOlm encodes the public key into target. target has to have a size of at least PickleLen() and is written to from index 0.
-// It returns the number of bytes written.
-func (c Ed25519PublicKey) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < c.PickleLen() {
-		return 0, fmt.Errorf("pickle ed25519 public key: %w", olm.ErrValueTooShort)
+// PickleLibOlm pickles the public key into the encoder.
+func (c Ed25519PublicKey) PickleLibOlm(encoder *libolmpickle.Encoder) {
+	if len(c) == ed25519.PublicKeySize {
+		encoder.Write(c)
+	} else {
+		encoder.WriteEmptyBytes(ed25519.PublicKeySize)
 	}
-	if len(c) != ed25519.PublicKeySize {
-		return libolmpickle.PickleBytes(make([]byte, ed25519.PublicKeySize), target), nil
-	}
-	return libolmpickle.PickleBytes(c, target), nil
 }
 
-// UnpickleLibOlm decodes the unencryted value and populates the public key accordingly. It returns the number of bytes read.
-func (c *Ed25519PublicKey) UnpickleLibOlm(value []byte) (int, error) {
-	unpickled, readBytes, err := libolmpickle.UnpickleBytes(value, ed25519.PublicKeySize)
-	if err != nil {
-		return 0, err
-	}
-	*c = unpickled
-	return readBytes, nil
-}
-
-// PickleLen returns the number of bytes the pickled public key will have.
-func (c Ed25519PublicKey) PickleLen() int {
-	if len(c) != ed25519.PublicKeySize {
-		return libolmpickle.PickleBytesLen(make([]byte, ed25519.PublicKeySize))
-	}
-	return libolmpickle.PickleBytesLen(c)
+// UnpickleLibOlm unpickles the unencryted value and populates the public key
+// accordingly.
+func (c *Ed25519PublicKey) UnpickleLibOlm(decoder *libolmpickle.Decoder) error {
+	key, err := decoder.ReadBytes(ed25519.PublicKeySize)
+	*c = key
+	return err
 }

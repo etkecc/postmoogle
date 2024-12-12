@@ -15,6 +15,8 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog"
+	"github.com/tidwall/gjson"
+	"go.mau.fi/util/exgjson"
 	"go.mau.fi/util/exzerolog"
 
 	"maunium.net/go/mautrix"
@@ -27,7 +29,24 @@ var (
 	NoGroupSession = errors.New("no group session created")
 )
 
-func getRelatesTo(content interface{}) *event.RelatesTo {
+func getRawJSON[T any](content json.RawMessage, path ...string) *T {
+	value := gjson.GetBytes(content, exgjson.Path(path...))
+	if !value.IsObject() {
+		return nil
+	}
+	var result T
+	err := json.Unmarshal([]byte(value.Raw), &result)
+	if err != nil {
+		return nil
+	}
+	return &result
+}
+
+func getRelatesTo(content any) *event.RelatesTo {
+	contentJSON, ok := content.(json.RawMessage)
+	if ok {
+		return getRawJSON[event.RelatesTo](contentJSON, "m.relates_to")
+	}
 	contentStruct, ok := content.(*event.Content)
 	if ok {
 		content = contentStruct.Parsed
@@ -39,7 +58,11 @@ func getRelatesTo(content interface{}) *event.RelatesTo {
 	return nil
 }
 
-func getMentions(content interface{}) *event.Mentions {
+func getMentions(content any) *event.Mentions {
+	contentJSON, ok := content.(json.RawMessage)
+	if ok {
+		return getRawJSON[event.Mentions](contentJSON, "m.mentions")
+	}
 	contentStruct, ok := content.(*event.Content)
 	if ok {
 		content = contentStruct.Parsed
@@ -156,7 +179,10 @@ func (mach *OlmMachine) newOutboundGroupSession(ctx context.Context, roomID id.R
 			Msg("Failed to get encryption event in room")
 		return nil, fmt.Errorf("failed to get encryption event in room %s: %w", roomID, err)
 	}
-	session := NewOutboundGroupSession(roomID, encryptionEvent)
+	session, err := NewOutboundGroupSession(roomID, encryptionEvent)
+	if err != nil {
+		return nil, err
+	}
 	if !mach.DontStoreOutboundKeys {
 		signingKey, idKey := mach.account.Keys()
 		err := mach.createGroupSession(ctx, idKey, signingKey, roomID, session.ID(), session.Internal.Key(), session.MaxAge, session.MaxMessages, false)
@@ -333,23 +359,26 @@ func (mach *OlmMachine) encryptAndSendGroupSession(ctx context.Context, session 
 		toDevice.Messages[userID] = output
 		for deviceID, device := range sessions {
 			log.Trace().
-				Str("target_user_id", userID.String()).
-				Str("target_device_id", deviceID.String()).
+				Stringer("target_user_id", userID).
+				Stringer("target_device_id", deviceID).
+				Stringer("target_identity_key", device.identity.IdentityKey).
 				Msg("Encrypting group session for device")
 			content := mach.encryptOlmEvent(ctx, device.session, device.identity, event.ToDeviceRoomKey, session.ShareContent())
 			output[deviceID] = &event.Content{Parsed: content}
 			deviceCount++
 			log.Debug().
-				Str("target_user_id", userID.String()).
-				Str("target_device_id", deviceID.String()).
+				Stringer("target_user_id", userID).
+				Stringer("target_device_id", deviceID).
+				Stringer("target_identity_key", device.identity.IdentityKey).
 				Msg("Encrypted group session for device")
 			if !mach.DisableSharedGroupSessionTracking {
 				err := mach.CryptoStore.MarkOutboundGroupSessionShared(ctx, userID, device.identity.IdentityKey, session.id)
 				if err != nil {
 					log.Warn().
 						Err(err).
-						Str("target_user_id", userID.String()).
-						Str("target_device_id", deviceID.String()).
+						Stringer("target_user_id", userID).
+						Stringer("target_device_id", deviceID).
+						Stringer("target_identity_key", device.identity.IdentityKey).
 						Stringer("target_session_id", session.id).
 						Msg("Failed to mark outbound group session shared")
 				}
@@ -368,8 +397,9 @@ func (mach *OlmMachine) encryptAndSendGroupSession(ctx context.Context, session 
 func (mach *OlmMachine) findOlmSessionsForUser(ctx context.Context, session *OutboundGroupSession, userID id.UserID, devices map[id.DeviceID]*id.Device, output map[id.DeviceID]deviceSessionWrapper, withheld map[id.DeviceID]*event.Content, missingOutput map[id.DeviceID]*id.Device) {
 	for deviceID, device := range devices {
 		log := zerolog.Ctx(ctx).With().
-			Str("target_user_id", userID.String()).
-			Str("target_device_id", deviceID.String()).
+			Stringer("target_user_id", userID).
+			Stringer("target_device_id", deviceID).
+			Stringer("target_identity_key", device.IdentityKey).
 			Logger()
 		userKey := UserDevice{UserID: userID, DeviceID: deviceID}
 		if state := session.Users[userKey]; state != OGSNotShared {

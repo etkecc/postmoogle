@@ -131,6 +131,13 @@ func parseFileHeader(file []byte) (from, to, compat int, message string, txn Txn
 //
 //	-- only: sqlite for next 123 lines
 //
+// To limit a block of code, fenced by another directive:
+//
+//	-- only: sqlite until "end only"
+//	QUERY;
+//	ANOTHER QUERY;
+//	-- end only sqlite
+//
 // If the single-line limit is on the second line of the file, the whole file is limited to that dialect.
 //
 // If the filter ends with `(lines commented)`, then ALL lines chosen by the filter will be uncommented.

@@ -28,8 +28,10 @@ func NewEvent() *Event {
 	}
 }
 
+type EventChan = <-chan empty
+
 // GetChan returns the channel that will be closed when the event is set.
-func (e *Event) GetChan() <-chan empty {
+func (e *Event) GetChan() EventChan {
 	e.l.RLock()
 	defer e.l.RUnlock()
 	return e.ch

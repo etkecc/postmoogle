@@ -13,27 +13,27 @@ import (
 // OnEventType allows callers to be notified when there are new events for the given event type.
 // There are no duplicate checks.
 func (l *Linkpearl) OnEventType(eventType event.Type, callback mautrix.EventHandler) {
-	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType(eventType, callback) //nolint:forcetypeassert // we know it's an ExtensibleSyncer
+	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType(eventType, callback) //nolint:forcetypeassert,errcheck // we know it's an ExtensibleSyncer
 }
 
 // OnSync shortcut to mautrix.DefaultSyncer.OnSync
 func (l *Linkpearl) OnSync(callback mautrix.SyncHandler) {
-	l.api.Syncer.(mautrix.ExtensibleSyncer).OnSync(callback) //nolint:forcetypeassert // we know it's an ExtensibleSyncer
+	l.api.Syncer.(mautrix.ExtensibleSyncer).OnSync(callback) //nolint:forcetypeassert,errcheck // we know it's an ExtensibleSyncer
 }
 
 // OnEvent shortcut to mautrix.DefaultSyncer.OnEvent
 func (l *Linkpearl) OnEvent(callback mautrix.EventHandler) {
-	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEvent(callback) //nolint:forcetypeassert // we know it's an ExtensibleSyncer
+	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEvent(callback) //nolint:forcetypeassert,errcheck // we know it's an ExtensibleSyncer
 }
 
 func (l *Linkpearl) initSync() {
-	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType( //nolint:forcetypeassert // we know it's an ExtensibleSyncer
+	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType( //nolint:forcetypeassert,errcheck // we know it's an ExtensibleSyncer
 		event.StateEncryption,
 		func(ctx context.Context, evt *event.Event) {
 			go l.onEncryption(ctx, evt)
 		},
 	)
-	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType( //nolint:forcetypeassert // we know it's an ExtensibleSyncer
+	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType( //nolint:forcetypeassert,errcheck // we know it's an ExtensibleSyncer
 		event.StateMember,
 		func(ctx context.Context, evt *event.Event) {
 			go l.onMembership(ctx, evt)
@@ -69,10 +69,6 @@ func (l *Linkpearl) onInvite(ctx context.Context, evt *event.Event) {
 	l.tryLeave(ctx, evt.RoomID, 0)
 }
 
-// TODO: https://spec.matrix.org/v1.8/client-server-api/#post_matrixclientv3joinroomidoralias
-// endpoint supports server_name param and tells "The servers to attempt to join the room through. One of the servers must be participating in the room.",
-// meaning you can specify more than 1 server. It is not clear, what format should be used "example.com,example.org", or "example.com example.org", or whatever else.
-// Moreover, it is not clear if the following values can be used together with that field: l.api.UserID.Homeserver() and evt.Sender.Homeserver()
 func (l *Linkpearl) tryJoin(ctx context.Context, roomID id.RoomID, retry int) {
 	if retry >= l.maxretries {
 		return

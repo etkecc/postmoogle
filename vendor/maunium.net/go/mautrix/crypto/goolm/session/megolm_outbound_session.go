@@ -3,7 +3,6 @@ package session
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
 	"fmt"
 
 	"go.mau.fi/util/exerrors"
@@ -35,7 +34,7 @@ var _ olm.OutboundGroupSession = (*MegolmOutboundSession)(nil)
 func NewMegolmOutboundSession() (*MegolmOutboundSession, error) {
 	o := &MegolmOutboundSession{}
 	var err error
-	o.SigningKey, err = crypto.Ed25519GenerateKey(nil)
+	o.SigningKey, err = crypto.Ed25519GenerateKey()
 	if err != nil {
 		return nil, err
 	}
@@ -68,10 +67,7 @@ func (o *MegolmOutboundSession) Encrypt(plaintext []byte) ([]byte, error) {
 		return nil, olm.ErrEmptyInput
 	}
 	encrypted, err := o.Ratchet.Encrypt(plaintext, &o.SigningKey)
-	if err != nil {
-		return nil, err
-	}
-	return goolmbase64.Encode(encrypted), nil
+	return goolmbase64.Encode(encrypted), err
 }
 
 // SessionID returns the base64 endoded public signing key
@@ -99,33 +95,21 @@ func (o *MegolmOutboundSession) Unpickle(pickled, key []byte) error {
 	if err != nil {
 		return err
 	}
-	_, err = o.UnpickleLibOlm(decrypted)
-	return err
+	return o.UnpickleLibOlm(decrypted)
 }
 
-// UnpickleLibOlm decodes the unencryted value and populates the Session accordingly. It returns the number of bytes read.
-func (o *MegolmOutboundSession) UnpickleLibOlm(value []byte) (int, error) {
-	//First 4 bytes are the accountPickleVersion
-	pickledVersion, curPos, err := libolmpickle.UnpickleUInt32(value)
-	if err != nil {
-		return 0, err
+// UnpickleLibOlm unpickles the unencryted value and populates the
+// [MegolmOutboundSession] accordingly.
+func (o *MegolmOutboundSession) UnpickleLibOlm(buf []byte) error {
+	decoder := libolmpickle.NewDecoder(buf)
+	pickledVersion, err := decoder.ReadUInt32()
+	if pickledVersion != megolmOutboundSessionPickleVersionLibOlm {
+		return fmt.Errorf("unpickle MegolmInboundSession: %w (found version %d)", olm.ErrBadVersion, pickledVersion)
 	}
-	switch pickledVersion {
-	case megolmOutboundSessionPickleVersionLibOlm:
-	default:
-		return 0, fmt.Errorf("unpickle MegolmInboundSession: %w", olm.ErrBadVersion)
+	if err = o.Ratchet.UnpickleLibOlm(decoder); err != nil {
+		return err
 	}
-	readBytes, err := o.Ratchet.UnpickleLibOlm(value[curPos:])
-	if err != nil {
-		return 0, err
-	}
-	curPos += readBytes
-	readBytes, err = o.SigningKey.UnpickleLibOlm(value[curPos:])
-	if err != nil {
-		return 0, err
-	}
-	curPos += readBytes
-	return curPos, nil
+	return o.SigningKey.UnpickleLibOlm(decoder)
 }
 
 // Pickle returns a base64 encoded and with key encrypted pickled MegolmOutboundSession using PickleLibOlm().
@@ -133,47 +117,16 @@ func (o *MegolmOutboundSession) Pickle(key []byte) ([]byte, error) {
 	if len(key) == 0 {
 		return nil, olm.ErrNoKeyProvided
 	}
-	pickeledBytes := make([]byte, o.PickleLen())
-	written, err := o.PickleLibOlm(pickeledBytes)
-	if err != nil {
-		return nil, err
-	}
-	if written != len(pickeledBytes) {
-		return nil, errors.New("number of written bytes not correct")
-	}
-	encrypted, err := cipher.Pickle(key, pickeledBytes)
-	if err != nil {
-		return nil, err
-	}
-	return encrypted, nil
+	return cipher.Pickle(key, o.PickleLibOlm())
 }
 
-// PickleLibOlm encodes the session into target. target has to have a size of at least PickleLen() and is written to from index 0.
-// It returns the number of bytes written.
-func (o *MegolmOutboundSession) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < o.PickleLen() {
-		return 0, fmt.Errorf("pickle MegolmOutboundSession: %w", olm.ErrValueTooShort)
-	}
-	written := libolmpickle.PickleUInt32(megolmOutboundSessionPickleVersionLibOlm, target)
-	writtenRatchet, err := o.Ratchet.PickleLibOlm(target[written:])
-	if err != nil {
-		return 0, fmt.Errorf("pickle MegolmOutboundSession: %w", err)
-	}
-	written += writtenRatchet
-	writtenPubKey, err := o.SigningKey.PickleLibOlm(target[written:])
-	if err != nil {
-		return 0, fmt.Errorf("pickle MegolmOutboundSession: %w", err)
-	}
-	written += writtenPubKey
-	return written, nil
-}
-
-// PickleLen returns the number of bytes the pickled session will have.
-func (o *MegolmOutboundSession) PickleLen() int {
-	length := libolmpickle.PickleUInt32Len(megolmOutboundSessionPickleVersionLibOlm)
-	length += o.Ratchet.PickleLen()
-	length += o.SigningKey.PickleLen()
-	return length
+// PickleLibOlm pickles the session returning the raw bytes.
+func (o *MegolmOutboundSession) PickleLibOlm() []byte {
+	encoder := libolmpickle.NewEncoder()
+	encoder.WriteUInt32(megolmOutboundSessionPickleVersionLibOlm)
+	o.Ratchet.PickleLibOlm(encoder)
+	o.SigningKey.PickleLibOlm(encoder)
+	return encoder.Bytes()
 }
 
 func (o *MegolmOutboundSession) SessionSharingMessage() ([]byte, error) {

@@ -15,7 +15,9 @@ import (
 // Array is an interface for small fixed-size arrays.
 // It exists because generics can't specify array sizes: https://github.com/golang/go/issues/44253
 type Array interface {
-	[1]any | [2]any | [3]any | [4]any | [5]any | [6]any | [7]any | [8]any | [9]any | [10]any | [11]any | [12]any | [13]any | [14]any | [15]any | [16]any | [17]any | [18]any | [19]any | [20]any
+	[0]any | [1]any | [2]any | [3]any | [4]any | [5]any | [6]any | [7]any | [8]any | [9]any |
+		[10]any | [11]any | [12]any | [13]any | [14]any | [15]any | [16]any | [17]any | [18]any | [19]any |
+		[20]any | [21]any | [22]any | [23]any | [24]any | [25]any | [26]any | [27]any | [28]any | [29]any
 }
 
 // MassInsertable represents a struct that contains dynamic values for a mass insert query.

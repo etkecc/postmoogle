@@ -2,7 +2,9 @@
 package megolm
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 
 	"maunium.net/go/mautrix/crypto/goolm/cipher"
@@ -63,8 +65,9 @@ func NewWithRandom(counter uint32) (*Ratchet, error) {
 
 // rehashPart rehases the part of the ratchet data with the base defined as from storing into the target to.
 func (m *Ratchet) rehashPart(from, to int) {
-	newData := crypto.HMACSHA256(m.Data[from*RatchetPartLength:from*RatchetPartLength+RatchetPartLength], hashKeySeeds[to])
-	copy(m.Data[to*RatchetPartLength:], newData[:RatchetPartLength])
+	hash := hmac.New(sha256.New, m.Data[from*RatchetPartLength:from*RatchetPartLength+RatchetPartLength])
+	hash.Write(hashKeySeeds[to])
+	copy(m.Data[to*RatchetPartLength:], hash.Sum(nil))
 }
 
 // Advance advances the ratchet one step.
@@ -158,8 +161,8 @@ func (r Ratchet) SessionSharingMessage(key crypto.Ed25519KeyPair) ([]byte, error
 	m := message.MegolmSessionSharing{}
 	m.Counter = r.Counter
 	m.RatchetData = r.Data
-	encoded := m.EncodeAndSign(key)
-	return goolmbase64.Encode(encoded), nil
+	encoded, err := m.EncodeAndSign(key)
+	return goolmbase64.Encode(encoded), err
 }
 
 // SessionExportMessage creates a message in the session export format.
@@ -197,39 +200,19 @@ func (r *Ratchet) UnpickleAsJSON(pickled, key []byte) error {
 }
 
 // UnpickleLibOlm decodes the unencryted value and populates the Ratchet accordingly. It returns the number of bytes read.
-func (r *Ratchet) UnpickleLibOlm(unpickled []byte) (int, error) {
-	//read ratchet data
-	curPos := 0
-	ratchetData, readBytes, err := libolmpickle.UnpickleBytes(unpickled, RatchetParts*RatchetPartLength)
+func (r *Ratchet) UnpickleLibOlm(decoder *libolmpickle.Decoder) error {
+	ratchetData, err := decoder.ReadBytes(RatchetParts * RatchetPartLength)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	copy(r.Data[:], ratchetData)
-	curPos += readBytes
-	//Read counter
-	counter, readBytes, err := libolmpickle.UnpickleUInt32(unpickled[curPos:])
-	if err != nil {
-		return 0, err
-	}
-	curPos += readBytes
-	r.Counter = counter
-	return curPos, nil
+
+	r.Counter, err = decoder.ReadUInt32()
+	return err
 }
 
-// PickleLibOlm encodes the ratchet into target. target has to have a size of at least PickleLen() and is written to from index 0.
-// It returns the number of bytes written.
-func (r Ratchet) PickleLibOlm(target []byte) (int, error) {
-	if len(target) < r.PickleLen() {
-		return 0, fmt.Errorf("pickle account: %w", olm.ErrValueTooShort)
-	}
-	written := libolmpickle.PickleBytes(r.Data[:], target)
-	written += libolmpickle.PickleUInt32(r.Counter, target[written:])
-	return written, nil
-}
-
-// PickleLen returns the number of bytes the pickled ratchet will have.
-func (r Ratchet) PickleLen() int {
-	length := libolmpickle.PickleBytesLen(r.Data[:])
-	length += libolmpickle.PickleUInt32Len(r.Counter)
-	return length
+// PickleLibOlm pickles the ratchet into the encoder.
+func (r Ratchet) PickleLibOlm(encoder *libolmpickle.Encoder) {
+	encoder.Write(r.Data[:])
+	encoder.WriteUInt32(r.Counter)
 }
