@@ -165,7 +165,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 		contentOpts.Stripify = false
 		content := eml.Content(threadID, contentOpts, b.psdc)
 		eml.Files = append(eml.Files, //nolint:forcetypeassert // that's ok
-			utils.NewFile("original.md", []byte(content.Parsed.(*event.MessageEventContent).Body)),
+			utils.NewFile("original.md", []byte(content.Parsed.(*event.MessageEventContent).Body)), //nolint:errcheck // that's ok
 		)
 	}
 
@@ -194,7 +194,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 			contentOpts.Stripify = false
 			content := eml.ContentBody(threadID, contentOpts)
 			eml.Files = append(eml.Files, //nolint:forcetypeassert // that's ok
-				utils.NewFile("original.md", []byte(content.Parsed.(*event.MessageEventContent).Body)),
+				utils.NewFile("original.md", []byte(content.Parsed.(*event.MessageEventContent).Body)), //nolint:errcheck // that's ok
 			)
 		}
 		_, berr := b.lp.Send(ctx, roomID, eml.ContentBody(threadID, cfg.ContentOptions()))
