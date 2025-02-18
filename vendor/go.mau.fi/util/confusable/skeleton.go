@@ -29,7 +29,7 @@ func Skeleton(input string) string {
 	var builder strings.Builder
 	builder.Grow(len(input))
 	for _, r := range input {
-		if !unicode.IsGraphic(r) {
+		if !unicode.IsGraphic(r) && r != 0xfffd {
 			continue
 		}
 		repl := GetReplacement(r)
@@ -48,7 +48,7 @@ func SkeletonBytes(input string) []byte {
 	var builder bytes.Buffer
 	builder.Grow(len(input))
 	for _, r := range input {
-		if !unicode.IsGraphic(r) {
+		if !unicode.IsGraphic(r) && r != 0xfffd {
 			continue
 		}
 		repl := GetReplacement(r)

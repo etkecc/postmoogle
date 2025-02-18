@@ -13,7 +13,6 @@ import (
 	zlogsentry "github.com/archdx/zerolog-sentry"
 	"github.com/etkecc/go-healthchecks/v2"
 	"github.com/etkecc/go-linkpearl"
-	"github.com/etkecc/go-psd"
 	"github.com/getsentry/sentry-go"
 	_ "github.com/lib/pq"
 	"github.com/mileusna/crontab"
@@ -126,10 +125,9 @@ func initMatrix(cfg *config.Config) {
 		log.Fatal().Err(err).Msg("cannot initialize matrix bot")
 	}
 
-	psdc := psd.NewClient(cfg.PSD.URL, cfg.PSD.Login, cfg.PSD.Password)
 	mxc = mxconfig.New(lp, &log, cfg.DKIM.PrivKey, cfg.DKIM.Signature)
 	q = queue.New(lp, mxc, &log)
-	mxb, err = bot.New(q, lp, &log, mxc, psdc, cfg.Proxies, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
+	mxb, err = bot.New(q, lp, &log, mxc, cfg.Proxies, cfg.Prefix, cfg.Domains, cfg.Admins, bot.MBXConfig(cfg.Mailboxes))
 	if err != nil {
 		log.Panic().Err(err).Msg("cannot start matrix bot")
 	}

@@ -9,7 +9,6 @@ import (
 
 	"github.com/etkecc/go-kit"
 	"github.com/etkecc/go-linkpearl"
-	"github.com/etkecc/go-psd"
 	"github.com/rs/zerolog"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
@@ -38,7 +37,6 @@ type Bot struct {
 	rooms                   sync.Map
 	proxies                 []string
 	sendmail                func(string, string, string, *url.URL) error
-	psdc                    *psd.Client
 	cfg                     *config.Manager
 	log                     *zerolog.Logger
 	lp                      *linkpearl.Linkpearl
@@ -53,7 +51,6 @@ func New(
 	lp *linkpearl.Linkpearl,
 	log *zerolog.Logger,
 	cfg *config.Manager,
-	psdc *psd.Client,
 	proxies []string,
 	prefix string,
 	domains []string,
@@ -67,7 +64,6 @@ func New(
 		adminRooms: []id.RoomID{},
 		proxies:    proxies,
 		mbxc:       mbxc,
-		psdc:       psdc,
 		cfg:        cfg,
 		log:        log,
 		lp:         lp,

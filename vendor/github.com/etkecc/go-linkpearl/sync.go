@@ -74,7 +74,7 @@ func (l *Linkpearl) tryJoin(ctx context.Context, roomID id.RoomID, retry int) {
 		return
 	}
 
-	_, err := l.api.JoinRoom(ctx, roomID.String(), "", nil)
+	_, err := l.api.JoinRoom(ctx, roomID.String(), nil)
 	err = UnwrapError(err)
 	if err != nil {
 		l.log.Error().Err(err).Str("roomID", roomID.String()).Msg("cannot join room")

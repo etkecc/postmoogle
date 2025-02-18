@@ -163,13 +163,13 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 	if cfg.Stripify() && !cfg.Threadify() {
 		contentOpts := cfg.ContentOptions()
 		contentOpts.Stripify = false
-		content := eml.Content(threadID, contentOpts, b.psdc)
+		content := eml.Content(threadID, contentOpts)
 		eml.Files = append(eml.Files, //nolint:forcetypeassert // that's ok
 			utils.NewFile("original.md", []byte(content.Parsed.(*event.MessageEventContent).Body)), //nolint:errcheck // that's ok
 		)
 	}
 
-	content := eml.Content(threadID, cfg.ContentOptions(), b.psdc)
+	content := eml.Content(threadID, cfg.ContentOptions())
 	eventID, serr := b.lp.Send(ctx, roomID, content)
 	if serr != nil {
 		if !strings.Contains(serr.Error(), "M_UNKNOWN") { // if it's not an unknown event error
@@ -560,7 +560,7 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 	}
 
 	evt := eventFromContext(ctx)
-	content := eml.Content(threadID, cfg.ContentOptions(), b.psdc)
+	content := eml.Content(threadID, cfg.ContentOptions())
 	notice := format.RenderMarkdown(text, true, true)
 	msgContent, ok := content.Parsed.(*event.MessageEventContent)
 	if !ok {

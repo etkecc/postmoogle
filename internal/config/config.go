@@ -52,11 +52,6 @@ func New() *Config {
 			DSN:     env.String("db.dsn", defaultConfig.DB.DSN),
 			Dialect: env.String("db.dialect", defaultConfig.DB.Dialect),
 		},
-		PSD: PSD{
-			URL:      env.String("psd.url"),
-			Login:    env.String("psd.login"),
-			Password: env.String("psd.password"),
-		},
 		Relay: Relay{
 			Host:     env.String("relay.host", defaultConfig.Relay.Host),
 			Port:     env.String("relay.port", defaultConfig.Relay.Port),

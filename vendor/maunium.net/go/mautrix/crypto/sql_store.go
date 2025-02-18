@@ -21,7 +21,7 @@ import (
 	"go.mau.fi/util/dbutil"
 
 	"maunium.net/go/mautrix"
-	"maunium.net/go/mautrix/crypto/goolm/cipher"
+	"maunium.net/go/mautrix/crypto/goolm/libolmpickle"
 	"maunium.net/go/mautrix/crypto/olm"
 	"maunium.net/go/mautrix/crypto/sql_store_upgrade"
 	"maunium.net/go/mautrix/event"
@@ -249,6 +249,16 @@ func (store *SQLCryptoStore) GetLatestSession(ctx context.Context, key id.Sender
 	}
 }
 
+// GetNewestSessionCreationTS gets the creation timestamp of the most recently created session with the given sender key.
+func (store *SQLCryptoStore) GetNewestSessionCreationTS(ctx context.Context, key id.SenderKey) (createdAt time.Time, err error) {
+	err = store.DB.QueryRow(ctx, "SELECT created_at FROM crypto_olm_session WHERE sender_key=$1 AND account_id=$2 ORDER BY created_at DESC LIMIT 1",
+		key, store.AccountID).Scan(&createdAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		err = nil
+	}
+	return
+}
+
 // AddSession persists an Olm session for a sender in the database.
 func (store *SQLCryptoStore) AddSession(ctx context.Context, key id.SenderKey, session *OlmSession) error {
 	store.olmSessionCacheLock.Lock()
@@ -276,6 +286,29 @@ func (store *SQLCryptoStore) UpdateSession(ctx context.Context, _ id.SenderKey, 
 
 func (store *SQLCryptoStore) DeleteSession(ctx context.Context, _ id.SenderKey, session *OlmSession) error {
 	_, err := store.DB.Exec(ctx, "DELETE FROM crypto_olm_session WHERE session_id=$1 AND account_id=$2", session.ID(), store.AccountID)
+	return err
+}
+
+func (store *SQLCryptoStore) PutOlmHash(ctx context.Context, messageHash [32]byte, receivedAt time.Time) error {
+	_, err := store.DB.Exec(ctx, "INSERT INTO crypto_olm_message_hash (account_id, received_at, message_hash) VALUES ($1, $2, $3) ON CONFLICT (message_hash) DO NOTHING", store.AccountID, receivedAt.UnixMilli(), messageHash[:])
+	return err
+}
+
+func (store *SQLCryptoStore) GetOlmHash(ctx context.Context, messageHash [32]byte) (receivedAt time.Time, err error) {
+	var receivedAtInt int64
+	err = store.DB.QueryRow(ctx, "SELECT received_at FROM crypto_olm_message_hash WHERE message_hash=$1", messageHash[:]).Scan(&receivedAtInt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = nil
+		}
+		return
+	}
+	receivedAt = time.UnixMilli(receivedAtInt)
+	return
+}
+
+func (store *SQLCryptoStore) DeleteOldOlmHashes(ctx context.Context, beforeTS time.Time) error {
+	_, err := store.DB.Exec(ctx, "DELETE FROM crypto_olm_message_hash WHERE account_id = $1 AND received_at < $2", store.AccountID, beforeTS.UnixMilli())
 	return err
 }
 
@@ -395,10 +428,7 @@ func (store *SQLCryptoStore) RedactGroupSessions(ctx context.Context, roomID id.
 		  AND session IS NOT NULL AND is_scheduled=false AND received_at IS NOT NULL
 		RETURNING session_id
 	`, event.RoomKeyWithheldBeeperRedacted, "Session redacted: "+reason, roomID, senderKey, store.AccountID)
-	if err != nil {
-		return nil, err
-	}
-	return dbutil.NewRowIter(res, dbutil.ScanSingleColumn[id.SessionID]).AsList()
+	return dbutil.NewRowIterWithError(res, dbutil.ScanSingleColumn[id.SessionID], err).AsList()
 }
 
 func (store *SQLCryptoStore) RedactExpiredGroupSessions(ctx context.Context) ([]id.SessionID, error) {
@@ -426,10 +456,7 @@ func (store *SQLCryptoStore) RedactExpiredGroupSessions(ctx context.Context) ([]
 		return nil, fmt.Errorf("unsupported dialect")
 	}
 	res, err := store.DB.Query(ctx, query, event.RoomKeyWithheldBeeperRedacted, "Session redacted: expired", store.AccountID)
-	if err != nil {
-		return nil, err
-	}
-	return dbutil.NewRowIter(res, dbutil.ScanSingleColumn[id.SessionID]).AsList()
+	return dbutil.NewRowIterWithError(res, dbutil.ScanSingleColumn[id.SessionID], err).AsList()
 }
 
 func (store *SQLCryptoStore) RedactOutdatedGroupSessions(ctx context.Context) ([]id.SessionID, error) {
@@ -439,10 +466,7 @@ func (store *SQLCryptoStore) RedactOutdatedGroupSessions(ctx context.Context) ([
 			WHERE account_id=$3 AND session IS NOT NULL AND received_at IS NULL
 			RETURNING session_id
 		`, event.RoomKeyWithheldBeeperRedacted, "Session redacted: outdated", store.AccountID)
-	if err != nil {
-		return nil, err
-	}
-	return dbutil.NewRowIter(res, dbutil.ScanSingleColumn[id.SessionID]).AsList()
+	return dbutil.NewRowIterWithError(res, dbutil.ScanSingleColumn[id.SessionID], err).AsList()
 }
 
 func (store *SQLCryptoStore) PutWithheldGroupSession(ctx context.Context, content event.RoomKeyWithheldEventContent) error {
@@ -679,11 +703,8 @@ func (store *SQLCryptoStore) GetDevices(ctx context.Context, userID id.UserID) (
 	}
 
 	rows, err := store.DB.Query(ctx, "SELECT user_id, device_id, identity_key, signing_key, trust, deleted, name FROM crypto_device WHERE user_id=$1 AND deleted=false", userID)
-	if err != nil {
-		return nil, err
-	}
 	data := make(map[id.DeviceID]*id.Device)
-	err = dbutil.NewRowIter(rows, scanDevice).Iter(func(device *id.Device) (bool, error) {
+	err = dbutil.NewRowIterWithError(rows, scanDevice, err).Iter(func(device *id.Device) (bool, error) {
 		data[device.DeviceID] = device
 		return true, nil
 	})
@@ -803,10 +824,7 @@ func (store *SQLCryptoStore) FilterTrackedUsers(ctx context.Context, users []id.
 		placeholders, params := userIDsToParams(users)
 		rows, err = store.DB.Query(ctx, "SELECT user_id FROM crypto_tracked_user WHERE user_id IN ("+placeholders+")", params...)
 	}
-	if err != nil {
-		return users, err
-	}
-	return dbutil.NewRowIter(rows, dbutil.ScanSingleColumn[id.UserID]).AsList()
+	return dbutil.NewRowIterWithError(rows, dbutil.ScanSingleColumn[id.UserID], err).AsList()
 }
 
 // MarkTrackedUsersOutdated flags that the device list for given users are outdated.
@@ -823,10 +841,7 @@ func (store *SQLCryptoStore) MarkTrackedUsersOutdated(ctx context.Context, users
 // GetOutdatedTrackerUsers gets all tracked users whose devices need to be updated.
 func (store *SQLCryptoStore) GetOutdatedTrackedUsers(ctx context.Context) ([]id.UserID, error) {
 	rows, err := store.DB.Query(ctx, "SELECT user_id FROM crypto_tracked_user WHERE devices_outdated = TRUE")
-	if err != nil {
-		return nil, err
-	}
-	return dbutil.NewRowIter(rows, dbutil.ScanSingleColumn[id.UserID]).AsList()
+	return dbutil.NewRowIterWithError(rows, dbutil.ScanSingleColumn[id.UserID], err).AsList()
 }
 
 // PutCrossSigningKey stores a cross-signing key of some user along with its usage.
@@ -911,7 +926,7 @@ func (store *SQLCryptoStore) DropSignaturesByKey(ctx context.Context, userID id.
 }
 
 func (store *SQLCryptoStore) PutSecret(ctx context.Context, name id.Secret, value string) error {
-	bytes, err := cipher.Pickle(store.PickleKey, []byte(value))
+	bytes, err := libolmpickle.Pickle(store.PickleKey, []byte(value))
 	if err != nil {
 		return err
 	}
@@ -930,7 +945,7 @@ func (store *SQLCryptoStore) GetSecret(ctx context.Context, name id.Secret) (val
 	} else if err != nil {
 		return "", err
 	}
-	bytes, err = cipher.Unpickle(store.PickleKey, bytes)
+	bytes, err = libolmpickle.Unpickle(store.PickleKey, bytes)
 	return string(bytes), err
 }
 

@@ -38,9 +38,6 @@ type Config struct {
 	// DB config
 	DB DB
 
-	// PSD config
-	PSD PSD
-
 	// TLS config
 	TLS TLS
 

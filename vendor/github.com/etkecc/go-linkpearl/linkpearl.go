@@ -139,15 +139,6 @@ func (l *Linkpearl) GetAccountDataCrypter() *Crypter {
 	return l.acr
 }
 
-// SetPresence (own). See https://spec.matrix.org/v1.3/client-server-api/#put_matrixclientv3presenceuseridstatus
-func (l *Linkpearl) SetPresence(ctx context.Context, presence event.Presence, message string) error {
-	req := ReqPresence{Presence: presence, StatusMsg: message}
-	u := l.GetClient().BuildClientURL("v3", "presence", l.GetClient().UserID, "status")
-	_, err := l.GetClient().MakeRequest(ctx, "PUT", u, req, nil)
-
-	return err
-}
-
 // SetJoinPermit sets the join permit callback function
 func (l *Linkpearl) SetJoinPermit(value func(context.Context, *event.Event) bool) {
 	l.joinPermit = value
@@ -161,7 +152,7 @@ func (l *Linkpearl) Start(ctx context.Context, optionalStatusMsg ...string) erro
 		statusMsg = optionalStatusMsg[0]
 	}
 
-	err := l.SetPresence(ctx, event.PresenceOnline, statusMsg)
+	err := l.api.SetPresence(ctx, mautrix.ReqPresence{Presence: event.PresenceOnline, StatusMsg: statusMsg})
 	if err != nil {
 		l.log.Error().Err(err).Msg("cannot set presence")
 	}
@@ -174,7 +165,7 @@ func (l *Linkpearl) Start(ctx context.Context, optionalStatusMsg ...string) erro
 // Stop the client
 func (l *Linkpearl) Stop(ctx context.Context) {
 	l.log.Debug().Msg("stopping the client")
-	if err := l.api.SetPresence(ctx, event.PresenceOffline); err != nil {
+	if err := l.api.SetPresence(ctx, mautrix.ReqPresence{Presence: event.PresenceOffline}); err != nil {
 		l.log.Error().Err(err).Msg("cannot set presence")
 	}
 	l.api.StopSync()

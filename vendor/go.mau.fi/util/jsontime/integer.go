@@ -31,22 +31,29 @@ func parseTime(data []byte, unixConv func(int64) time.Time, into *time.Time) err
 	return nil
 }
 
-func anyIntegerToTime(src any, unixConv func(int64) time.Time, into *time.Time) error {
+func anyIntegerTo64(src any) (int64, error) {
 	switch v := src.(type) {
 	case int:
-		*into = unixConv(int64(v))
+		return int64(v), nil
 	case int8:
-		*into = unixConv(int64(v))
+		return int64(v), nil
 	case int16:
-		*into = unixConv(int64(v))
+		return int64(v), nil
 	case int32:
-		*into = unixConv(int64(v))
+		return int64(v), nil
 	case int64:
-		*into = unixConv(int64(v))
+		return v, nil
 	default:
-		return fmt.Errorf("%w: %T", ErrNotInteger, src)
+		return 0, fmt.Errorf("%w: %T", ErrNotInteger, src)
 	}
+}
 
+func anyIntegerToTime(src any, unixConv func(int64) time.Time, into *time.Time) error {
+	i64, err := anyIntegerTo64(src)
+	if err != nil {
+		return err
+	}
+	*into = unixConv(i64)
 	return nil
 }
 

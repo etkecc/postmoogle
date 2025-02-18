@@ -118,9 +118,10 @@ type internalTxnStarter interface {
 }
 
 type TxnOptions struct {
-	Isolation sql.IsolationLevel
-	ReadOnly  bool
-	Conn      Conn
+	Isolation  sql.IsolationLevel
+	ReadOnly   bool
+	Conn       Conn
+	RetryBegin func(error, int) bool
 }
 
 func (ld *loggingDB) BeginTx(ctx context.Context, opts *TxnOptions) (*LoggingTxn, error) {
@@ -134,14 +135,19 @@ func (ld *loggingDB) BeginTx(ctx context.Context, opts *TxnOptions) (*LoggingTxn
 	var tx *sql.Tx
 	var err error
 	start := time.Now()
-	if opts.Conn != nil {
-		tx, err = opts.Conn.beginTx(ctx, sqlOpts)
-	} else {
-		targetDB := ld.db.RawDB
-		if opts.ReadOnly && ld.db.ReadOnlyDB != nil {
-			targetDB = ld.db.ReadOnlyDB
+	for i := 0; ; i++ {
+		if opts.Conn != nil {
+			tx, err = opts.Conn.beginTx(ctx, sqlOpts)
+		} else {
+			targetDB := ld.db.RawDB
+			if opts.ReadOnly && ld.db.ReadOnlyDB != nil {
+				targetDB = ld.db.ReadOnlyDB
+			}
+			tx, err = targetDB.BeginTx(ctx, sqlOpts)
 		}
-		tx, err = targetDB.BeginTx(ctx, sqlOpts)
+		if opts.RetryBegin == nil || err == nil || !opts.RetryBegin(err, i) {
+			break
+		}
 	}
 	ld.db.Log.QueryTiming(ctx, "Begin", "", nil, -1, time.Since(start), err)
 	if err != nil {

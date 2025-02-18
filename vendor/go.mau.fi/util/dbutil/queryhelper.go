@@ -126,9 +126,12 @@ func (qh *QueryHelper[T]) QueryOne(ctx context.Context, query string, args ...an
 // to scan each row, and returns the values. If the query returns no rows, it
 // returns a non-nil zero-length slice and no error.
 func (qh *QueryHelper[T]) QueryMany(ctx context.Context, query string, args ...any) ([]T, error) {
+	return qh.QueryManyIter(ctx, query, args...).AsList()
+}
+
+// QueryManyIter executes a query with QueryContext and returns a RowIter
+// that will use the associated DataStruct to scan each row.
+func (qh *QueryHelper[T]) QueryManyIter(ctx context.Context, query string, args ...any) RowIter[T] {
 	rows, err := qh.db.Query(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	return NewRowIter(rows, qh.scanNew).AsList()
+	return NewRowIterWithError(rows, qh.scanNew, err)
 }

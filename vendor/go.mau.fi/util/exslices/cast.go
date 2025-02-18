@@ -14,6 +14,17 @@ func CastFunc[To, From any](source []From, conv func(From) To) []To {
 	return result
 }
 
+func CastFuncFilter[To, From any](source []From, conv func(From) (To, bool)) []To {
+	result := make([]To, 0, len(source))
+	for _, v := range source {
+		res, ok := conv(v)
+		if ok {
+			result = append(result, res)
+		}
+	}
+	return result
+}
+
 func CastToString[To, From ~string](source []From) []To {
 	result := make([]To, len(source))
 	for i, v := range source {
