@@ -12,6 +12,7 @@ import (
 	"maunium.net/go/mautrix/crypto"
 	"maunium.net/go/mautrix/crypto/cryptohelper"
 	"maunium.net/go/mautrix/event"
+	"maunium.net/go/mautrix/id"
 )
 
 const (
@@ -107,7 +108,11 @@ func New(cfg *Config) (*Linkpearl, error) {
 		return nil, err
 	}
 	db.Log = dbutil.ZeroLogger(cfg.Logger)
-	lp.ch, err = cryptohelper.NewCryptoHelper(lp.api, []byte(cfg.Login), db)
+	localpart := id.UserID(cfg.Login).Localpart()
+	if localpart == "" {
+		localpart = cfg.Login
+	}
+	lp.ch, err = cryptohelper.NewCryptoHelper(lp.api, []byte(localpart), db)
 	if err != nil {
 		return nil, err
 	}

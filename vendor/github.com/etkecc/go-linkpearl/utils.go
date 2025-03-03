@@ -20,6 +20,22 @@ func EventRelatesTo(evt *event.Event) *event.RelatesTo {
 	return RelatesTo(EventParent(evt.ID, relatable))
 }
 
+// EventReplaceID returns replace_id of a matrix event (if any)
+// i.e. when the evt was replaced by another event, this returns the ID of the replacing event
+func EventReplaceID(evt *event.Event) id.EventID {
+	ParseContent(evt, nil)
+	relatable, ok := evt.Content.Parsed.(event.Relatable)
+	if !ok {
+		return ""
+	}
+
+	relation := relatable.GetRelatesTo()
+	if relation == nil {
+		return ""
+	}
+	return relation.GetReplaceID()
+}
+
 // RelatesTo returns relation object of a matrix event (either threads with reply-to fallback or plain reply-to)
 func RelatesTo(parentID id.EventID, noThreads ...bool) *event.RelatesTo {
 	if parentID == "" {

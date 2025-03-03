@@ -32,5 +32,6 @@ go lp.Start()
 * Zero configuration session restores
 * Zero configuration room and user account data encryption with AES GCM (both keys and values)
 * Zero configuration room and user account data caching
+* [Shared Secret Auth](https://github.com/devture/matrix-synapse-shared-secret-auth) support
 * Threads support
 * All wrapped components exported

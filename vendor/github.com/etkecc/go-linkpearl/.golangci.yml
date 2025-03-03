@@ -4,8 +4,6 @@ run:
   issues-exit-code: 1
   tests: true
   build-tags: []
-  skip-dirs-use-default: true
-  skip-files: []
   modules-download-mode: readonly
 
 output:
@@ -118,6 +116,7 @@ linters:
 
 
 issues:
+  exclude-dirs-use-default: true
   exclude-dirs:
     - mocks
   exclude-rules:
