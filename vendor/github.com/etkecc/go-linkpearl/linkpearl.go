@@ -108,8 +108,8 @@ func New(cfg *Config) (*Linkpearl, error) {
 		return nil, err
 	}
 	db.Log = dbutil.ZeroLogger(cfg.Logger)
-	localpart := id.UserID(cfg.Login).Localpart()
-	if localpart == "" {
+	localpart, _, mxidErr := id.UserID(cfg.Login).Parse()
+	if mxidErr != nil {
 		localpart = cfg.Login
 	}
 	lp.ch, err = cryptohelper.NewCryptoHelper(lp.api, []byte(localpart), db)
