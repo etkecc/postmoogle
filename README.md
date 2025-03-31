@@ -2,6 +2,32 @@
 
 > [more about that name](https://finalfantasy.fandom.com/wiki/The_Little_Postmoogle_That_Could)
 
+
+<!-- vim-markdown-toc GFM -->
+
+* [Roadmap](#roadmap)
+    * [Receive](#receive)
+    * [Send](#send)
+* [Configuration](#configuration)
+    * [1. Bot (mandatory)](#1-bot-mandatory)
+    * [2. DNS (highly recommended)](#2-dns-highly-recommended)
+* [Where to get](#where-to-get)
+    * [etke.cc](#etkecc)
+    * [Matrix Docker Ansible Deploy](#matrix-docker-ansible-deploy)
+    * [Docker](#docker)
+    * [Binary](#binary)
+    * [Build from source](#build-from-source)
+* [Usage](#usage)
+    * [How to start](#how-to-start)
+        * [mailbox ownership](#mailbox-ownership)
+        * [mailbox options](#mailbox-options)
+        * [mailbox security checks](#mailbox-security-checks)
+        * [mailbox anti-spam](#mailbox-anti-spam)
+        * [server options](#server-options)
+        * [server antispam](#server-antispam)
+
+<!-- vim-markdown-toc -->
+
 An Email to Matrix bridge. 1 room = 1 mailbox.
 
 Postmoogle is an actual SMTP server that allows you to send and receive emails on your matrix server.
@@ -94,6 +120,49 @@ You can find default values in [internal/config/defaults.go](internal/config/def
 
 Follow the [docs/dns](docs/dns.md)
 
+## Where to get
+
+### [etke.cc](https://etke.cc)
+
+You can get a hosted version of the bot with a support and maintenance plan by the developers on [etke.cc](https://etke.cc)
+
+### [Matrix Docker Ansible Deploy](https://github.com/spantaleev/matrix-docker-ansible-deploy)
+
+You can get the bot using MDAD playbook, just [follow the docs](https://github.com/spantaleev/matrix-docker-ansible-deploy/blob/master/docs/configuring-playbook-bridge-postmoogle.md)
+
+### Docker
+
+You can get the bot using docker image from [the registry](https://github.com/etkecc/postmoogle/pkgs/container/postmoogle)
+
+```bash
+# 1. Get UID and GID of the system user you want to use to run the bot's container:
+# id
+# 2. Prepare the configuration in the env file (see Configuration section), alternatively you can use `docker --env` flags
+# 2. Run the bot using UID and GID from step 1:
+docker run --user YOUR_UID:YOUR_GID --env-file /YOUR_ENV_FILE ghcr.io/etkecc/postmoogle:latest
+```
+
+### Binary
+
+You can get binary from [the releases page](https://github.com/etkecc/postmoogle/releases):
+
+```bash
+# 1. Prepare the configuration in the .env file (see Configuration section), alternatively you can use env vars
+# 2. Run the bot (it will load .env file in the current directory automatically)
+./postmoogle
+```
+
+### Build from source
+
+```bash
+# 1. Clone the repo
+# 2. Prepare the configuration in the .env file (see Configuration section), alternatively you can use env vars
+# 3. (if `just` is installed)
+just build
+# or
+go build -ldflags '-extldflags "-static"' -tags timetzdata,goolm -v ./cmd/postmoogle
+```
+
 ## Usage
 
 ### How to start
@@ -125,6 +194,7 @@ If you want to change them - check available options in the help message (`!pm h
 * **`!pm owner`** - Get or set owner of the room
 * **`!pm password`** - Get or set SMTP password of the room's mailbox
 * **`!pm relay`** - Get or set SMTP relay of that mailbox. Format: `smtp://user:password@host:port`, e.g. `smtp://54b7bfb9-b95f-44b8-9879-9b560baf4e3a:8528a3a9-bea8-4583-9912-d4357ba565eb@example.com:587`
+
 ---
 
 #### mailbox options
