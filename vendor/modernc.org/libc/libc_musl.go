@@ -15,7 +15,7 @@
 // have generated some Go code from C you should stick to the version of this
 // package that you used at that time and was tested with your payload. The
 // correct way to upgrade to a newer version of this package is to first
-// recompile (C to Go) your code with a newwer version if ccgo that depends on
+// recompile (C to Go) your code with a newer version of ccgo that depends on
 // the new libc version.
 //
 // If you use C to Go translated code provided by others, stick to the version
@@ -227,29 +227,6 @@ func CString(s string) (uintptr, error) {
 	copy(unsafe.Slice((*byte)(unsafe.Pointer(p)), n), s)
 	*(*byte)(unsafe.Pointer(p + uintptr(n))) = 0
 	return p, nil
-}
-
-// GoBytes returns a byte slice from a C char* having length len bytes.
-func GoBytes(s uintptr, len int) []byte {
-	return unsafe.Slice((*byte)(unsafe.Pointer(s)), len)
-}
-
-// GoString returns the value of a C string at s.
-func GoString(s uintptr) string {
-	if s == 0 {
-		return ""
-	}
-
-	var buf []byte
-	for {
-		b := *(*byte)(unsafe.Pointer(s))
-		if b == 0 {
-			return string(buf)
-		}
-
-		buf = append(buf, b)
-		s++
-	}
 }
 
 func mustMalloc(sz Tsize_t) (r uintptr) {

@@ -1,3 +1,52 @@
+## v0.23.3 (2025-04-16)
+
+* *(commands)* Added generic command processing framework for bots.
+* *(client)* Added `allowed_room_ids` field to room summary responses
+  (thanks to [@nexy7574] in [#367]).
+* *(bridgev2)* Added support for custom timeouts on outgoing messages which have
+  to wait for a remote echo.
+* *(bridgev2)* Added automatic typing stop event if the ghost user had sent a
+  typing event before a message.
+* *(bridgev2)* The saved management room is now cleared if the user leaves the
+  room, allowing the next DM to be automatically marked as a management room.
+* *(bridge)* Removed deprecated fallback package for bridge statuses.
+  The status package is now only available under bridgev2.
+
+[#367]: https://github.com/mautrix/go/pull/367
+
+## v0.23.2 (2025-03-16)
+
+* **Breaking change *(bridge)*** Removed legacy bridge module.
+* **Breaking change *(event)*** Changed `m.federate` field in room create event
+  content to a pointer to allow detecting omitted values.
+* *(bridgev2/commands)* Added `set-management-room` command to set a new
+  management room.
+* *(bridgev2/portal)* Changed edit bridging to ignore remote edits if the
+  original sender on Matrix can't be puppeted.
+* *(bridgv2)* Added config option to disable bridging `m.notice` messages.
+* *(appservice/http)* Switched access token validation to use constant time
+  comparisons.
+* *(event)* Added support for [MSC3765] rich text topics.
+* *(event)* Added fields to policy list event contents for [MSC4204] and
+  [MSC4205].
+* *(client)* Added method for getting the content of a redacted event using
+  [MSC2815].
+* *(client)* Added methods for sending and updating [MSC4140] delayed events.
+* *(client)* Added support for [MSC4222] in sync payloads.
+* *(crypto/cryptohelper)* Switched to using `sqlite3-fk-wal` instead of plain
+  `sqlite3` by default.
+* *(crypto/encryptolm)* Added generic method for encrypting to-device events.
+* *(crypto/ssss)* Fixed panic if server-side key metadata is corrupted.
+* *(crypto/sqlstore)* Fixed error when marking over 32 thousand device lists
+  as outdated on SQLite.
+
+[MSC2815]: https://github.com/matrix-org/matrix-spec-proposals/pull/2815
+[MSC3765]: https://github.com/matrix-org/matrix-spec-proposals/pull/3765
+[MSC4140]: https://github.com/matrix-org/matrix-spec-proposals/pull/4140
+[MSC4204]: https://github.com/matrix-org/matrix-spec-proposals/pull/4204
+[MSC4205]: https://github.com/matrix-org/matrix-spec-proposals/pull/4205
+[MSC4222]: https://github.com/matrix-org/matrix-spec-proposals/pull/4222
+
 ## v0.23.1 (2025-02-16)
 
 * *(client)* Added `FullStateEvent` method to get a state event including

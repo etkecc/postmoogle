@@ -149,7 +149,7 @@ func (mach *OlmMachine) DecryptMegolmEvent(ctx context.Context, evt *event.Event
 	} else if megolmEvt.RoomID != encryptionRoomID {
 		return nil, WrongRoom
 	}
-	if evt.StateKey != nil && megolmEvt.StateKey != nil {
+	if evt.StateKey != nil && megolmEvt.StateKey != nil && mach.AllowEncryptedState {
 		megolmEvt.Type.Class = event.StateEventType
 	} else {
 		megolmEvt.Type.Class = evt.Type.Class
@@ -160,7 +160,7 @@ func (mach *OlmMachine) DecryptMegolmEvent(ctx context.Context, evt *event.Event
 	if err != nil {
 		if errors.Is(err, event.ErrUnsupportedContentType) {
 			log.Warn().Msg("Unsupported event type in encrypted event")
-		} else {
+		} else if !mach.IgnorePostDecryptionParseErrors {
 			return nil, fmt.Errorf("failed to parse content of megolm payload event: %w", err)
 		}
 	}
