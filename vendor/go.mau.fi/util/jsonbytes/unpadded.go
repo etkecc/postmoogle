@@ -28,3 +28,21 @@ func (b *UnpaddedBytes) UnmarshalJSON(data []byte) error {
 	*b, err = base64.RawStdEncoding.DecodeString(b64str)
 	return err
 }
+
+// UnpaddedURLBytes is a byte slice that is encoded and decoded using
+// [base64.RawURLEncoding] instead of the default padded base64.
+type UnpaddedURLBytes []byte
+
+func (b UnpaddedURLBytes) MarshalJSON() ([]byte, error) {
+	return json.Marshal(base64.RawURLEncoding.EncodeToString(b))
+}
+
+func (b *UnpaddedURLBytes) UnmarshalJSON(data []byte) error {
+	var b64str string
+	err := json.Unmarshal(data, &b64str)
+	if err != nil {
+		return err
+	}
+	*b, err = base64.RawURLEncoding.DecodeString(b64str)
+	return err
+}

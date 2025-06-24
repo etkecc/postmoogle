@@ -316,12 +316,21 @@ type contextKey int
 const (
 	LogBodyContextKey contextKey = iota
 	LogRequestIDContextKey
+	MaxAttemptsContextKey
 )
 
 func (cli *Client) RequestStart(req *http.Request) {
 	if cli != nil && cli.RequestHook != nil {
 		cli.RequestHook(req)
 	}
+}
+
+// WithMaxRetries updates the context to set the maximum number of retries for any HTTP requests made with the context.
+//
+// 0 means the request will only be attempted once and will not be retried.
+// Negative values will remove the override and fallback to the defaults.
+func WithMaxRetries(ctx context.Context, maxRetries int) context.Context {
+	return context.WithValue(ctx, MaxAttemptsContextKey, maxRetries+1)
 }
 
 func (cli *Client) LogRequestDone(req *http.Request, resp *http.Response, err error, handlerErr error, contentLength int, duration time.Duration) {
@@ -472,8 +481,16 @@ func (cli *Client) MakeFullRequestWithResp(ctx context.Context, params FullReque
 	if cli == nil {
 		return nil, nil, ErrClientIsNil
 	}
+	if cli.HomeserverURL == nil || cli.HomeserverURL.Scheme == "" {
+		return nil, nil, ErrClientHasNoHomeserver
+	}
 	if params.MaxAttempts == 0 {
-		params.MaxAttempts = 1 + cli.DefaultHTTPRetries
+		maxAttempts, ok := ctx.Value(MaxAttemptsContextKey).(int)
+		if ok && maxAttempts > 0 {
+			params.MaxAttempts = maxAttempts
+		} else {
+			params.MaxAttempts = 1 + cli.DefaultHTTPRetries
+		}
 	}
 	if params.BackoffDuration == 0 {
 		if cli.DefaultHTTPBackoff == 0 {
@@ -538,7 +555,11 @@ func (cli *Client) doRetry(req *http.Request, cause error, retries int, backoff 
 	log.Warn().Err(cause).
 		Int("retry_in_seconds", int(backoff.Seconds())).
 		Msg("Request failed, retrying")
-	time.Sleep(backoff)
+	select {
+	case <-time.After(backoff):
+	case <-req.Context().Done():
+		return nil, nil, req.Context().Err()
+	}
 	if cli.UpdateRequestOnRetry != nil {
 		req = cli.UpdateRequestOnRetry(req, cause)
 	}
@@ -1041,13 +1062,17 @@ func (cli *Client) GetMutualRooms(ctx context.Context, otherUserID id.UserID, ex
 }
 
 func (cli *Client) GetRoomSummary(ctx context.Context, roomIDOrAlias string, via ...string) (resp *RespRoomSummary, err error) {
+	urlPath := ClientURLPath{"unstable", "im.nheko.summary", "summary", roomIDOrAlias}
+	if cli.SpecVersions.ContainsGreaterOrEqual(SpecV115) {
+		urlPath = ClientURLPath{"v1", "room_summary", roomIDOrAlias}
+	}
 	// TODO add version check after one is added to MSC3266
-	urlPath := cli.BuildURLWithFullQuery(ClientURLPath{"unstable", "im.nheko.summary", "summary", roomIDOrAlias}, func(q url.Values) {
+	fullURL := cli.BuildURLWithFullQuery(urlPath, func(q url.Values) {
 		if len(via) > 0 {
 			q["via"] = via
 		}
 	})
-	_, err = cli.MakeRequest(ctx, http.MethodGet, urlPath, nil, &resp)
+	_, err = cli.MakeRequest(ctx, http.MethodGet, fullURL, nil, &resp)
 	return
 }
 
@@ -1791,6 +1816,9 @@ func (cli *Client) uploadMediaToURL(ctx context.Context, data ReqUploadMedia) (*
 				break
 			}
 			err = fmt.Errorf("HTTP %d", resp.StatusCode)
+		} else if errors.Is(err, context.Canceled) {
+			cli.Log.Warn().Str("url", data.UnstableUploadURL).Msg("External media upload canceled")
+			return nil, err
 		}
 		if retries <= 0 {
 			cli.Log.Warn().Str("url", data.UnstableUploadURL).Err(err).
@@ -1972,6 +2000,12 @@ func (cli *Client) JoinedRooms(ctx context.Context) (resp *RespJoinedRooms, err 
 	return
 }
 
+func (cli *Client) PublicRooms(ctx context.Context, req *ReqPublicRooms) (resp *RespPublicRooms, err error) {
+	urlPath := cli.BuildURLWithQuery(ClientURLPath{"v3", "publicRooms"}, req.Query())
+	_, err = cli.MakeRequest(ctx, http.MethodGet, urlPath, nil, &resp)
+	return
+}
+
 // Hierarchy returns a list of rooms that are in the room's hierarchy. See https://spec.matrix.org/v1.4/client-server-api/#get_matrixclientv1roomsroomidhierarchy
 //
 // The hierarchy API is provided to walk the space tree and discover the rooms with their aesthetic details. works in a depth-first manner:
@@ -2058,6 +2092,12 @@ func (cli *Client) GetUnredactedEventContent(ctx context.Context, roomID id.Room
 	urlPath := cli.BuildURLWithQuery(ClientURLPath{"v3", "rooms", roomID, "event", eventID}, map[string]string{
 		"fi.mau.msc2815.include_unredacted_content": "true",
 	})
+	_, err = cli.MakeRequest(ctx, http.MethodGet, urlPath, nil, &resp)
+	return
+}
+
+func (cli *Client) GetRelations(ctx context.Context, roomID id.RoomID, eventID id.EventID, req *ReqGetRelations) (resp *RespGetRelations, err error) {
+	urlPath := cli.BuildURLWithQuery(append(ClientURLPath{"v1", "rooms", roomID, "relations", eventID}, req.PathSuffix()...), req.Query())
 	_, err = cli.MakeRequest(ctx, http.MethodGet, urlPath, nil, &resp)
 	return
 }

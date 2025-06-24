@@ -8,7 +8,7 @@ import (
 
 	"github.com/emersion/go-msgauth/dkim"
 	"github.com/etkecc/go-linkpearl"
-	"github.com/jhillyerd/enmime"
+	"github.com/jhillyerd/enmime/v2"
 	"github.com/kvannotten/mailstrip"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format"

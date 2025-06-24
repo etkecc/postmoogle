@@ -1,73 +1,16 @@
+version: "2"
 run:
   concurrency: 4
-  timeout: 30m
+  modules-download-mode: readonly
   issues-exit-code: 1
   tests: true
-  build-tags: []
-  modules-download-mode: readonly
-
 output:
   formats:
-    - format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
-  sort-results: true
-
-linters-settings:
-  decorder:
-    dec-order:
-      - const
-      - var
-      - type
-      - func
-  dogsled:
-    max-blank-identifiers: 3
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  errchkjson:
-    report-no-exported: true
-  exhaustive:
-    check:
-      - switch
-      - map
-    default-signifies-exhaustive: true
-  gocognit:
-    min-complexity: 15
-  nestif:
-    min-complexity: 5
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-  gofmt:
-    simplify: true
-    rewrite-rules:
-      - pattern: 'interface{}'
-        replacement: 'any'
-      - pattern: 'a[b:len(a)]'
-        replacement: 'a[b:]'
-  gofumpt:
-    extra-rules: true
-  grouper:
-    const-require-single-const: true
-    import-require-single-import: true
-    var-require-single-var: true
-  misspell:
-    locale: US
-  usestdlibvars:
-    time-month: true
-    time-layout: true
-    crypto-hash: true
-    default-rpc-path: true
-    sql-isolation-level: true
-    tls-signature-scheme: true
-    constant-kind: true
-  unparam:
-    check-exported: true
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
 linters:
-  disable-all: false
   enable:
     - asasalint
     - asciicheck
@@ -80,7 +23,6 @@ linters:
     - dupl
     - dupword
     - durationcheck
-    - errcheck
     - errchkjson
     - errname
     - errorlint
@@ -89,14 +31,8 @@ linters:
     - gocognit
     - gocritic
     - gocyclo
-    - gofmt
-    - gofumpt
-    - goimports
     - gosec
-    - gosimple
     - gosmopolitan
-    - govet
-    - ineffassign
     - makezero
     - mirror
     - misspell
@@ -106,36 +42,106 @@ linters:
     - predeclared
     - revive
     - sqlclosecheck
-    - staticcheck
     - unconvert
     - unparam
-    - unused
     - usestdlibvars
     - wastedassign
-  fast: false
-
-
+  settings:
+    decorder:
+      dec-order:
+        - const
+        - var
+        - type
+        - func
+    dogsled:
+      max-blank-identifiers: 3
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    errchkjson:
+      report-no-exported: true
+    exhaustive:
+      check:
+        - switch
+        - map
+      default-signifies-exhaustive: true
+    gocognit:
+      min-complexity: 15
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+    grouper:
+      const-require-single-const: true
+      import-require-single-import: true
+      var-require-single-var: true
+    misspell:
+      locale: US
+    nestif:
+      min-complexity: 5
+    unparam:
+      check-exported: true
+    usestdlibvars:
+      time-month: true
+      time-layout: true
+      crypto-hash: true
+      default-rpc-path: true
+      sql-isolation-level: true
+      tls-signature-scheme: true
+      constant-kind: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - errcheck
+          - gocognit
+          - gocyclo
+          - gosec
+        path: _test\.go
+      - linters:
+          - staticcheck
+        text: 'SA9003:'
+      - linters:
+          - lll
+        source: '^//go:generate '
+      - linters:
+          - revive
+        text: returns unexported type
+    paths:
+      - mocks
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-dirs-use-default: true
-  exclude-dirs:
-    - mocks
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - gocognit
-        - errcheck
-        - dupl
-        - gosec
-    - linters:
-        - staticcheck
-      text: "SA9003:"
-    - linters:
-        - lll
-      source: "^//go:generate "
-    - linters:
-        - revive
-      text: "returns unexported type"
   max-issues-per-linter: 0
   max-same-issues: 0
   new: false
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+      rewrite-rules:
+        - pattern: interface{}
+          replacement: any
+        - pattern: a[b:len(a)]
+          replacement: a[b:]
+    gofumpt:
+      extra-rules: true
+  exclusions:
+    generated: lax
+    paths:
+      - mocks
+      - third_party$
+      - builtin$
+      - examples$

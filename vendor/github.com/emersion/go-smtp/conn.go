@@ -229,14 +229,21 @@ func (c *Conn) handleGreet(enhanced bool, arg string) {
 	// NewSession can access it via Conn.Hostname.
 	c.helo = domain
 
-	sess, err := c.server.Backend.NewSession(c)
-	if err != nil {
-		c.helo = ""
-		c.writeError(451, EnhancedCode{4, 0, 0}, err)
-		return
-	}
+	// RFC 5321: "An EHLO command MAY be issued by a client later in the session"
+	if c.session != nil {
+		// RFC 5321: "... the SMTP server MUST clear all buffers
+		// and reset the state exactly as if a RSET command has been issued."
+		c.reset()
+	} else {
+		sess, err := c.server.Backend.NewSession(c)
+		if err != nil {
+			c.helo = ""
+			c.writeError(451, EnhancedCode{4, 0, 0}, err)
+			return
+		}
 
-	c.setSession(sess)
+		c.setSession(sess)
+	}
 
 	if !enhanced {
 		c.writeResponse(250, EnhancedCode{2, 0, 0}, fmt.Sprintf("Hello %s", domain))
@@ -283,6 +290,9 @@ func (c *Conn) handleGreet(enhanced bool, arg string) {
 	}
 	if c.server.MaxRecipients > 0 {
 		caps = append(caps, fmt.Sprintf("LIMITS RCPTMAX=%v", c.server.MaxRecipients))
+	}
+	if c.server.EnableRRVS {
+		caps = append(caps, "RRVS")
 	}
 
 	args := []string{"Hello " + domain}
@@ -709,6 +719,18 @@ func (c *Conn) handleRcpt(arg string) {
 			}
 			opts.OriginalRecipientType = aType
 			opts.OriginalRecipient = aAddr
+		case "RRVS":
+			if !c.server.EnableRRVS {
+				c.writeResponse(504, EnhancedCode{5, 5, 4}, "RRVS is not implemented")
+				return
+			}
+			value, _, _ = strings.Cut(value, ";") // discard the no-support action
+			rrvsTime, err := time.Parse(time.RFC3339, value)
+			if err != nil {
+				c.writeResponse(501, EnhancedCode{5, 5, 4}, "Malformed RRVS parameter value")
+				return
+			}
+			opts.RequireRecipientValidSince = rrvsTime
 		default:
 			c.writeResponse(500, EnhancedCode{5, 5, 4}, "Unknown RCPT TO argument")
 			return
@@ -1229,13 +1251,17 @@ func (c *Conn) writeResponse(code int, enhCode EnhancedCode, text ...string) {
 		}
 	}
 
-	for i := 0; i < len(text)-1; i++ {
+	// transform each single line with \n, into separate lines
+	text = strings.Split(strings.Join(text, "\n"), "\n")
+
+	lastLineIndex := len(text) - 1
+	for i := 0; i < lastLineIndex; i++ {
 		c.text.PrintfLine("%d-%v", code, text[i])
 	}
 	if enhCode == NoEnhancedCode {
-		c.text.PrintfLine("%d %v", code, text[len(text)-1])
+		c.text.PrintfLine("%d %v", code, text[lastLineIndex])
 	} else {
-		c.text.PrintfLine("%d %v.%v.%v %v", code, enhCode[0], enhCode[1], enhCode[2], text[len(text)-1])
+		c.text.PrintfLine("%d %v.%v.%v %v", code, enhCode[0], enhCode[1], enhCode[2], text[lastLineIndex])
 	}
 }
 

@@ -15,7 +15,7 @@ import (
 	"github.com/etkecc/go-validator/v2"
 	"github.com/etkecc/postmoogle/internal/email"
 	"github.com/etkecc/postmoogle/internal/utils"
-	"github.com/jhillyerd/enmime"
+	"github.com/jhillyerd/enmime/v2"
 	"github.com/rs/zerolog"
 	"maunium.net/go/mautrix/id"
 )

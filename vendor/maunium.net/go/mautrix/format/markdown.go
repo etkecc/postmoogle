@@ -14,9 +14,11 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer/html"
+	"go.mau.fi/util/exstrings"
 
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/format/mdext"
+	"maunium.net/go/mautrix/id"
 )
 
 const paragraphStart = "<p>"
@@ -40,13 +42,42 @@ func UnwrapSingleParagraph(html string) string {
 	return html
 }
 
-var mdEscapeRegex = regexp.MustCompile("([\\\\`*_[\\]])")
+var mdEscapeRegex = regexp.MustCompile("([\\\\`*_[\\]()])")
 
 func EscapeMarkdown(text string) string {
 	text = mdEscapeRegex.ReplaceAllString(text, "\\$1")
 	text = strings.ReplaceAll(text, ">", "&gt;")
 	text = strings.ReplaceAll(text, "<", "&lt;")
 	return text
+}
+
+type uriAble interface {
+	String() string
+	URI() *id.MatrixURI
+}
+
+func MarkdownMention(id uriAble) string {
+	return MarkdownLink(id.String(), id.URI().MatrixToURL())
+}
+
+func MarkdownLink(name string, url string) string {
+	return fmt.Sprintf("[%s](%s)", EscapeMarkdown(name), EscapeMarkdown(url))
+}
+
+func SafeMarkdownCode[T ~string](textInput T) string {
+	if textInput == "" {
+		return "` `"
+	}
+	text := strings.ReplaceAll(string(textInput), "\n", " ")
+	backtickCount := exstrings.LongestSequenceOf(text, '`')
+	if backtickCount == 0 {
+		return fmt.Sprintf("`%s`", text)
+	}
+	quotes := strings.Repeat("`", backtickCount+1)
+	if text[0] == '`' || text[len(text)-1] == '`' {
+		return fmt.Sprintf("%s %s %s", quotes, text, quotes)
+	}
+	return fmt.Sprintf("%s%s%s", quotes, text, quotes)
 }
 
 func RenderMarkdownCustom(text string, renderer goldmark.Markdown) event.MessageEventContent {

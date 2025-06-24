@@ -159,7 +159,7 @@ func (l *Linkpearl) Start(ctx context.Context, optionalStatusMsg ...string) erro
 
 	err := l.api.SetPresence(ctx, mautrix.ReqPresence{Presence: event.PresenceOnline, StatusMsg: statusMsg})
 	if err != nil {
-		l.log.Error().Err(err).Msg("cannot set presence")
+		l.log.Warn().Err(err).Msg("cannot set presence on start")
 	}
 	defer l.Stop(ctx)
 
@@ -171,7 +171,7 @@ func (l *Linkpearl) Start(ctx context.Context, optionalStatusMsg ...string) erro
 func (l *Linkpearl) Stop(ctx context.Context) {
 	l.log.Debug().Msg("stopping the client")
 	if err := l.api.SetPresence(ctx, mautrix.ReqPresence{Presence: event.PresenceOffline}); err != nil {
-		l.log.Error().Err(err).Msg("cannot set presence")
+		l.log.Warn().Err(err).Msg("cannot set presence")
 	}
 	l.api.StopSync()
 	if err := l.ch.Close(); err != nil {

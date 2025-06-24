@@ -1,3 +1,61 @@
+## v0.24.1 (2025-06-16)
+
+* *(commands)* Added framework for using reactions as buttons that execute
+  command handlers.
+* *(client)* Added wrapper for `/relations` endpoints.
+* *(client)* Added support for stable version of room summary endpoint.
+* *(client)* Fixed parsing URL preview responses where width/height are strings.
+* *(federation)* Fixed bugs in server auth.
+* *(id)* Added utilities for validating server names.
+* *(event)* Fixed incorrect empty `entity` field when sending hashed moderation
+  policy events.
+* *(event)* Added [MSC4293] redact events field to member events.
+* *(event)* Added support for fallbacks in [MSC4144] per-message profiles.
+* *(format)* Added `MarkdownLink` and `MarkdownMention` utility functions for
+  generating properly escaped markdown.
+* *(synapseadmin)* Added support for synchronous (v1) room delete endpoint.
+* *(synapseadmin)* Changed `Client` struct to not embed the `mautrix.Client`.
+  This is a breaking change if you were relying on accessing non-admin functions
+  from the admin client.
+* *(bridgev2/provisioning)* Fixed `/display_and_wait` not passing through errors
+  from the network connector properly.
+* *(bridgev2/crypto)* Fixed encryption not working if the user's ID had the same
+  prefix as the bridge ghosts (e.g. `@whatsappbridgeuser:example.com` with a
+  `@whatsapp_` prefix).
+* *(bridgev2)* Fixed portals not being saved after creating a DM portal from a
+  Matrix DM invite.
+* *(bridgev2)* Added config option to determine whether cross-room replies
+  should be bridged.
+* *(appservice)* Fixed `EnsureRegistered` not being called when sending a custom
+  member event for the controlled user.
+
+[MSC4293]: https://github.com/matrix-org/matrix-spec-proposals/pull/4293
+
+## v0.24.0 (2025-05-16)
+
+* *(commands)* Added generic framework for implementing bot commands.
+* *(client)* Added support for specifying maximum number of HTTP retries using
+  a context value instead of having to call `MakeFullRequest` manually.
+* *(client,federation)* Added methods for fetching room directories.
+* *(federation)* Added support for server side of request authentication.
+* *(synapseadmin)* Added wrapper for the account suspension endpoint.
+* *(format)* Added method for safely wrapping a string in markdown inline code.
+* *(crypto)* Added method to import key backup without persisting to database,
+  to allow the client more control over the process.
+* *(bridgev2)* Added viewing chat interface to signal when the user is viewing
+  a given chat.
+* *(bridgev2)* Added option to pass through transaction ID from client when
+  sending messages to remote network.
+* *(crypto)* Fixed unnecessary error log when decrypting dummy events used for
+  unwedging Olm sessions.
+* *(crypto)* Fixed `forwarding_curve25519_key_chain` not being set consistently
+  when backing up keys.
+* *(event)* Fixed marshaling legacy VoIP events with no version field.
+* *(bridgev2)* Fixed disappearing message references not being deleted when the
+  portal is deleted.
+* *(bridgev2)* Fixed read receipt bridging not ignoring fake message entries
+  and causing unnecessary error logs.
+
 ## v0.23.3 (2025-04-16)
 
 * *(commands)* Added generic command processing framework for bots.

@@ -63,6 +63,11 @@ func StringToInt(value string, optionalDefaultValue ...int) int {
 		defaultValue = optionalDefaultValue[0]
 	}
 
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return defaultValue
+	}
+
 	vInt, err := strconv.Atoi(value)
 	if err != nil {
 		return defaultValue
@@ -80,7 +85,7 @@ func StringToSlice(value string, optionalDefaultValue ...string) []string {
 
 	value = strings.TrimSpace(value)
 	if idx := strings.Index(value, ","); idx == -1 {
-		value = defaultValue
+		return []string{defaultValue}
 	}
 
 	parts := strings.Split(value, ",")
@@ -93,6 +98,10 @@ func StringToSlice(value string, optionalDefaultValue ...string) []string {
 
 // SliceToString converts slice of strings into single string (using strings.Join) with optional hook
 func SliceToString(slice []string, delimiter string, hook func(string) string) string {
+	if len(slice) == 0 {
+		return ""
+	}
+
 	adjusted := make([]string, 0, len(slice))
 	for _, item := range slice {
 		if hook != nil {
