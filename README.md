@@ -139,7 +139,7 @@ You can get the bot using docker image from [the registry](https://github.com/et
 # id
 # 2. Prepare the configuration in the env file (see Configuration section), alternatively you can use `docker --env` flags
 # 2. Run the bot using UID and GID from step 1:
-docker run --user YOUR_UID:YOUR_GID --env-file /YOUR_ENV_FILE ghcr.io/etkecc/postmoogle:latest
+docker run --user YOUR_UID:YOUR_GID --env-file /YOUR_ENV_FILE -v /PATH_TO_STORE_DATA:/data ghcr.io/etkecc/postmoogle:latest
 ```
 
 ### Binary
