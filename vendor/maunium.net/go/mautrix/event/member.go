@@ -7,8 +7,6 @@
 package event
 
 import (
-	"encoding/json"
-
 	"maunium.net/go/mautrix/id"
 )
 
@@ -35,22 +33,37 @@ const (
 // MemberEventContent represents the content of a m.room.member state event.
 // https://spec.matrix.org/v1.2/client-server-api/#mroommember
 type MemberEventContent struct {
-	Membership       Membership          `json:"membership"`
-	AvatarURL        id.ContentURIString `json:"avatar_url,omitempty"`
-	Displayname      string              `json:"displayname,omitempty"`
-	IsDirect         bool                `json:"is_direct,omitempty"`
-	ThirdPartyInvite *ThirdPartyInvite   `json:"third_party_invite,omitempty"`
-	Reason           string              `json:"reason,omitempty"`
-	MSC3414File      *EncryptedFileInfo  `json:"org.matrix.msc3414.file,omitempty"`
+	Membership                   Membership          `json:"membership"`
+	AvatarURL                    id.ContentURIString `json:"avatar_url,omitempty"`
+	Displayname                  string              `json:"displayname,omitempty"`
+	IsDirect                     bool                `json:"is_direct,omitempty"`
+	ThirdPartyInvite             *ThirdPartyInvite   `json:"third_party_invite,omitempty"`
+	Reason                       string              `json:"reason,omitempty"`
+	JoinAuthorisedViaUsersServer id.UserID           `json:"join_authorised_via_users_server,omitempty"`
+	MSC3414File                  *EncryptedFileInfo  `json:"org.matrix.msc3414.file,omitempty"`
 
 	MSC4293RedactEvents bool `json:"org.matrix.msc4293.redact_events,omitempty"`
 }
 
+type SignedThirdPartyInvite struct {
+	Token      string                         `json:"token"`
+	Signatures map[string]map[id.KeyID]string `json:"signatures,omitempty"`
+	MXID       string                         `json:"mxid"`
+}
+
 type ThirdPartyInvite struct {
-	DisplayName string `json:"display_name"`
-	Signed      struct {
-		Token      string          `json:"token"`
-		Signatures json.RawMessage `json:"signatures"`
-		MXID       string          `json:"mxid"`
-	}
+	DisplayName string                 `json:"display_name"`
+	Signed      SignedThirdPartyInvite `json:"signed"`
+}
+
+type ThirdPartyInviteEventContent struct {
+	DisplayName    string                `json:"display_name"`
+	KeyValidityURL string                `json:"key_validity_url"`
+	PublicKey      id.Ed25519            `json:"public_key"`
+	PublicKeys     []ThirdPartyInviteKey `json:"public_keys,omitempty"`
+}
+
+type ThirdPartyInviteKey struct {
+	KeyValidityURL string     `json:"key_validity_url,omitempty"`
+	PublicKey      id.Ed25519 `json:"public_key"`
 }

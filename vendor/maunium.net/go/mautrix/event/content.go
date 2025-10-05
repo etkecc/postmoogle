@@ -18,6 +18,7 @@ import (
 // This is used by Content.ParseRaw() for creating the correct type of struct.
 var TypeMap = map[Type]reflect.Type{
 	StateMember:            reflect.TypeOf(MemberEventContent{}),
+	StateThirdPartyInvite:  reflect.TypeOf(ThirdPartyInviteEventContent{}),
 	StatePowerLevels:       reflect.TypeOf(PowerLevelsEventContent{}),
 	StateCanonicalAlias:    reflect.TypeOf(CanonicalAliasEventContent{}),
 	StateRoomName:          reflect.TypeOf(RoomNameEventContent{}),
@@ -38,7 +39,6 @@ var TypeMap = map[Type]reflect.Type{
 	StateHalfShotBridge:    reflect.TypeOf(BridgeEventContent{}),
 	StateSpaceParent:       reflect.TypeOf(SpaceParentEventContent{}),
 	StateSpaceChild:        reflect.TypeOf(SpaceChildEventContent{}),
-	StateInsertionMarker:   reflect.TypeOf(InsertionMarkerContent{}),
 
 	StateLegacyPolicyRoom:     reflect.TypeOf(ModPolicyContent{}),
 	StateLegacyPolicyServer:   reflect.TypeOf(ModPolicyContent{}),
@@ -49,6 +49,8 @@ var TypeMap = map[Type]reflect.Type{
 
 	StateElementFunctionalMembers: reflect.TypeOf(ElementFunctionalMembersContent{}),
 	StateBeeperRoomFeatures:       reflect.TypeOf(RoomFeatures{}),
+	StateBeeperDisappearingTimer:  reflect.TypeOf(BeeperDisappearingTimer{}),
+	StateBotCommands:              reflect.TypeOf(BotCommandsEventContent{}),
 
 	EventMessage:   reflect.TypeOf(MessageEventContent{}),
 	EventSticker:   reflect.TypeOf(MessageEventContent{}),

@@ -60,24 +60,8 @@ func (ut *UpgradeTable) Register(from, to, compat int, message string, txn TxnMo
 	(*ut)[from] = upg
 }
 
-// Syntax is either
-//
-//	-- v0 -> v1: Message
-//
-// or
-//
-//	-- v1: Message
-//
-// Both syntaxes may also have a compatibility notice before the colon:
-//
-//	-- v5 (compatible with v3+): Upgrade with backwards compatibility
 var upgradeHeaderRegex = regexp.MustCompile(`^-- (?:v(\d+) -> )?v(\d+)(?: \(compatible with v(\d+)\+\))?: (.+)$`)
 
-// To disable wrapping the upgrade in a single transaction, put `--transaction: off` on the second line.
-//
-//	-- v5: Upgrade without transaction
-//	-- transaction: off
-//	// do dangerous stuff
 var transactionDisableRegex = regexp.MustCompile(`^-- transaction: ([a-z-]*)`)
 
 func parseFileHeader(file []byte) (from, to, compat int, message string, txn TxnMode, lines [][]byte, err error) {
@@ -123,24 +107,6 @@ func parseFileHeader(file []byte) (from, to, compat int, message string, txn Txn
 	return
 }
 
-// To limit the next line to one dialect:
-//
-//	-- only: postgres
-//
-// To limit the next N lines:
-//
-//	-- only: sqlite for next 123 lines
-//
-// To limit a block of code, fenced by another directive:
-//
-//	-- only: sqlite until "end only"
-//	QUERY;
-//	ANOTHER QUERY;
-//	-- end only sqlite
-//
-// If the single-line limit is on the second line of the file, the whole file is limited to that dialect.
-//
-// If the filter ends with `(lines commented)`, then ALL lines chosen by the filter will be uncommented.
 var dialectLineFilter = regexp.MustCompile(`^\s*-- only: (postgres|sqlite)(?: for next (\d+) lines| until "(end) only")?(?: \(lines? (commented)\))?`)
 
 // Constants used to make parseDialectFilter clearer

@@ -1,8 +1,9 @@
 package tw
 
 import (
-	"github.com/olekukonko/ll"
 	"io"
+
+	"github.com/olekukonko/ll"
 )
 
 // Renderer defines the interface for rendering tables to an io.Writer.
@@ -117,6 +118,13 @@ type Border struct {
 
 type StreamConfig struct {
 	Enable bool
+
+	// StrictColumns, if true, causes Append() to return an error
+	// in streaming mode if the number of cells in an appended row
+	// does not match the established number of columns for the stream.
+	// If false (default), rows with mismatched column counts will be
+	// padded or truncated with a warning log.
+	StrictColumns bool
 
 	// Deprecated: Use top-level Config.Widths for streaming width control.
 	// This field will be removed in a future version. It will be respected if

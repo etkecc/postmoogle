@@ -294,6 +294,20 @@ func (c *Conn) handleGreet(enhanced bool, arg string) {
 	if c.server.EnableRRVS {
 		caps = append(caps, "RRVS")
 	}
+	if c.server.EnableDELIVERBY {
+		if c.server.MinimumDeliverByTime == 0 {
+			caps = append(caps, "DELIVERBY")
+		} else {
+			caps = append(caps, fmt.Sprintf("DELIVERBY %d", int(c.server.MinimumDeliverByTime.Seconds())))
+		}
+	}
+	if c.server.EnableMTPRIORITY {
+		if c.server.MtPriorityProfile == PriorityUnspecified {
+			caps = append(caps, "MT-PRIORITY")
+		} else {
+			caps = append(caps, fmt.Sprintf("MT-PRIORITY %s", c.server.MtPriorityProfile))
+		}
+	}
 
 	args := []string{"Hello " + domain}
 	args = append(args, caps...)
@@ -731,6 +745,38 @@ func (c *Conn) handleRcpt(arg string) {
 				return
 			}
 			opts.RequireRecipientValidSince = rrvsTime
+		case "BY":
+			if !c.server.EnableDELIVERBY {
+				c.writeResponse(504, EnhancedCode{5, 5, 4}, "DELIVERBY is not implemented")
+				return
+			}
+			deliverBy := parseDeliverByArgument(value)
+			if deliverBy == nil {
+				c.writeResponse(501, EnhancedCode{5, 5, 4}, "Malformed BY parameter value")
+				return
+			}
+			if c.server.MinimumDeliverByTime != 0 &&
+				deliverBy.Mode == DeliverByReturn &&
+				deliverBy.Time < c.server.MinimumDeliverByTime {
+				c.writeResponse(501, EnhancedCode{5, 5, 4}, "BY parameter is below server minimum")
+				return
+			}
+			opts.DeliverBy = deliverBy
+		case "MT-PRIORITY":
+			if !c.server.EnableMTPRIORITY {
+				c.writeResponse(504, EnhancedCode{5, 5, 4}, "MT-PRIORITY is not implemented")
+				return
+			}
+			mtPriority, err := strconv.Atoi(value)
+			if err != nil {
+				c.writeResponse(501, EnhancedCode{5, 5, 4}, "Malformed MT-PRIORITY parameter value")
+				return
+			}
+			if mtPriority < -9 || mtPriority > 9 {
+				c.writeResponse(501, EnhancedCode{5, 5, 4}, "MT-PRIORITY is outside valid range")
+				return
+			}
+			opts.MTPriority = &mtPriority
 		default:
 			c.writeResponse(500, EnhancedCode{5, 5, 4}, "Unknown RCPT TO argument")
 			return

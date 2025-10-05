@@ -15,10 +15,12 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"go.mau.fi/util/ptr"
 
 	"go.mau.fi/util/exzerolog"
 
 	"maunium.net/go/mautrix"
+	"maunium.net/go/mautrix/crypto/olm"
 	"maunium.net/go/mautrix/crypto/ssss"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
@@ -33,7 +35,8 @@ type OlmMachine struct {
 	CryptoStore Store
 	StateStore  StateStore
 
-	BackgroundCtx context.Context
+	backgroundCtx       context.Context
+	cancelBackgroundCtx context.CancelFunc
 
 	PlaintextMentions   bool
 	AllowEncryptedState bool
@@ -120,8 +123,6 @@ func NewOlmMachine(client *mautrix.Client, log *zerolog.Logger, cryptoStore Stor
 		CryptoStore: cryptoStore,
 		StateStore:  stateStore,
 
-		BackgroundCtx: context.Background(),
-
 		SendKeysMinTrust:  id.TrustStateUnset,
 		ShareKeysMinTrust: id.TrustStateCrossSignedTOFU,
 
@@ -134,6 +135,7 @@ func NewOlmMachine(client *mautrix.Client, log *zerolog.Logger, cryptoStore Stor
 		recentlyUnwedged: make(map[id.IdentityKey]time.Time),
 		secretListeners:  make(map[string]chan<- string),
 	}
+	mach.backgroundCtx, mach.cancelBackgroundCtx = context.WithCancel(context.Background())
 	mach.AllowKeyShare = mach.defaultAllowKeyShare
 	return mach
 }
@@ -146,6 +148,11 @@ func (mach *OlmMachine) machOrContextLog(ctx context.Context) *zerolog.Logger {
 	return log
 }
 
+func (mach *OlmMachine) SetBackgroundCtx(ctx context.Context) {
+	mach.cancelBackgroundCtx()
+	mach.backgroundCtx, mach.cancelBackgroundCtx = context.WithCancel(ctx)
+}
+
 // Load loads the Olm account information from the crypto store. If there's no olm account, a new one is created.
 // This must be called before using the machine.
 func (mach *OlmMachine) Load(ctx context.Context) (err error) {
@@ -156,7 +163,21 @@ func (mach *OlmMachine) Load(ctx context.Context) (err error) {
 	if mach.account == nil {
 		mach.account = NewOlmAccount()
 	}
+	zerolog.Ctx(ctx).Debug().
+		Str("machine_ptr", fmt.Sprintf("%p", mach)).
+		Str("account_ptr", fmt.Sprintf("%p", mach.account.Internal)).
+		Str("olm_driver", olm.Driver).
+		Msg("Loaded olm account")
 	return nil
+}
+
+func (mach *OlmMachine) Destroy() {
+	mach.Log.Debug().
+		Str("machine_ptr", fmt.Sprintf("%p", mach)).
+		Str("account_ptr", fmt.Sprintf("%p", ptr.Val(mach.account).Internal)).
+		Msg("Destroying olm machine")
+	mach.cancelBackgroundCtx()
+	// TODO actually destroy something?
 }
 
 func (mach *OlmMachine) saveAccount(ctx context.Context) error {
@@ -361,7 +382,7 @@ func (mach *OlmMachine) HandleMemberEvent(ctx context.Context, evt *event.Event)
 		Msg("Got membership state change, invalidating group session in room")
 	err := mach.CryptoStore.RemoveOutboundGroupSession(ctx, evt.RoomID)
 	if err != nil {
-		mach.Log.Warn().Str("room_id", evt.RoomID.String()).Msg("Failed to invalidate outbound group session")
+		mach.Log.Warn().Stringer("room_id", evt.RoomID).Msg("Failed to invalidate outbound group session")
 	}
 }
 
@@ -581,7 +602,7 @@ func (mach *OlmMachine) createGroupSession(ctx context.Context, senderKey id.Sen
 	}
 	err = mach.CryptoStore.PutGroupSession(ctx, igs)
 	if err != nil {
-		log.Err(err).Str("session_id", sessionID.String()).Msg("Failed to store new inbound group session")
+		log.Err(err).Stringer("session_id", sessionID).Msg("Failed to store new inbound group session")
 		return fmt.Errorf("failed to store new inbound group session: %w", err)
 	}
 	mach.MarkSessionReceived(ctx, roomID, sessionID, igs.Internal.FirstKnownIndex())

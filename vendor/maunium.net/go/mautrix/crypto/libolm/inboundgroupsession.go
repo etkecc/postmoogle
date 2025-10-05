@@ -7,6 +7,7 @@ import "C"
 import (
 	"bytes"
 	"encoding/base64"
+	"runtime"
 	"unsafe"
 
 	"maunium.net/go/mautrix/crypto/olm"
@@ -18,21 +19,6 @@ import (
 type InboundGroupSession struct {
 	int *C.OlmInboundGroupSession
 	mem []byte
-}
-
-func init() {
-	olm.InitInboundGroupSessionFromPickled = func(pickled, key []byte) (olm.InboundGroupSession, error) {
-		return InboundGroupSessionFromPickled(pickled, key)
-	}
-	olm.InitNewInboundGroupSession = func(sessionKey []byte) (olm.InboundGroupSession, error) {
-		return NewInboundGroupSession(sessionKey)
-	}
-	olm.InitInboundGroupSessionImport = func(sessionKey []byte) (olm.InboundGroupSession, error) {
-		return InboundGroupSessionImport(sessionKey)
-	}
-	olm.InitBlankInboundGroupSession = func() olm.InboundGroupSession {
-		return NewBlankInboundGroupSession()
-	}
 }
 
 // Ensure that [InboundGroupSession] implements [olm.InboundGroupSession].
@@ -67,8 +53,10 @@ func NewInboundGroupSession(sessionKey []byte) (*InboundGroupSession, error) {
 	s := NewBlankInboundGroupSession()
 	r := C.olm_init_inbound_group_session(
 		(*C.OlmInboundGroupSession)(s.int),
-		(*C.uint8_t)(&sessionKey[0]),
-		C.size_t(len(sessionKey)))
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(sessionKey))),
+		C.size_t(len(sessionKey)),
+	)
+	runtime.KeepAlive(sessionKey)
 	if r == errorVal() {
 		return nil, s.lastError()
 	}
@@ -86,8 +74,10 @@ func InboundGroupSessionImport(sessionKey []byte) (*InboundGroupSession, error) 
 	s := NewBlankInboundGroupSession()
 	r := C.olm_import_inbound_group_session(
 		(*C.OlmInboundGroupSession)(s.int),
-		(*C.uint8_t)(&sessionKey[0]),
-		C.size_t(len(sessionKey)))
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(sessionKey))),
+		C.size_t(len(sessionKey)),
+	)
+	runtime.KeepAlive(sessionKey)
 	if r == errorVal() {
 		return nil, s.lastError()
 	}
@@ -104,7 +94,7 @@ func inboundGroupSessionSize() uint {
 func NewBlankInboundGroupSession() *InboundGroupSession {
 	memory := make([]byte, inboundGroupSessionSize())
 	return &InboundGroupSession{
-		int: C.olm_inbound_group_session(unsafe.Pointer(&memory[0])),
+		int: C.olm_inbound_group_session(unsafe.Pointer(unsafe.SliceData(memory))),
 		mem: memory,
 	}
 }
@@ -139,10 +129,12 @@ func (s *InboundGroupSession) Pickle(key []byte) ([]byte, error) {
 	pickled := make([]byte, s.pickleLen())
 	r := C.olm_pickle_inbound_group_session(
 		(*C.OlmInboundGroupSession)(s.int),
-		unsafe.Pointer(&key[0]),
+		unsafe.Pointer(unsafe.SliceData(key)),
 		C.size_t(len(key)),
-		unsafe.Pointer(&pickled[0]),
-		C.size_t(len(pickled)))
+		unsafe.Pointer(unsafe.SliceData(pickled)),
+		C.size_t(len(pickled)),
+	)
+	runtime.KeepAlive(key)
 	if r == errorVal() {
 		return nil, s.lastError()
 	}
@@ -157,10 +149,12 @@ func (s *InboundGroupSession) Unpickle(pickled, key []byte) error {
 	}
 	r := C.olm_unpickle_inbound_group_session(
 		(*C.OlmInboundGroupSession)(s.int),
-		unsafe.Pointer(&key[0]),
+		unsafe.Pointer(unsafe.SliceData(key)),
 		C.size_t(len(key)),
-		unsafe.Pointer(&pickled[0]),
-		C.size_t(len(pickled)))
+		unsafe.Pointer(unsafe.SliceData(pickled)),
+		C.size_t(len(pickled)),
+	)
+	runtime.KeepAlive(key)
 	if r == errorVal() {
 		return s.lastError()
 	}
@@ -226,11 +220,13 @@ func (s *InboundGroupSession) decryptMaxPlaintextLen(message []byte) (uint, erro
 		return 0, olm.EmptyInput
 	}
 	// olm_group_decrypt_max_plaintext_length destroys the input, so we have to clone it
-	message = bytes.Clone(message)
+	messageCopy := bytes.Clone(message)
 	r := C.olm_group_decrypt_max_plaintext_length(
 		(*C.OlmInboundGroupSession)(s.int),
-		(*C.uint8_t)(&message[0]),
-		C.size_t(len(message)))
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(messageCopy))),
+		C.size_t(len(messageCopy)),
+	)
+	runtime.KeepAlive(messageCopy)
 	if r == errorVal() {
 		return 0, s.lastError()
 	}
@@ -254,17 +250,18 @@ func (s *InboundGroupSession) Decrypt(message []byte) ([]byte, uint, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-	messageCopy := make([]byte, len(message))
-	copy(messageCopy, message)
+	messageCopy := bytes.Clone(message)
 	plaintext := make([]byte, decryptMaxPlaintextLen)
 	var messageIndex uint32
 	r := C.olm_group_decrypt(
 		(*C.OlmInboundGroupSession)(s.int),
-		(*C.uint8_t)(&messageCopy[0]),
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(messageCopy))),
 		C.size_t(len(messageCopy)),
-		(*C.uint8_t)(&plaintext[0]),
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(plaintext))),
 		C.size_t(len(plaintext)),
-		(*C.uint32_t)(&messageIndex))
+		(*C.uint32_t)(unsafe.Pointer(&messageIndex)),
+	)
+	runtime.KeepAlive(messageCopy)
 	if r == errorVal() {
 		return nil, 0, s.lastError()
 	}
@@ -281,8 +278,9 @@ func (s *InboundGroupSession) ID() id.SessionID {
 	sessionID := make([]byte, s.sessionIdLen())
 	r := C.olm_inbound_group_session_id(
 		(*C.OlmInboundGroupSession)(s.int),
-		(*C.uint8_t)(&sessionID[0]),
-		C.size_t(len(sessionID)))
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(sessionID))),
+		C.size_t(len(sessionID)),
+	)
 	if r == errorVal() {
 		panic(s.lastError())
 	}
@@ -318,9 +316,10 @@ func (s *InboundGroupSession) Export(messageIndex uint32) ([]byte, error) {
 	key := make([]byte, s.exportLen())
 	r := C.olm_export_inbound_group_session(
 		(*C.OlmInboundGroupSession)(s.int),
-		(*C.uint8_t)(&key[0]),
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(key))),
 		C.size_t(len(key)),
-		C.uint32_t(messageIndex))
+		C.uint32_t(messageIndex),
+	)
 	if r == errorVal() {
 		return nil, s.lastError()
 	}

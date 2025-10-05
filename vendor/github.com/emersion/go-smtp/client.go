@@ -499,7 +499,7 @@ func (c *Client) Rcpt(to string, opts *RcptOptions) error {
 	sb.Grow(2048)
 	fmt.Fprintf(&sb, "RCPT TO:<%s>", to)
 	if _, ok := c.ext["DSN"]; ok && opts != nil {
-		if opts.Notify != nil && len(opts.Notify) != 0 {
+		if len(opts.Notify) != 0 {
 			sb.WriteString(" NOTIFY=")
 			if err := checkNotifySet(opts.Notify); err != nil {
 				return errors.New("smtp: Malformed NOTIFY parameter value")
@@ -533,6 +533,22 @@ func (c *Client) Rcpt(to string, opts *RcptOptions) error {
 	}
 	if _, ok := c.ext["RRVS"]; ok && opts != nil && !opts.RequireRecipientValidSince.IsZero() {
 		sb.WriteString(fmt.Sprintf(" RRVS=%s", opts.RequireRecipientValidSince.Format(time.RFC3339)))
+	}
+	if _, ok := c.ext["DELIVERBY"]; ok && opts != nil && opts.DeliverBy != nil {
+		if opts.DeliverBy.Mode == DeliverByReturn && opts.DeliverBy.Time < 1 {
+			return errors.New("smtp: DELIVERBY mode must be greater than zero with return mode")
+		}
+		arg := fmt.Sprintf(" BY=%d;%s", int(opts.DeliverBy.Time.Seconds()), opts.DeliverBy.Mode)
+		if opts.DeliverBy.Trace {
+			arg += "T"
+		}
+		sb.WriteString(arg)
+	}
+	if _, ok := c.ext["MT-PRIORITY"]; ok && opts != nil && opts.MTPriority != nil {
+		if *opts.MTPriority < -9 || *opts.MTPriority > 9 {
+			return errors.New("smtp: MT-PRIORITY must be between -9 and 9")
+		}
+		sb.WriteString(fmt.Sprintf(" MT-PRIORITY=%d", *opts.MTPriority))
 	}
 	if _, _, err := c.cmd(25, "%s", sb.String()); err != nil {
 		return err
@@ -728,15 +744,6 @@ func (c *Client) SendMail(from string, to []string, r io.Reader) error {
 var testHookStartTLS func(*tls.Config) // nil, except for tests
 
 func sendMail(addr string, implicitTLS bool, a sasl.Client, from string, to []string, r io.Reader) error {
-	if err := validateLine(from); err != nil {
-		return err
-	}
-	for _, recp := range to {
-		if err := validateLine(recp); err != nil {
-			return err
-		}
-	}
-
 	var (
 		c   *Client
 		err error

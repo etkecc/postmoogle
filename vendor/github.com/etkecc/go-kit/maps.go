@@ -6,6 +6,17 @@ import (
 	"sort"
 )
 
+// MapFromSlice creates a map from slice elements as keys
+// The map values are set to true, indicating the presence of the key.
+// This is useful for quickly checking if a key exists in the map.
+func MapFromSlice[T cmp.Ordered](slice []T) map[T]bool {
+	data := make(map[T]bool, len(slice))
+	for _, k := range slice {
+		data[k] = true
+	}
+	return data
+}
+
 // MapKeys returns map keys only
 func MapKeys[T cmp.Ordered, V any](data map[T]V) []T {
 	keys := make([]T, 0, len(data))

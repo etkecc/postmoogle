@@ -8,6 +8,10 @@ package event
 
 import (
 	"encoding/base64"
+	"encoding/json"
+	"slices"
+
+	"go.mau.fi/util/jsontime"
 
 	"maunium.net/go/mautrix/id"
 )
@@ -52,8 +56,31 @@ type TopicEventContent struct {
 // m.room.topic state event as described in [MSC3765].
 //
 // [MSC3765]: https://github.com/matrix-org/matrix-spec-proposals/pull/3765
-type ExtensibleTopic struct {
+type ExtensibleTopic = ExtensibleTextContainer
+
+type ExtensibleTextContainer struct {
 	Text []ExtensibleText `json:"m.text"`
+}
+
+func MakeExtensibleText(text string) *ExtensibleTextContainer {
+	return &ExtensibleTextContainer{
+		Text: []ExtensibleText{{
+			Body:     text,
+			MimeType: "text/plain",
+		}},
+	}
+}
+
+func MakeExtensibleFormattedText(plaintext, html string) *ExtensibleTextContainer {
+	return &ExtensibleTextContainer{
+		Text: []ExtensibleText{{
+			Body:     plaintext,
+			MimeType: "text/plain",
+		}, {
+			Body:     html,
+			MimeType: "text/html",
+		}},
+	}
 }
 
 // ExtensibleText represents the contents of an m.text field.
@@ -74,32 +101,45 @@ type Predecessor struct {
 	EventID id.EventID `json:"event_id"`
 }
 
-type RoomVersion string
+// Deprecated: use id.RoomVersion instead
+type RoomVersion = id.RoomVersion
 
+// Deprecated: use id.RoomVX constants instead
 const (
-	RoomV1  RoomVersion = "1"
-	RoomV2  RoomVersion = "2"
-	RoomV3  RoomVersion = "3"
-	RoomV4  RoomVersion = "4"
-	RoomV5  RoomVersion = "5"
-	RoomV6  RoomVersion = "6"
-	RoomV7  RoomVersion = "7"
-	RoomV8  RoomVersion = "8"
-	RoomV9  RoomVersion = "9"
-	RoomV10 RoomVersion = "10"
-	RoomV11 RoomVersion = "11"
+	RoomV1  = id.RoomV1
+	RoomV2  = id.RoomV2
+	RoomV3  = id.RoomV3
+	RoomV4  = id.RoomV4
+	RoomV5  = id.RoomV5
+	RoomV6  = id.RoomV6
+	RoomV7  = id.RoomV7
+	RoomV8  = id.RoomV8
+	RoomV9  = id.RoomV9
+	RoomV10 = id.RoomV10
+	RoomV11 = id.RoomV11
+	RoomV12 = id.RoomV12
 )
 
 // CreateEventContent represents the content of a m.room.create state event.
 // https://spec.matrix.org/v1.2/client-server-api/#mroomcreate
 type CreateEventContent struct {
-	Type        RoomType     `json:"type,omitempty"`
-	Federate    *bool        `json:"m.federate,omitempty"`
-	RoomVersion RoomVersion  `json:"room_version,omitempty"`
-	Predecessor *Predecessor `json:"predecessor,omitempty"`
+	Type        RoomType       `json:"type,omitempty"`
+	Federate    *bool          `json:"m.federate,omitempty"`
+	RoomVersion id.RoomVersion `json:"room_version,omitempty"`
+	Predecessor *Predecessor   `json:"predecessor,omitempty"`
+
+	// Room v12+ only
+	AdditionalCreators []id.UserID `json:"additional_creators,omitempty"`
 
 	// Deprecated: use the event sender instead
 	Creator id.UserID `json:"creator,omitempty"`
+}
+
+func (cec *CreateEventContent) SupportsCreatorPower() bool {
+	if cec == nil {
+		return false
+	}
+	return cec.RoomVersion.PrivilegedRoomCreators()
 }
 
 // JoinRule specifies how open a room is to new members.
@@ -193,6 +233,29 @@ type BridgeEventContent struct {
 	BeeperRoomTypeV2 string `json:"com.beeper.room_type.v2,omitempty"`
 }
 
+// DisappearingType represents the type of a disappearing message timer.
+type DisappearingType string
+
+const (
+	DisappearingTypeNone      DisappearingType = ""
+	DisappearingTypeAfterRead DisappearingType = "after_read"
+	DisappearingTypeAfterSend DisappearingType = "after_send"
+)
+
+type BeeperDisappearingTimer struct {
+	Type  DisappearingType      `json:"type"`
+	Timer jsontime.Milliseconds `json:"timer"`
+}
+
+type marshalableBeeperDisappearingTimer BeeperDisappearingTimer
+
+func (bdt *BeeperDisappearingTimer) MarshalJSON() ([]byte, error) {
+	if bdt == nil || bdt.Type == DisappearingTypeNone {
+		return []byte("{}"), nil
+	}
+	return json.Marshal((*marshalableBeeperDisappearingTimer)(bdt))
+}
+
 type SpaceChildEventContent struct {
 	Via       []string `json:"via,omitempty"`
 	Order     string   `json:"order,omitempty"`
@@ -244,12 +307,14 @@ func (mpc *ModPolicyContent) EntityOrHash() string {
 	return mpc.Entity
 }
 
-// Deprecated: MSC2716 has been abandoned
-type InsertionMarkerContent struct {
-	InsertionID id.EventID `json:"org.matrix.msc2716.marker.insertion"`
-	Timestamp   int64      `json:"com.beeper.timestamp,omitempty"`
-}
-
 type ElementFunctionalMembersContent struct {
 	ServiceMembers []id.UserID `json:"service_members"`
+}
+
+func (efmc *ElementFunctionalMembersContent) Add(mxid id.UserID) bool {
+	if slices.Contains(efmc.ServiceMembers, mxid) {
+		return false
+	}
+	efmc.ServiceMembers = append(efmc.ServiceMembers, mxid)
+	return true
 }

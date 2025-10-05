@@ -20,6 +20,7 @@ import (
 func (b *Bot) sendMailboxes(ctx context.Context) {
 	evt := eventFromContext(ctx)
 	mailboxes := map[string]config.Room{}
+	rooms := map[string]id.RoomID{}
 	slice := []string{}
 	b.rooms.Range(func(key, value any) bool {
 		if key == nil {
@@ -43,6 +44,7 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		}
 
 		mailboxes[mailbox] = cfg
+		rooms[mailbox] = roomID
 		slice = append(slice, mailbox)
 		return true
 	})
@@ -61,7 +63,11 @@ func (b *Bot) sendMailboxes(ctx context.Context) {
 		msg.WriteString(utils.EmailsList(mailbox, cfg.Domain()))
 		msg.WriteString("` by ")
 		msg.WriteString(cfg.Owner())
-		msg.WriteString("\n")
+		msg.WriteString(" in [")
+		msg.WriteString(rooms[mailbox].String())
+		msg.WriteString("](https://matrix.to/#/")
+		msg.WriteString(rooms[mailbox].String())
+		msg.WriteString(")\n")
 	}
 
 	b.lp.SendNotice(ctx, evt.RoomID, msg.String(), linkpearl.RelatesTo(evt.ID))

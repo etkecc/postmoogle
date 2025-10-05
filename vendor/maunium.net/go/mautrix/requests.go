@@ -2,6 +2,7 @@ package mautrix
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -38,6 +39,26 @@ const (
 )
 
 type Direction rune
+
+func (d Direction) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(d))
+}
+
+func (d *Direction) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	switch str {
+	case "f":
+		*d = DirectionForward
+	case "b":
+		*d = DirectionBackward
+	default:
+		return fmt.Errorf("invalid direction %q, must be 'f' or 'b'", str)
+	}
+	return nil
+}
 
 const (
 	DirectionForward  Direction = 'f'
@@ -120,11 +141,12 @@ type ReqCreateRoom struct {
 	InitialState    []*event.Event         `json:"initial_state,omitempty"`
 	Preset          string                 `json:"preset,omitempty"`
 	IsDirect        bool                   `json:"is_direct,omitempty"`
-	RoomVersion     string                 `json:"room_version,omitempty"`
+	RoomVersion     id.RoomVersion         `json:"room_version,omitempty"`
 
 	PowerLevelOverride *event.PowerLevelsEventContent `json:"power_level_content_override,omitempty"`
 
 	MeowRoomID            id.RoomID   `json:"fi.mau.room_id,omitempty"`
+	MeowCreateTS          int64       `json:"fi.mau.origin_server_ts,omitempty"`
 	BeeperInitialMembers  []id.UserID `json:"com.beeper.initial_members,omitempty"`
 	BeeperAutoJoinInvites bool        `json:"com.beeper.auto_join_invites,omitempty"`
 	BeeperLocalRoomID     id.RoomID   `json:"com.beeper.local_room_id,omitempty"`
@@ -379,18 +401,6 @@ type ReqPutPushRule struct {
 	Pattern    string                     `json:"pattern"`
 }
 
-// Deprecated: MSC2716 was abandoned
-type ReqBatchSend struct {
-	PrevEventID id.EventID `json:"-"`
-	BatchID     id.BatchID `json:"-"`
-
-	BeeperNewMessages bool      `json:"-"`
-	BeeperMarkReadBy  id.UserID `json:"-"`
-
-	StateEventsAtStart []*event.Event `json:"state_events_at_start"`
-	Events             []*event.Event `json:"events"`
-}
-
 type ReqBeeperBatchSend struct {
 	// ForwardIfNoMessages should be set to true if the batch should be forward
 	// backfilled if there are no messages currently in the room.
@@ -585,4 +595,14 @@ func (rgr *ReqGetRelations) Query() map[string]string {
 		query["recurse"] = "true"
 	}
 	return query
+}
+
+// ReqSuspend is the request body for https://github.com/matrix-org/matrix-spec-proposals/pull/4323
+type ReqSuspend struct {
+	Suspended bool `json:"suspended"`
+}
+
+// ReqLocked is the request body for https://github.com/matrix-org/matrix-spec-proposals/pull/4323
+type ReqLocked struct {
+	Locked bool `json:"locked"`
 }

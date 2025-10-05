@@ -7,6 +7,7 @@ import "C"
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"runtime"
 	"unsafe"
 
 	"maunium.net/go/mautrix/crypto/olm"
@@ -18,18 +19,6 @@ import (
 type OutboundGroupSession struct {
 	int *C.OlmOutboundGroupSession
 	mem []byte
-}
-
-func init() {
-	olm.InitNewOutboundGroupSessionFromPickled = func(pickled, key []byte) (olm.OutboundGroupSession, error) {
-		if len(pickled) == 0 {
-			return nil, olm.EmptyInput
-		}
-		s := NewBlankOutboundGroupSession()
-		return s, s.Unpickle(pickled, key)
-	}
-	olm.InitNewOutboundGroupSession = func() (olm.OutboundGroupSession, error) { return NewOutboundGroupSession() }
-	olm.InitNewBlankOutboundGroupSession = func() olm.OutboundGroupSession { return NewBlankOutboundGroupSession() }
 }
 
 // Ensure that [OutboundGroupSession] implements [olm.OutboundGroupSession].
@@ -44,8 +33,10 @@ func NewOutboundGroupSession() (*OutboundGroupSession, error) {
 	}
 	r := C.olm_init_outbound_group_session(
 		(*C.OlmOutboundGroupSession)(s.int),
-		(*C.uint8_t)(&random[0]),
-		C.size_t(len(random)))
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(random))),
+		C.size_t(len(random)),
+	)
+	runtime.KeepAlive(random)
 	if r == errorVal() {
 		return nil, s.lastError()
 	}
@@ -62,7 +53,7 @@ func outboundGroupSessionSize() uint {
 func NewBlankOutboundGroupSession() *OutboundGroupSession {
 	memory := make([]byte, outboundGroupSessionSize())
 	return &OutboundGroupSession{
-		int: C.olm_outbound_group_session(unsafe.Pointer(&memory[0])),
+		int: C.olm_outbound_group_session(unsafe.Pointer(unsafe.SliceData(memory))),
 		mem: memory,
 	}
 }
@@ -98,10 +89,12 @@ func (s *OutboundGroupSession) Pickle(key []byte) ([]byte, error) {
 	pickled := make([]byte, s.pickleLen())
 	r := C.olm_pickle_outbound_group_session(
 		(*C.OlmOutboundGroupSession)(s.int),
-		unsafe.Pointer(&key[0]),
+		unsafe.Pointer(unsafe.SliceData(key)),
 		C.size_t(len(key)),
-		unsafe.Pointer(&pickled[0]),
-		C.size_t(len(pickled)))
+		unsafe.Pointer(unsafe.SliceData(pickled)),
+		C.size_t(len(pickled)),
+	)
+	runtime.KeepAlive(key)
 	if r == errorVal() {
 		return nil, s.lastError()
 	}
@@ -114,10 +107,13 @@ func (s *OutboundGroupSession) Unpickle(pickled, key []byte) error {
 	}
 	r := C.olm_unpickle_outbound_group_session(
 		(*C.OlmOutboundGroupSession)(s.int),
-		unsafe.Pointer(&key[0]),
+		unsafe.Pointer(unsafe.SliceData(key)),
 		C.size_t(len(key)),
-		unsafe.Pointer(&pickled[0]),
-		C.size_t(len(pickled)))
+		unsafe.Pointer(unsafe.SliceData(pickled)),
+		C.size_t(len(pickled)),
+	)
+	runtime.KeepAlive(pickled)
+	runtime.KeepAlive(key)
 	if r == errorVal() {
 		return s.lastError()
 	}
@@ -192,10 +188,12 @@ func (s *OutboundGroupSession) Encrypt(plaintext []byte) ([]byte, error) {
 	message := make([]byte, s.encryptMsgLen(len(plaintext)))
 	r := C.olm_group_encrypt(
 		(*C.OlmOutboundGroupSession)(s.int),
-		(*C.uint8_t)(&plaintext[0]),
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(plaintext))),
 		C.size_t(len(plaintext)),
-		(*C.uint8_t)(&message[0]),
-		C.size_t(len(message)))
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(message))),
+		C.size_t(len(message)),
+	)
+	runtime.KeepAlive(plaintext)
 	if r == errorVal() {
 		return nil, s.lastError()
 	}
@@ -212,8 +210,9 @@ func (s *OutboundGroupSession) ID() id.SessionID {
 	sessionID := make([]byte, s.sessionIdLen())
 	r := C.olm_outbound_group_session_id(
 		(*C.OlmOutboundGroupSession)(s.int),
-		(*C.uint8_t)(&sessionID[0]),
-		C.size_t(len(sessionID)))
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(sessionID))),
+		C.size_t(len(sessionID)),
+	)
 	if r == errorVal() {
 		panic(s.lastError())
 	}
@@ -236,8 +235,9 @@ func (s *OutboundGroupSession) Key() string {
 	sessionKey := make([]byte, s.sessionKeyLen())
 	r := C.olm_outbound_group_session_key(
 		(*C.OlmOutboundGroupSession)(s.int),
-		(*C.uint8_t)(&sessionKey[0]),
-		C.size_t(len(sessionKey)))
+		(*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(sessionKey))),
+		C.size_t(len(sessionKey)),
+	)
 	if r == errorVal() {
 		panic(s.lastError())
 	}

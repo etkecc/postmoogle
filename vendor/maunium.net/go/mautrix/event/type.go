@@ -108,11 +108,12 @@ func (et *Type) IsCustom() bool {
 
 func (et *Type) GuessClass() TypeClass {
 	switch et.Type {
-	case StateAliases.Type, StateCanonicalAlias.Type, StateCreate.Type, StateJoinRules.Type, StateMember.Type,
+	case StateAliases.Type, StateCanonicalAlias.Type, StateCreate.Type, StateJoinRules.Type, StateMember.Type, StateThirdPartyInvite.Type,
 		StatePowerLevels.Type, StateRoomName.Type, StateRoomAvatar.Type, StateServerACL.Type, StateTopic.Type,
 		StatePinnedEvents.Type, StateTombstone.Type, StateEncryption.Type, StateBridge.Type, StateHalfShotBridge.Type,
 		StateSpaceParent.Type, StateSpaceChild.Type, StatePolicyRoom.Type, StatePolicyServer.Type, StatePolicyUser.Type,
-		StateInsertionMarker.Type, StateElementFunctionalMembers.Type, StateBeeperRoomFeatures.Type:
+		StateElementFunctionalMembers.Type, StateBeeperRoomFeatures.Type, StateBeeperDisappearingTimer.Type,
+		StateBotCommands.Type:
 		return StateEventType
 	case EphemeralEventReceipt.Type, EphemeralEventTyping.Type, EphemeralEventPresence.Type:
 		return EphemeralEventType
@@ -177,6 +178,7 @@ var (
 	StateHistoryVisibility = Type{"m.room.history_visibility", StateEventType}
 	StateGuestAccess       = Type{"m.room.guest_access", StateEventType}
 	StateMember            = Type{"m.room.member", StateEventType}
+	StateThirdPartyInvite  = Type{"m.room.third_party_invite", StateEventType}
 	StatePowerLevels       = Type{"m.room.power_levels", StateEventType}
 	StateRoomName          = Type{"m.room.name", StateEventType}
 	StateTopic             = Type{"m.room.topic", StateEventType}
@@ -200,11 +202,10 @@ var (
 	StateUnstablePolicyServer = Type{"org.matrix.mjolnir.rule.server", StateEventType}
 	StateUnstablePolicyUser   = Type{"org.matrix.mjolnir.rule.user", StateEventType}
 
-	// Deprecated: MSC2716 has been abandoned
-	StateInsertionMarker = Type{"org.matrix.msc2716.marker", StateEventType}
-
 	StateElementFunctionalMembers = Type{"io.element.functional_members", StateEventType}
 	StateBeeperRoomFeatures       = Type{"com.beeper.room_features", StateEventType}
+	StateBeeperDisappearingTimer  = Type{"com.beeper.disappearing_timer", StateEventType}
+	StateBotCommands              = Type{"org.matrix.msc4332.commands", StateEventType}
 )
 
 // Message events
@@ -238,6 +239,7 @@ var (
 
 	EventUnstablePollStart    = Type{Type: "org.matrix.msc3381.poll.start", Class: MessageEventType}
 	EventUnstablePollResponse = Type{Type: "org.matrix.msc3381.poll.response", Class: MessageEventType}
+	EventUnstablePollEnd      = Type{Type: "org.matrix.msc3381.poll.end", Class: MessageEventType}
 )
 
 // Ephemeral events

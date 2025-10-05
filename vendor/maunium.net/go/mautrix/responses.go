@@ -221,14 +221,14 @@ type RespMutualRooms struct {
 type RespRoomSummary struct {
 	PublicRoomInfo
 
-	Membership     event.Membership  `json:"membership,omitempty"`
-	RoomVersion    event.RoomVersion `json:"room_version,omitempty"`
-	Encryption     id.Algorithm      `json:"encryption,omitempty"`
-	AllowedRoomIDs []id.RoomID       `json:"allowed_room_ids,omitempty"`
+	Membership     event.Membership `json:"membership,omitempty"`
+	RoomVersion    id.RoomVersion   `json:"room_version,omitempty"`
+	Encryption     id.Algorithm     `json:"encryption,omitempty"`
+	AllowedRoomIDs []id.RoomID      `json:"allowed_room_ids,omitempty"`
 
-	UnstableRoomVersion    event.RoomVersion `json:"im.nheko.summary.room_version,omitempty"`
-	UnstableRoomVersionOld event.RoomVersion `json:"im.nheko.summary.version,omitempty"`
-	UnstableEncryption     id.Algorithm      `json:"im.nheko.summary.encryption,omitempty"`
+	UnstableRoomVersion    id.RoomVersion `json:"im.nheko.summary.room_version,omitempty"`
+	UnstableRoomVersionOld id.RoomVersion `json:"im.nheko.summary.version,omitempty"`
+	UnstableEncryption     id.Algorithm   `json:"im.nheko.summary.encryption,omitempty"`
 }
 
 // RespRegisterAvailable is the JSON response for https://spec.matrix.org/v1.4/client-server-api/#get_matrixclientv3registeravailable
@@ -397,7 +397,7 @@ type BeeperInboxPreviewEvent struct {
 type SyncJoinedRoom struct {
 	Summary     LazyLoadSummary `json:"summary"`
 	State       SyncEventsList  `json:"state"`
-	StateAfter  *SyncEventsList `json:"org.matrix.msc4222.state_after,omitempty"`
+	StateAfter  *SyncEventsList `json:"state_after,omitempty"`
 	Timeline    SyncTimeline    `json:"timeline"`
 	Ephemeral   SyncEventsList  `json:"ephemeral"`
 	AccountData SyncEventsList  `json:"account_data"`
@@ -488,30 +488,19 @@ type RespDeviceInfo struct {
 	LastSeenTS  int64       `json:"last_seen_ts"`
 }
 
-// Deprecated: MSC2716 was abandoned
-type RespBatchSend struct {
-	StateEventIDs []id.EventID `json:"state_event_ids"`
-	EventIDs      []id.EventID `json:"event_ids"`
-
-	InsertionEventID     id.EventID `json:"insertion_event_id"`
-	BatchEventID         id.EventID `json:"batch_event_id"`
-	BaseInsertionEventID id.EventID `json:"base_insertion_event_id"`
-
-	NextBatchID id.BatchID `json:"next_batch_id"`
-}
-
 type RespBeeperBatchSend struct {
 	EventIDs []id.EventID `json:"event_ids"`
 }
 
 // RespCapabilities is the JSON response for https://spec.matrix.org/v1.3/client-server-api/#get_matrixclientv3capabilities
 type RespCapabilities struct {
-	RoomVersions    *CapRoomVersions `json:"m.room_versions,omitempty"`
-	ChangePassword  *CapBooleanTrue  `json:"m.change_password,omitempty"`
-	SetDisplayname  *CapBooleanTrue  `json:"m.set_displayname,omitempty"`
-	SetAvatarURL    *CapBooleanTrue  `json:"m.set_avatar_url,omitempty"`
-	ThreePIDChanges *CapBooleanTrue  `json:"m.3pid_changes,omitempty"`
-	GetLoginToken   *CapBooleanTrue  `json:"m.get_login_token,omitempty"`
+	RoomVersions              *CapRoomVersions              `json:"m.room_versions,omitempty"`
+	ChangePassword            *CapBooleanTrue               `json:"m.change_password,omitempty"`
+	SetDisplayname            *CapBooleanTrue               `json:"m.set_displayname,omitempty"`
+	SetAvatarURL              *CapBooleanTrue               `json:"m.set_avatar_url,omitempty"`
+	ThreePIDChanges           *CapBooleanTrue               `json:"m.3pid_changes,omitempty"`
+	GetLoginToken             *CapBooleanTrue               `json:"m.get_login_token,omitempty"`
+	UnstableAccountModeration *CapUnstableAccountModeration `json:"uk.timedout.msc4323,omitempty"`
 
 	Custom map[string]interface{} `json:"-"`
 }
@@ -620,6 +609,11 @@ func (vers *CapRoomVersions) IsAvailable(version string) bool {
 	return available
 }
 
+type CapUnstableAccountModeration struct {
+	Suspend bool `json:"suspend"`
+	Lock    bool `json:"lock"`
+}
+
 type RespPublicRooms struct {
 	Chunk                  []*PublicRoomInfo `json:"chunk"`
 	NextBatch              string            `json:"next_batch,omitempty"`
@@ -648,12 +642,7 @@ type RespHierarchy struct {
 
 type ChildRoomsChunk struct {
 	PublicRoomInfo
-	ChildrenState []StrippedStateWithTime `json:"children_state"`
-}
-
-type StrippedStateWithTime struct {
-	event.StrippedState
-	Timestamp jsontime.UnixMilli `json:"origin_server_ts"`
+	ChildrenState []*event.Event `json:"children_state"`
 }
 
 type RespAppservicePing struct {
@@ -715,4 +704,14 @@ type RespGetRelations struct {
 	NextBatch      string         `json:"next_batch,omitempty"`
 	PrevBatch      string         `json:"prev_batch,omitempty"`
 	RecursionDepth int            `json:"recursion_depth,omitempty"`
+}
+
+// RespSuspended is the response body for https://github.com/matrix-org/matrix-spec-proposals/pull/4323
+type RespSuspended struct {
+	Suspended bool `json:"suspended"`
+}
+
+// RespLocked is the response body for https://github.com/matrix-org/matrix-spec-proposals/pull/4323
+type RespLocked struct {
+	Locked bool `json:"locked"`
 }

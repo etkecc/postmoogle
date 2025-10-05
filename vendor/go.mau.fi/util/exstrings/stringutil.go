@@ -16,6 +16,8 @@ import (
 // UnsafeBytes returns a byte slice that points to the same memory as the input string.
 //
 // The returned byte slice must not be modified.
+//
+// See [go.mau.fi/util/exbytes.UnsafeString] for the reverse operation.
 func UnsafeBytes(str string) []byte {
 	return unsafe.Slice(unsafe.StringData(str), len(str))
 }
@@ -52,6 +54,32 @@ func LongestSequenceOf(a string, b rune) int {
 		}
 	}
 	return maxCount
+}
+
+// PrefixByteRunLength returns the number of the given byte at the start of a string.
+func PrefixByteRunLength(s string, b byte) int {
+	count := 0
+	for ; count < len(s) && s[count] == b; count++ {
+	}
+	return count
+}
+
+// CollapseSpaces replaces all runs of multiple spaces (\x20) in a string with a single space.
+func CollapseSpaces(s string) string {
+	doubleSpaceIdx := strings.Index(s, "  ")
+	if doubleSpaceIdx < 0 {
+		return s
+	}
+	var buf strings.Builder
+	buf.Grow(len(s))
+	for doubleSpaceIdx >= 0 {
+		buf.WriteString(s[:doubleSpaceIdx+1])
+		spaceCount := PrefixByteRunLength(s[doubleSpaceIdx+2:], ' ') + 2
+		s = s[doubleSpaceIdx+spaceCount:]
+		doubleSpaceIdx = strings.Index(s, "  ")
+	}
+	buf.WriteString(s)
+	return buf.String()
 }
 
 // LongestSequenceOfFunc returns the length of the longest contiguous sequence of runes in a string.

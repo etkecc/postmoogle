@@ -38,7 +38,7 @@ func NewPlainAuthServer(ctx context.Context, bot matrixbot, conn *smtp.Conn, aut
 func (a *PlainAuthServer) Next(response []byte) (challenge []byte, done bool, err error) {
 	if a.done {
 		err = sasl.ErrUnexpectedClientResponse
-		return
+		return challenge, done, err
 	}
 	// No initial response, send an empty challenge
 	if response == nil {
@@ -51,7 +51,7 @@ func (a *PlainAuthServer) Next(response []byte) (challenge []byte, done bool, er
 	if len(parts) != 3 {
 		a.bot.BanAuth(a.ctx, a.conn.Conn().RemoteAddr())
 		err = errors.New("sasl: invalid response. Don't bother me anymore, kupo")
-		return
+		return challenge, done, err
 	}
 
 	identity := string(parts[0])
@@ -60,5 +60,5 @@ func (a *PlainAuthServer) Next(response []byte) (challenge []byte, done bool, er
 
 	err = a.authenticate(identity, username, password)
 	done = true
-	return
+	return challenge, done, err
 }

@@ -26,7 +26,8 @@ func IsNetworkError(err error) bool {
 			errno == syscall.ETIMEDOUT ||
 			errno == syscall.ECONNREFUSED ||
 			errno == syscall.EHOSTDOWN ||
-			errno == syscall.EHOSTUNREACH
+			errno == syscall.EHOSTUNREACH ||
+			errno == syscall.EPIPE
 	} else if netError := net.Error(nil); errors.As(err, &netError) {
 		return true
 	} else if errors.As(err, &http2.StreamError{}) {

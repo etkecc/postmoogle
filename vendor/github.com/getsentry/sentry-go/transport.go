@@ -262,17 +262,6 @@ func getRequestFromEvent(ctx context.Context, event *Event, dsn *Dsn) (r *http.R
 	)
 }
 
-func categoryFor(eventType string) ratelimit.Category {
-	switch eventType {
-	case "":
-		return ratelimit.CategoryError
-	case transactionType:
-		return ratelimit.CategoryTransaction
-	default:
-		return ratelimit.Category(eventType)
-	}
-}
-
 // ================================
 // HTTPTransport
 // ================================
@@ -303,7 +292,8 @@ type HTTPTransport struct {
 	// current in-flight items and starts a new batch for subsequent events.
 	buffer chan batch
 
-	start sync.Once
+	startOnce sync.Once
+	closeOnce sync.Once
 
 	// Size of the transport buffer. Defaults to 30.
 	BufferSize int
@@ -364,7 +354,7 @@ func (t *HTTPTransport) Configure(options ClientOptions) {
 		}
 	}
 
-	t.start.Do(func() {
+	t.startOnce.Do(func() {
 		go t.worker()
 	})
 }
@@ -380,7 +370,7 @@ func (t *HTTPTransport) SendEventWithContext(ctx context.Context, event *Event) 
 		return
 	}
 
-	category := categoryFor(event.Type)
+	category := event.toCategory()
 
 	if t.disabled(category) {
 		return
@@ -440,11 +430,9 @@ func (t *HTTPTransport) SendEventWithContext(ctx context.Context, event *Event) 
 // have the SDK send events over the network synchronously, configure it to use
 // the HTTPSyncTransport in the call to Init.
 func (t *HTTPTransport) Flush(timeout time.Duration) bool {
-	timeoutCh := make(chan struct{})
-	time.AfterFunc(timeout, func() {
-		close(timeoutCh)
-	})
-	return t.flushInternal(timeoutCh)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return t.FlushWithContext(ctx)
 }
 
 // FlushWithContext works like Flush, but it accepts a context.Context instead of a timeout.
@@ -506,7 +494,9 @@ fail:
 // Close should be called after Flush and before terminating the program
 // otherwise some events may be lost.
 func (t *HTTPTransport) Close() {
-	close(t.done)
+	t.closeOnce.Do(func() {
+		close(t.done)
+	})
 }
 
 func (t *HTTPTransport) worker() {
@@ -652,7 +642,7 @@ func (t *HTTPSyncTransport) SendEventWithContext(ctx context.Context, event *Eve
 		return
 	}
 
-	if t.disabled(categoryFor(event.Type)) {
+	if t.disabled(event.toCategory()) {
 		return
 	}
 

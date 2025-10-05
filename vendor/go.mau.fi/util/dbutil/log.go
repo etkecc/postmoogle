@@ -115,6 +115,7 @@ func (z zeroLogger) QueryTiming(ctx context.Context, method, query string, args 
 	if duration >= 1*time.Second {
 		evt := log.Warn().
 			Float64("duration_seconds", duration.Seconds()).
+			AnErr("result_error", err).
 			Str("method", method).
 			Str("query", query)
 		if z.Caller {

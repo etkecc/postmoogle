@@ -7,19 +7,23 @@
 package goolm
 
 import (
-	// Need to import these subpackages to ensure they are registered
-	_ "maunium.net/go/mautrix/crypto/goolm/account"
-	_ "maunium.net/go/mautrix/crypto/goolm/pk"
-	_ "maunium.net/go/mautrix/crypto/goolm/session"
-
+	"maunium.net/go/mautrix/crypto/goolm/account"
+	"maunium.net/go/mautrix/crypto/goolm/pk"
+	"maunium.net/go/mautrix/crypto/goolm/session"
 	"maunium.net/go/mautrix/crypto/olm"
 )
 
-func init() {
+func Register() {
+	olm.Driver = "goolm"
+
 	olm.GetVersion = func() (major, minor, patch uint8) {
 		return 3, 2, 15
 	}
 	olm.SetPickleKeyImpl = func(key []byte) {
 		panic("gob and json encoding is deprecated and not supported with goolm")
 	}
+
+	account.Register()
+	pk.Register()
+	session.Register()
 }

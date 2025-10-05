@@ -61,6 +61,24 @@ type Server struct {
 	// Should be used only if backend supports it.
 	EnableRRVS bool
 
+	// Advertise DELIVERBY (RFC 2852) capability.
+	// Should be used only if backend supports it.
+	EnableDELIVERBY bool
+	// The minimum time, with seconds precision, that a client
+	// may specify in the BY argument with return mode.
+	// A zero value indicates no set minimum.
+	// Only use if DELIVERBY is enabled.
+	MinimumDeliverByTime time.Duration
+
+	// Advertise MT-PRIORITY (RFC 6710) capability.
+	// Should only be used if backend supports it.
+	EnableMTPRIORITY bool
+	// The priority profile mapping as defined
+	// in RFC 6710 section 10.2.
+	//
+	// Default value of NONE to advertise no specific profile.
+	MtPriorityProfile PriorityProfile
+
 	// The server backend.
 	Backend Backend
 

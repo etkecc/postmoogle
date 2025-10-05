@@ -2,10 +2,11 @@ package renderer
 
 import (
 	"fmt"
-	"github.com/olekukonko/ll"
 	"html"
 	"io"
 	"strings"
+
+	"github.com/olekukonko/ll"
 
 	"github.com/olekukonko/tablewriter/tw"
 )
@@ -138,6 +139,7 @@ func NewSVG(configs ...SVGConfig) *SVG {
 		allVisualLineData: make([][][]string, 3),
 		allVisualLineCtx:  make([][]tw.Formatting, 3),
 		vMergeTrack:       make(map[int]int),
+		logger:            ll.New("svg"),
 	}
 	for i := 0; i < 3; i++ {
 		r.allVisualLineData[i] = make([][]string, 0)
@@ -511,10 +513,7 @@ func (s *SVG) renderVisualLine(visualLineData []string, ctx tw.Formatting, posit
 			}
 			s.dataRowCounter++
 		} else {
-			parentDataRowStripeIndex := s.dataRowCounter - 1
-			if parentDataRowStripeIndex < 0 {
-				parentDataRowStripeIndex = 0
-			}
+			parentDataRowStripeIndex := max(s.dataRowCounter-1, 0)
 			if s.config.RowAltBG != tw.Empty && parentDataRowStripeIndex%2 != 0 {
 				bgColor = s.config.RowAltBG
 			} else {
@@ -622,9 +621,10 @@ func (s *SVG) renderVisualLine(visualLineData []string, ctx tw.Formatting, posit
 			}
 		}
 		textX := currentX + s.config.Padding
-		if cellTextAnchor == "middle" {
+		switch cellTextAnchor {
+		case "middle":
 			textX = currentX + s.config.Padding + (rectWidth-2*s.config.Padding)/2.0
-		} else if cellTextAnchor == "end" {
+		case "end":
 			textX = currentX + rectWidth - s.config.Padding
 		}
 		textY := s.currentY + rectHeight/2.0
@@ -685,7 +685,7 @@ func (s *SVG) Start(w io.Writer) error {
 func (s *SVG) debug(format string, a ...interface{}) {
 	if s.config.Debug {
 		msg := fmt.Sprintf(format, a...)
-		s.trace = append(s.trace, fmt.Sprintf("[SVG] %s", msg))
+		s.trace = append(s.trace, "[SVG] "+msg)
 	}
 }
 

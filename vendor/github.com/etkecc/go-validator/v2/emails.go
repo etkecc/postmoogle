@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/mail"
@@ -9,7 +11,6 @@ import (
 
 	"blitiri.com.ar/go/spf"
 	"github.com/etkecc/go-trysmtp"
-	"golang.org/x/net/context"
 )
 
 var (
@@ -22,15 +23,23 @@ var (
 // Email checks if email is valid
 // returnPath and optionalSenderIP are optional fields
 func (v *V) Email(email, returnPath string, optionalSenderIP ...net.IP) bool {
+	return v.EmailWithError(email, returnPath, optionalSenderIP...) == nil
+}
+
+// EmailWithError checks if email is valid and returns an error if not
+func (v *V) EmailWithError(email, returnPath string, optionalSenderIP ...net.IP) error {
 	// edge case: email may be optional
 	if email == "" {
-		return !v.cfg.Email.Enforce
+		if v.cfg.Email.Enforce {
+			return errors.New("email is required")
+		}
+		return nil
 	}
 
 	address, err := mail.ParseAddress(email)
 	if err != nil {
 		v.cfg.Log("email %s invalid, reason: %v", email, err)
-		return false
+		return err
 	}
 	if returnPath != "" {
 		rpAddress, err := mail.ParseAddress(returnPath)
@@ -46,7 +55,7 @@ func (v *V) Email(email, returnPath string, optionalSenderIP ...net.IP) bool {
 	return v.emailChecks(email, returnPath, optionalSenderIP...)
 }
 
-func (v *V) emailChecks(email, returnPath string, optionalSenderIP ...net.IP) bool {
+func (v *V) emailChecks(email, returnPath string, optionalSenderIP ...net.IP) error {
 	maxChecks := 4
 	var senderIP net.IP
 	if len(optionalSenderIP) > 0 {
@@ -67,10 +76,10 @@ func (v *V) emailChecks(email, returnPath string, optionalSenderIP ...net.IP) bo
 		err := <-errchan
 		if err != nil {
 			v.cfg.Log("email %q is invalid, reason: %v", email, err)
-			return false
+			return err
 		}
 		if checks >= maxChecks {
-			return true
+			return nil
 		}
 	}
 }

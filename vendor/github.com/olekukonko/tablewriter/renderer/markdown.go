@@ -1,9 +1,11 @@
 package renderer
 
 import (
-	"github.com/olekukonko/ll"
 	"io"
 	"strings"
+
+	"github.com/olekukonko/ll"
+	"github.com/olekukonko/tablewriter/pkg/twwidth"
 
 	"github.com/olekukonko/tablewriter/tw"
 )
@@ -35,7 +37,7 @@ func NewMarkdown(configs ...tw.Rendition) *Markdown {
 	if len(configs) > 0 {
 		cfg = mergeMarkdownConfig(cfg, configs[0])
 	}
-	return &Markdown{config: cfg}
+	return &Markdown{config: cfg, logger: ll.New("markdown")}
 }
 
 // mergeMarkdownConfig combines user-provided config with Markdown defaults, enforcing Markdown-specific settings.
@@ -94,7 +96,6 @@ func (m *Markdown) Row(row []string, ctx tw.Formatting) {
 	m.resolveAlignment(ctx)
 	m.logger.Debugf("Rendering row with data=%v, widths=%v, previous=%v, current=%v, next=%v", row, ctx.Row.Widths, ctx.Row.Previous, ctx.Row.Current, ctx.Row.Next)
 	m.renderMarkdownLine(row, ctx, false)
-
 }
 
 // Footer renders the Markdown table footer.
@@ -154,10 +155,10 @@ func (m *Markdown) resolveAlignment(ctx tw.Formatting) tw.Alignment {
 
 // formatCell formats a Markdown cell's content with padding and alignment, ensuring at least 3 characters wide.
 func (m *Markdown) formatCell(content string, width int, align tw.Align, padding tw.Padding) string {
-	//if m.config.Settings.TrimWhitespace.Enabled() {
+	// if m.config.Settings.TrimWhitespace.Enabled() {
 	//	content = strings.TrimSpace(content)
 	//}
-	contentVisualWidth := tw.DisplayWidth(content)
+	contentVisualWidth := twwidth.Width(content)
 
 	// Use specified padding characters or default to spaces
 	padLeftChar := padding.Left
@@ -170,16 +171,13 @@ func (m *Markdown) formatCell(content string, width int, align tw.Align, padding
 	}
 
 	// Calculate padding widths
-	padLeftCharWidth := tw.DisplayWidth(padLeftChar)
-	padRightCharWidth := tw.DisplayWidth(padRightChar)
+	padLeftCharWidth := twwidth.Width(padLeftChar)
+	padRightCharWidth := twwidth.Width(padRightChar)
 	minWidth := tw.Max(3, contentVisualWidth+padLeftCharWidth+padRightCharWidth)
 	targetWidth := tw.Max(width, minWidth)
 
 	// Calculate padding
-	totalPaddingNeeded := targetWidth - contentVisualWidth
-	if totalPaddingNeeded < 0 {
-		totalPaddingNeeded = 0
-	}
+	totalPaddingNeeded := max(targetWidth-contentVisualWidth, 0)
 
 	var leftPadStr, rightPadStr string
 	switch align {
@@ -212,26 +210,27 @@ func (m *Markdown) formatCell(content string, width int, align tw.Align, padding
 	result := leftPadStr + content + rightPadStr
 
 	// Adjust width if needed
-	finalWidth := tw.DisplayWidth(result)
+	finalWidth := twwidth.Width(result)
 	if finalWidth != targetWidth {
 		m.logger.Debugf("Markdown formatCell MISMATCH: content='%s', target_w=%d, paddingL='%s', paddingR='%s', align=%s -> result='%s', result_w=%d",
 			content, targetWidth, padding.Left, padding.Right, align, result, finalWidth)
 		adjNeeded := targetWidth - finalWidth
 		if adjNeeded > 0 {
 			adjStr := strings.Repeat(tw.Space, adjNeeded)
-			if align == tw.AlignRight {
+			switch align {
+			case tw.AlignRight:
 				result = adjStr + result
-			} else if align == tw.AlignCenter {
+			case tw.AlignCenter:
 				leftAdj := adjNeeded / 2
 				rightAdj := adjNeeded - leftAdj
 				result = strings.Repeat(tw.Space, leftAdj) + result + strings.Repeat(tw.Space, rightAdj)
-			} else {
+			default:
 				result += adjStr
 			}
 		} else {
-			result = tw.TruncateString(result, targetWidth)
+			result = twwidth.Truncate(result, targetWidth)
 		}
-		m.logger.Debugf("Markdown formatCell Corrected: target_w=%d, result='%s', new_w=%d", targetWidth, result, tw.DisplayWidth(result))
+		m.logger.Debugf("Markdown formatCell Corrected: target_w=%d, result='%s', new_w=%d", targetWidth, result, twwidth.Width(result))
 	}
 
 	m.logger.Debugf("Markdown formatCell: content='%s', width=%d, align=%s, paddingL='%s', paddingR='%s' -> '%s' (target %d)",
@@ -262,11 +261,11 @@ func (m *Markdown) formatSeparator(width int, align tw.Align) string {
 	}
 
 	result := sb.String()
-	currentLen := tw.DisplayWidth(result)
+	currentLen := twwidth.Width(result)
 	if currentLen < targetWidth {
 		result += strings.Repeat("-", targetWidth-currentLen)
 	} else if currentLen > targetWidth {
-		result = tw.TruncateString(result, targetWidth)
+		result = twwidth.Truncate(result, targetWidth)
 	}
 
 	m.logger.Debugf("Markdown formatSeparator: width=%d, align=%s -> '%s'", width, align, result)
@@ -314,7 +313,7 @@ func (m *Markdown) renderMarkdownLine(line []string, ctx tw.Formatting, isHeader
 	output.WriteString(prefix)
 
 	colIndex := 0
-	separatorWidth := tw.DisplayWidth(separator)
+	separatorWidth := twwidth.Width(separator)
 
 	for colIndex < numCols {
 		cellCtx, ok := ctx.Row.Current[colIndex]
@@ -345,10 +344,7 @@ func (m *Markdown) renderMarkdownLine(line []string, ctx tw.Formatting, isHeader
 			span = cellCtx.Merge.Horizontal.Span
 			totalWidth := 0
 			for k := 0; k < span && colIndex+k < numCols; k++ {
-				colWidth := ctx.NormalizedWidths.Get(colIndex + k)
-				if colWidth < 0 {
-					colWidth = 0
-				}
+				colWidth := max(ctx.NormalizedWidths.Get(colIndex+k), 0)
 				totalWidth += colWidth
 				if k > 0 && separatorWidth > 0 {
 					totalWidth += separatorWidth
@@ -387,17 +383,18 @@ func (m *Markdown) renderMarkdownLine(line []string, ctx tw.Formatting, isHeader
 				}
 				// For rows, use the header's alignment if specified
 				rowAlign := align
-				if headerCellCtx, headerOK := ctx.Row.Previous[colIndex]; headerOK && isHeaderSep == false {
+				if headerCellCtx, headerOK := ctx.Row.Previous[colIndex]; headerOK && !isHeaderSep {
 					if headerCellCtx.Align != tw.AlignNone && headerCellCtx.Align != tw.Empty {
 						rowAlign = headerCellCtx.Align
 					}
 				}
 				if rowAlign == tw.AlignNone || rowAlign == tw.Empty {
-					if ctx.Row.Position == tw.Header {
+					switch ctx.Row.Position {
+					case tw.Header:
 						rowAlign = tw.AlignCenter
-					} else if ctx.Row.Position == tw.Footer {
+					case tw.Footer:
 						rowAlign = tw.AlignRight
-					} else {
+					default:
 						rowAlign = tw.AlignLeft
 					}
 					m.logger.Debugf("renderMarkdownLine: Col %d using default align '%s'", colIndex, rowAlign)

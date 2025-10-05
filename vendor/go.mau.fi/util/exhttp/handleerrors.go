@@ -6,21 +6,29 @@
 
 package exhttp
 
-import "net/http"
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"net"
+	"net/http"
+)
 
-type ErrorBodyGenerators struct {
-	NotFound         func() []byte
-	MethodNotAllowed func() []byte
+type ErrorBodies struct {
+	NotFound         json.RawMessage
+	MethodNotAllowed json.RawMessage
 }
 
-func HandleErrors(next http.Handler, gen ErrorBodyGenerators) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(&bodyOverrider{
-			ResponseWriter:                      w,
-			statusNotFoundBodyGenerator:         gen.NotFound,
-			statusMethodNotAllowedBodyGenerator: gen.MethodNotAllowed,
-		}, r)
-	})
+func HandleErrors(gen ErrorBodies) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(&bodyOverrider{
+				ResponseWriter:             w,
+				statusNotFoundBody:         gen.NotFound,
+				statusMethodNotAllowedBody: gen.MethodNotAllowed,
+			}, r)
+		})
+	}
 }
 
 type bodyOverrider struct {
@@ -28,17 +36,26 @@ type bodyOverrider struct {
 
 	code     int
 	override bool
+	written  bool
 
-	statusNotFoundBodyGenerator         func() []byte
-	statusMethodNotAllowedBodyGenerator func() []byte
+	hijacked bool
+
+	statusNotFoundBody         json.RawMessage
+	statusMethodNotAllowedBody json.RawMessage
 }
 
-var _ http.ResponseWriter = (*bodyOverrider)(nil)
+var (
+	_ http.ResponseWriter = (*bodyOverrider)(nil)
+	_ http.Flusher        = (*bodyOverrider)(nil)
+	_ http.Hijacker       = (*bodyOverrider)(nil)
+)
 
 func (b *bodyOverrider) WriteHeader(code int) {
-	if b.Header().Get("Content-Type") == "text/plain; charset=utf-8" {
-		b.Header().Set("Content-Type", "application/json")
+	if !b.hijacked &&
+		b.Header().Get("Content-Type") == "text/plain; charset=utf-8" &&
+		(code == http.StatusNotFound || code == http.StatusMethodNotAllowed) {
 
+		b.Header().Set("Content-Type", "application/json")
 		b.override = true
 	}
 
@@ -46,19 +63,36 @@ func (b *bodyOverrider) WriteHeader(code int) {
 	b.ResponseWriter.WriteHeader(code)
 }
 
-func (b *bodyOverrider) Write(body []byte) (int, error) {
+func (b *bodyOverrider) Write(body []byte) (n int, err error) {
 	if b.override {
-		switch b.code {
-		case http.StatusNotFound:
-			if b.statusNotFoundBodyGenerator != nil {
-				body = b.statusNotFoundBodyGenerator()
-			}
-		case http.StatusMethodNotAllowed:
-			if b.statusMethodNotAllowedBodyGenerator != nil {
-				body = b.statusMethodNotAllowedBodyGenerator()
+		n = len(body)
+		if !b.written {
+			switch b.code {
+			case http.StatusNotFound:
+				_, err = b.ResponseWriter.Write(b.statusNotFoundBody)
+			case http.StatusMethodNotAllowed:
+				_, err = b.ResponseWriter.Write(b.statusMethodNotAllowedBody)
 			}
 		}
+		b.written = true
+		return
 	}
 
 	return b.ResponseWriter.Write(body)
+}
+
+func (b *bodyOverrider) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hijacker, ok := b.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("HandleErrors: %T does not implement http.Hijacker", b.ResponseWriter)
+	}
+	b.hijacked = true
+	return hijacker.Hijack()
+}
+
+func (b *bodyOverrider) Flush() {
+	flusher, ok := b.ResponseWriter.(http.Flusher)
+	if ok {
+		flusher.Flush()
+	}
 }

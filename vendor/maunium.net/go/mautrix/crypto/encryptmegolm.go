@@ -25,7 +25,6 @@ import (
 )
 
 var (
-	AlreadyShared  = errors.New("group session already shared")
 	NoGroupSession = errors.New("no group session created")
 )
 
@@ -42,7 +41,7 @@ func getRawJSON[T any](content json.RawMessage, path ...string) *T {
 	return &result
 }
 
-func getRelatesTo(content any) *event.RelatesTo {
+func getRelatesTo(content any, plaintext json.RawMessage) *event.RelatesTo {
 	contentJSON, ok := content.(json.RawMessage)
 	if ok {
 		return getRawJSON[event.RelatesTo](contentJSON, "m.relates_to")
@@ -55,7 +54,7 @@ func getRelatesTo(content any) *event.RelatesTo {
 	if ok {
 		return relatable.OptionalGetRelatesTo()
 	}
-	return nil
+	return getRawJSON[event.RelatesTo](plaintext, "content", "m.relates_to")
 }
 
 func getMentions(content any) *event.Mentions {
@@ -159,7 +158,7 @@ func (mach *OlmMachine) EncryptMegolmEventWithStateKey(ctx context.Context, room
 		Algorithm:        id.AlgorithmMegolmV1,
 		SessionID:        session.ID(),
 		MegolmCiphertext: ciphertext,
-		RelatesTo:        getRelatesTo(content),
+		RelatesTo:        getRelatesTo(content, plaintext),
 
 		// These are deprecated
 		SenderKey: mach.account.IdentityKey(),
@@ -209,7 +208,8 @@ func (mach *OlmMachine) ShareGroupSession(ctx context.Context, roomID id.RoomID,
 	if err != nil {
 		return fmt.Errorf("failed to get previous outbound group session: %w", err)
 	} else if session != nil && session.Shared && !session.Expired() {
-		return AlreadyShared
+		mach.machOrContextLog(ctx).Debug().Stringer("room_id", roomID).Msg("Not re-sharing group session, already shared")
+		return nil
 	}
 	log := mach.machOrContextLog(ctx).With().
 		Str("room_id", roomID.String()).
@@ -233,7 +233,7 @@ func (mach *OlmMachine) ShareGroupSession(ctx context.Context, roomID id.RoomID,
 	var fetchKeysForUsers []id.UserID
 
 	for _, userID := range users {
-		log := log.With().Str("target_user_id", userID.String()).Logger()
+		log := log.With().Stringer("target_user_id", userID).Logger()
 		devices, err := mach.CryptoStore.GetDevices(ctx, userID)
 		if err != nil {
 			log.Err(err).Msg("Failed to get devices of user")
@@ -305,7 +305,7 @@ func (mach *OlmMachine) ShareGroupSession(ctx context.Context, roomID id.RoomID,
 			toDeviceWithheld.Messages[userID] = withheld
 		}
 
-		log := log.With().Str("target_user_id", userID.String()).Logger()
+		log := log.With().Stringer("target_user_id", userID).Logger()
 		log.Trace().Msg("Trying to find olm session to encrypt megolm session for user (post-fetch retry)")
 		mach.findOlmSessionsForUser(ctx, session, userID, devices, output, withheld, nil)
 		log.Debug().

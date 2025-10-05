@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 
@@ -12,15 +13,22 @@ var domainRegex = regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-
 
 // Domain checks if domain is valid
 func (v *V) Domain(domain string) bool {
+	return v.DomainWithError(domain) == nil
+}
+
+func (v *V) DomainWithError(domain string) error {
 	if domain == "" {
-		return !v.cfg.Domain.Enforce
+		if v.cfg.Domain.Enforce {
+			return errors.New("domain is required")
+		}
+		return nil
 	}
 
 	if !v.DomainString(domain) {
-		return false
+		return errors.New("domain is invalid")
 	}
 
-	return true
+	return nil
 }
 
 // DomainString checks if domain string / value is valid using string checks like length and regexp

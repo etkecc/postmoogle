@@ -138,8 +138,12 @@ type MessageEventContent struct {
 
 	BeeperLinkPreviews []*BeeperLinkPreview `json:"com.beeper.linkpreviews,omitempty"`
 
+	BeeperDisappearingTimer *BeeperDisappearingTimer `json:"com.beeper.disappearing_timer,omitempty"`
+
 	MSC1767Audio *MSC1767Audio `json:"org.matrix.msc1767.audio,omitempty"`
 	MSC3245Voice *MSC3245Voice `json:"org.matrix.msc3245.voice,omitempty"`
+
+	MSC4332BotCommand *BotCommandInput `json:"org.matrix.msc4332.command,omitempty"`
 }
 
 func (content *MessageEventContent) GetCapMsgType() CapabilityMsgType {
@@ -271,6 +275,18 @@ func (m *Mentions) Has(userID id.UserID) bool {
 	return m != nil && slices.Contains(m.UserIDs, userID)
 }
 
+func (m *Mentions) Merge(other *Mentions) *Mentions {
+	if m == nil {
+		return other
+	} else if other == nil {
+		return m
+	}
+	return &Mentions{
+		UserIDs: slices.Concat(m.UserIDs, other.UserIDs),
+		Room:    m.Room || other.Room,
+	}
+}
+
 type EncryptedFileInfo struct {
 	attachment.EncryptedFile
 	URL id.ContentURIString `json:"url"`
@@ -285,7 +301,8 @@ type FileInfo struct {
 	Blurhash     string
 	AnoaBlurhash string
 
-	MauGIF bool
+	MauGIF     bool
+	IsAnimated bool
 
 	Width    int
 	Height   int
@@ -302,7 +319,8 @@ type serializableFileInfo struct {
 	Blurhash     string `json:"blurhash,omitempty"`
 	AnoaBlurhash string `json:"xyz.amorgan.blurhash,omitempty"`
 
-	MauGIF bool `json:"fi.mau.gif,omitempty"`
+	MauGIF     bool `json:"fi.mau.gif,omitempty"`
+	IsAnimated bool `json:"is_animated,omitempty"`
 
 	Width    json.Number `json:"w,omitempty"`
 	Height   json.Number `json:"h,omitempty"`
@@ -320,7 +338,8 @@ func (sfi *serializableFileInfo) CopyFrom(fileInfo *FileInfo) *serializableFileI
 		ThumbnailInfo: (&serializableFileInfo{}).CopyFrom(fileInfo.ThumbnailInfo),
 		ThumbnailFile: fileInfo.ThumbnailFile,
 
-		MauGIF: fileInfo.MauGIF,
+		MauGIF:     fileInfo.MauGIF,
+		IsAnimated: fileInfo.IsAnimated,
 
 		Blurhash:     fileInfo.Blurhash,
 		AnoaBlurhash: fileInfo.AnoaBlurhash,
@@ -351,6 +370,7 @@ func (sfi *serializableFileInfo) CopyTo(fileInfo *FileInfo) {
 		ThumbnailURL:  sfi.ThumbnailURL,
 		ThumbnailFile: sfi.ThumbnailFile,
 		MauGIF:        sfi.MauGIF,
+		IsAnimated:    sfi.IsAnimated,
 		Blurhash:      sfi.Blurhash,
 		AnoaBlurhash:  sfi.AnoaBlurhash,
 	}

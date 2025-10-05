@@ -511,7 +511,9 @@ func (client *Client) RecoverWithContext(
 // call to Init.
 func (client *Client) Flush(timeout time.Duration) bool {
 	if client.batchLogger != nil {
-		client.batchLogger.Flush()
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		return client.FlushWithContext(ctx)
 	}
 	return client.Transport.Flush(timeout)
 }
@@ -530,7 +532,7 @@ func (client *Client) Flush(timeout time.Duration) bool {
 
 func (client *Client) FlushWithContext(ctx context.Context) bool {
 	if client.batchLogger != nil {
-		client.batchLogger.Flush()
+		client.batchLogger.Flush(ctx.Done())
 	}
 	return client.Transport.FlushWithContext(ctx)
 }

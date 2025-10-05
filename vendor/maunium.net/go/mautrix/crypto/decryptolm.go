@@ -17,7 +17,10 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"go.mau.fi/util/exerrors"
+	"go.mau.fi/util/ptr"
 
+	"maunium.net/go/mautrix/crypto/goolm/account"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
 )
@@ -169,6 +172,7 @@ func (mach *OlmMachine) tryDecryptOlmCiphertext(ctx context.Context, sender id.U
 		return nil, DecryptionFailedForNormalMessage
 	}
 
+	accountBackup, err := mach.account.Internal.Pickle([]byte("tmp"))
 	log.Trace().Msg("Trying to create inbound session")
 	endTimeTrace = mach.timeTrace(ctx, "creating inbound olm session", time.Second)
 	session, err := mach.createInboundSession(ctx, senderKey, ciphertext)
@@ -180,6 +184,7 @@ func (mach *OlmMachine) tryDecryptOlmCiphertext(ctx context.Context, sender id.U
 	log = log.With().Str("new_olm_session_id", session.ID().String()).Logger()
 	log.Debug().
 		Hex("ciphertext_hash", ciphertextHash[:]).
+		Hex("ciphertext_hash_repeat", ptr.Ptr(exerrors.Must(olmMessageHash(ciphertext)))[:]).
 		Str("olm_session_description", session.Describe()).
 		Msg("Created inbound olm session")
 	ctx = log.WithContext(ctx)
@@ -188,6 +193,19 @@ func (mach *OlmMachine) tryDecryptOlmCiphertext(ctx context.Context, sender id.U
 	plaintext, err = session.Decrypt(ciphertext, olmType)
 	endTimeTrace()
 	if err != nil {
+		log.Debug().
+			Hex("ciphertext_hash", ciphertextHash[:]).
+			Hex("ciphertext_hash_repeat", ptr.Ptr(exerrors.Must(olmMessageHash(ciphertext)))[:]).
+			Str("ciphertext", ciphertext).
+			Str("olm_session_description", session.Describe()).
+			Msg("DEBUG: Failed to decrypt prekey olm message with newly created session")
+		err2 := mach.goolmRetryHack(ctx, senderKey, ciphertext, accountBackup)
+		if err2 != nil {
+			log.Debug().Err(err2).Msg("Goolm confirmed decryption failure")
+		} else {
+			log.Warn().Msg("Goolm decryption was successful after libolm failure?")
+		}
+
 		go mach.unwedgeDevice(log, sender, senderKey)
 		return nil, fmt.Errorf("failed to decrypt olm event with session created from prekey message: %w", err)
 	}
@@ -203,6 +221,23 @@ func (mach *OlmMachine) tryDecryptOlmCiphertext(ctx context.Context, sender id.U
 		log.Warn().Err(err).Msg("Failed to update new olm session in crypto store after decrypting")
 	}
 	return plaintext, nil
+}
+
+func (mach *OlmMachine) goolmRetryHack(ctx context.Context, senderKey id.SenderKey, ciphertext string, accountBackup []byte) error {
+	acc, err := account.AccountFromPickled(accountBackup, []byte("tmp"))
+	if err != nil {
+		return fmt.Errorf("failed to unpickle olm account: %w", err)
+	}
+	sess, err := acc.NewInboundSessionFrom(&senderKey, ciphertext)
+	if err != nil {
+		return fmt.Errorf("failed to create inbound session: %w", err)
+	}
+	_, err = sess.Decrypt(ciphertext, id.OlmMsgTypePreKey)
+	if err != nil {
+		// This is the expected result if libolm failed
+		return fmt.Errorf("failed to decrypt with new session: %w", err)
+	}
+	return nil
 }
 
 const MaxOlmSessionsPerDevice = 5
@@ -263,6 +298,7 @@ func (mach *OlmMachine) tryDecryptOlmCiphertextWithExistingSession(
 		if err != nil {
 			log.Warn().Err(err).
 				Hex("ciphertext_hash", ciphertextHash[:]).
+				Hex("ciphertext_hash_repeat", ptr.Ptr(exerrors.Must(olmMessageHash(ciphertext)))[:]).
 				Str("session_description", session.Describe()).
 				Msg("Failed to decrypt olm message")
 			if olmType == id.OlmMsgTypePreKey {
@@ -306,7 +342,7 @@ const MinUnwedgeInterval = 1 * time.Hour
 
 func (mach *OlmMachine) unwedgeDevice(log zerolog.Logger, sender id.UserID, senderKey id.SenderKey) {
 	log = log.With().Str("action", "unwedge olm session").Logger()
-	ctx := log.WithContext(mach.BackgroundCtx)
+	ctx := log.WithContext(mach.backgroundCtx)
 	mach.recentlyUnwedgedLock.Lock()
 	prevUnwedge, ok := mach.recentlyUnwedged[senderKey]
 	delta := time.Now().Sub(prevUnwedge)
@@ -340,7 +376,10 @@ func (mach *OlmMachine) unwedgeDevice(log zerolog.Logger, sender id.UserID, send
 		return
 	}
 
-	log.Debug().Str("device_id", deviceIdentity.DeviceID.String()).Msg("Creating new Olm session")
+	log.Debug().
+		Time("last_created", lastCreatedAt).
+		Stringer("device_id", deviceIdentity.DeviceID).
+		Msg("Creating new Olm session")
 	mach.devicesToUnwedgeLock.Lock()
 	mach.devicesToUnwedge[senderKey] = true
 	mach.devicesToUnwedgeLock.Unlock()
