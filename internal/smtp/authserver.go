@@ -9,8 +9,73 @@ import (
 	"github.com/emersion/go-smtp"
 )
 
+const (
+	loginStateNotStarted = iota
+	loginStateUsername
+	loginStatePassword
+)
+
 // ensure that PlainAuthServer implements sasl.Server
-var _ sasl.Server = (*PlainAuthServer)(nil)
+var (
+	_ sasl.Server = (*PlainAuthServer)(nil)
+	_ sasl.Server = (*LoginAuthServer)(nil)
+)
+
+// LoginAuthServer is a server implementation of the LOGIN authentication mechanism.
+// It's a modified implementation of the go-sasl's original loginServer (MIT License),
+// removed from go-sasl in https://github.com/emersion/go-sasl/commit/b788ff22d5a6b3970cde181998f52658a475bffc
+// DO NOT USE IT, unless you have no other choice.
+type LoginAuthServer struct {
+	done         bool
+	state        int
+	ctx          context.Context //nolint:containedctx // that's per-request structure
+	bot          matrixbot
+	conn         *smtp.Conn
+	authenticate sasl.PlainAuthenticator // we use the same interface as PLAIN auth for simplicity
+	username     string
+	password     string
+}
+
+// NewLoginAuthServer creates a new LOGIN authentication server.
+func NewLoginAuthServer(ctx context.Context, bot matrixbot, conn *smtp.Conn, auth sasl.PlainAuthenticator) *LoginAuthServer {
+	return &LoginAuthServer{
+		ctx:          ctx,
+		bot:          bot,
+		conn:         conn,
+		authenticate: auth,
+		state:        loginStateNotStarted,
+	}
+}
+
+// Next processes the next step of the authentication.
+func (a *LoginAuthServer) Next(response []byte) (challenge []byte, done bool, err error) {
+	if a.done {
+		err = sasl.ErrUnexpectedClientResponse
+		return challenge, done, err
+	}
+
+	switch a.state {
+	case loginStateNotStarted:
+		a.state = loginStateUsername
+		return []byte("Username:"), false, nil
+
+	case loginStateUsername:
+		a.username = string(response)
+		a.state = loginStatePassword
+		return []byte("Password:"), false, nil
+
+	case loginStatePassword:
+		a.password = string(response)
+		a.done = true
+		err = a.authenticate("", a.username, a.password)
+		done = true
+		return challenge, done, err
+
+	default:
+		err = sasl.ErrUnexpectedClientResponse
+		return challenge, done, err
+	}
+}
 
 // PlainAuthServer is a server implementation of the PLAIN authentication mechanism.
 // It's a modified version of the original plainServer from https://github.com/emersion/go-sasl package (MIT License)
@@ -35,6 +100,7 @@ func NewPlainAuthServer(ctx context.Context, bot matrixbot, conn *smtp.Conn, aut
 	}
 }
 
+// Next processes the next step of the authentication.
 func (a *PlainAuthServer) Next(response []byte) (challenge []byte, done bool, err error) {
 	if a.done {
 		err = sasl.ErrUnexpectedClientResponse

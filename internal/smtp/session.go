@@ -48,20 +48,32 @@ type session struct {
 
 // AuthMechanisms returns the list of supported authentication mechanisms
 func (s *session) AuthMechanisms() []string {
-	return []string{sasl.Plain}
+	return []string{sasl.Plain, sasl.Login}
 }
 
 func (s *session) Auth(mech string) (sasl.Server, error) {
+	addr := s.conn.Conn().RemoteAddr()
 	if !slices.Contains(s.AuthMechanisms(), mech) {
-		addr := s.conn.Conn().RemoteAddr()
 		s.log.Info().Str("addr", addr.String()).Msg("banning due to invalid auth mechanism")
 		s.bot.BanAuth(s.ctx, addr)
 		return nil, ErrBanned
 	}
 
-	return NewPlainAuthServer(s.ctx, s.bot, s.conn, func(identity, username, password string) error {
-		return s.authPlain(identity, username, password)
-	}), nil
+	switch mech {
+	case sasl.Login:
+		return NewLoginAuthServer(s.ctx, s.bot, s.conn, func(identity, username, password string) error {
+			return s.authPlain(identity, username, password)
+		}), nil
+
+	case sasl.Plain:
+		return NewPlainAuthServer(s.ctx, s.bot, s.conn, func(identity, username, password string) error {
+			return s.authPlain(identity, username, password)
+		}), nil
+	default:
+		s.log.Warn().Str("addr", addr.String()).Str("mech", mech).Msg("unsupported auth mechanism")
+		s.bot.BanAuth(s.ctx, addr)
+		return nil, ErrBanned
+	}
 }
 
 func (s *session) authPlain(_, username, password string) error {
