@@ -104,8 +104,13 @@ func (l *Linkpearl) SendFile(ctx context.Context, roomID id.RoomID, req *mautrix
 		return err
 	}
 	content := &event.MessageEventContent{
-		MsgType:   msgtype,
-		Body:      req.FileName,
+		MsgType:  msgtype,
+		Body:     req.FileName,
+		FileName: req.FileName,
+		Info: &event.FileInfo{
+			Size:     int(req.ContentLength),
+			MimeType: req.ContentType,
+		},
 		URL:       resp.ContentURI.CUString(),
 		RelatesTo: relation,
 	}
