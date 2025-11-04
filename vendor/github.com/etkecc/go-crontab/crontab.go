@@ -14,9 +14,10 @@ import (
 
 // Crontab struct representing cron table
 type Crontab struct {
-	ticker *time.Ticker
-	jobs   []*job
-	sync.RWMutex
+	mu       sync.RWMutex
+	ticker   *time.Ticker
+	jobs     []*job
+	paniclog func(any)
 }
 
 // job in cron table
@@ -27,8 +28,9 @@ type job struct {
 	month     map[int]struct{}
 	dayOfWeek map[int]struct{}
 
-	fn   interface{}
-	args []interface{}
+	fn       any
+	args     []any
+	paniclog func(any)
 	sync.RWMutex
 }
 
@@ -43,14 +45,17 @@ type tick struct {
 
 // New initializes and returns new cron table
 func New() *Crontab {
-	return new(time.Minute)
+	return newCrontab(time.Minute)
 }
 
-// new creates new crontab, arg provided for testing purpose
-func new(t time.Duration) *Crontab {
+// newCrontab creates newCrontab crontab, arg provided for testing purpose
+func newCrontab(t time.Duration) *Crontab {
 	c := &Crontab{
 		ticker: time.NewTicker(t),
 		jobs:   []*job{},
+		paniclog: func(r any) {
+			log.Println("Crontab error", r)
+		},
 	}
 
 	go func() {
@@ -71,21 +76,21 @@ func new(t time.Duration) *Crontab {
 // * fn is not function
 //
 // * Provided args don't match the number and/or the type of fn args
-func (c *Crontab) AddJob(schedule string, fn interface{}, args ...interface{}) error {
+func (c *Crontab) AddJob(schedule string, fn any, args ...any) error {
 	j, err := parseSchedule(schedule)
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if err != nil {
 		return err
 	}
 
 	if fn == nil || reflect.ValueOf(fn).Kind() != reflect.Func {
-		return fmt.Errorf("Cron job must be func()")
+		return errors.New("cron job must be func()")
 	}
 
 	fnType := reflect.TypeOf(fn)
 	if len(args) != fnType.NumIn() {
-		return fmt.Errorf("Number of func() params and number of provided params doesn't match")
+		return errors.New("number of func() params and number of provided params doesn't match")
 	}
 
 	for i := 0; i < fnType.NumIn(); i++ {
@@ -95,10 +100,10 @@ func (c *Crontab) AddJob(schedule string, fn interface{}, args ...interface{}) e
 
 		if t1 != t2 {
 			if t1.Kind() != reflect.Interface {
-				return fmt.Errorf("Param with index %d shold be `%s` not `%s`", i, t1, t2)
+				return fmt.Errorf("param with index %d shold be `%s` not `%s`", i, t1, t2)
 			}
 			if !t2.Implements(t1) {
-				return fmt.Errorf("Param with index %d of type `%s` doesn't implement interface `%s`", i, t2, t1)
+				return fmt.Errorf("param with index %d of type `%s` doesn't implement interface `%s`", i, t2, t1)
 			}
 		}
 	}
@@ -106,13 +111,14 @@ func (c *Crontab) AddJob(schedule string, fn interface{}, args ...interface{}) e
 	// all checked, add job to cron tab
 	j.fn = fn
 	j.args = args
+	j.paniclog = c.paniclog
 	c.jobs = append(c.jobs, j)
 	return nil
 }
 
 // MustAddJob is like AddJob but panics if there is an problem with job
 //
-// It simplifies initialization, since we usually add jobs at the beggining so you won't have to check for errors (it will panic when program starts).
+// It simplifies initialization, since we usually add jobs at the beginning so you won't have to check for errors (it will panic when program starts).
 // It is a similar aproach as go's std lib package `regexp` and `regexp.Compile()` `regexp.MustCompile()`
 // MustAddJob will panic if:
 //
@@ -121,31 +127,36 @@ func (c *Crontab) AddJob(schedule string, fn interface{}, args ...interface{}) e
 // * fn is not function
 //
 // * Provided args don't match the number and/or the type of fn args
-func (c *Crontab) MustAddJob(schedule string, fn interface{}, args ...interface{}) {
+func (c *Crontab) MustAddJob(schedule string, fn any, args ...any) {
 	if err := c.AddJob(schedule, fn, args...); err != nil {
 		panic(err)
 	}
 }
 
+// SetPanicLogger function to set custom panic logger
+func (c *Crontab) SetPanicLogger(f func(any)) {
+	c.paniclog = f
+}
+
 // Shutdown the cron table schedule
 //
 // Once stopped, it can't be restarted.
-// This function is pre-shuttdown helper for your app, there is no Start/Stop functionallity with crontab package.
+// This function is pre-shuttdown helper for your app, there is no Start/Stop functionality with crontab package.
 func (c *Crontab) Shutdown() {
 	c.ticker.Stop()
 }
 
 // Clear all jobs from cron table
 func (c *Crontab) Clear() {
-	c.Lock()
+	c.mu.Lock()
 	c.jobs = []*job{}
-	c.Unlock()
+	c.mu.Unlock()
 }
 
 // RunAll jobs in cron table, shcheduled or not
 func (c *Crontab) RunAll() {
-	c.RLock()
-	defer c.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	for _, j := range c.jobs {
 		go j.run()
 	}
@@ -154,8 +165,8 @@ func (c *Crontab) RunAll() {
 // RunScheduled jobs
 func (c *Crontab) runScheduled(t time.Time) {
 	tick := getTick(t)
-	c.RLock()
-	defer c.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	for _, j := range c.jobs {
 		if j.tick(tick) {
@@ -170,7 +181,7 @@ func (j *job) run() {
 	j.RLock()
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("Crontab error", r)
+			j.paniclog(r)
 		}
 	}()
 	v := reflect.ValueOf(j.fn)
@@ -224,7 +235,7 @@ func parseSchedule(s string) (*job, error) {
 	s = matchSpaces.ReplaceAllLiteralString(s, " ")
 	parts := strings.Split(s, " ")
 	if len(parts) != 5 {
-		return j, errors.New("Schedule string must have five components like * * * * *")
+		return j, errors.New("schedule string must have five components like * * * * *")
 	}
 
 	j.min, err = parsePart(parts[0], 0, 59)
@@ -267,34 +278,35 @@ func parseSchedule(s string) (*job, error) {
 }
 
 // parsePart parse individual schedule part from schedule string
-func parsePart(s string, min, max int) (map[int]struct{}, error) {
-
+//
+//nolint:gocognit // TODO: refactor
+func parsePart(s string, minimum, maximum int) (map[int]struct{}, error) {
 	r := make(map[int]struct{})
 
 	// wildcard pattern
 	if s == "*" {
-		for i := min; i <= max; i++ {
+		for i := minimum; i <= maximum; i++ {
 			r[i] = struct{}{}
 		}
 		return r, nil
 	}
 
 	// */2 1-59/5 pattern
-	if matches := matchN.FindStringSubmatch(s); matches != nil {
-		localMin := min
-		localMax := max
+	if matches := matchN.FindStringSubmatch(s); matches != nil { //nolint:nestif // TODO: refactor
+		localMin := minimum
+		localMax := maximum
 		if matches[1] != "" && matches[1] != "*" {
 			if rng := matchRange.FindStringSubmatch(matches[1]); rng != nil {
-				localMin, _ = strconv.Atoi(rng[1])
-				localMax, _ = strconv.Atoi(rng[2])
-				if localMin < min || localMax > max {
-					return nil, fmt.Errorf("Out of range for %s in %s. %s must be in range %d-%d", rng[1], s, rng[1], min, max)
+				localMin, _ = strconv.Atoi(rng[1]) //nolint:errcheck // checked below
+				localMax, _ = strconv.Atoi(rng[2]) //nolint:errcheck // checked below
+				if localMin < minimum || localMax > maximum {
+					return nil, fmt.Errorf("out of range for %s in %s. %s must be in range %d-%d", rng[1], s, rng[1], minimum, maximum)
 				}
 			} else {
-				return nil, fmt.Errorf("Unable to parse %s part in %s", matches[1], s)
+				return nil, fmt.Errorf("unable to parse %s part in %s", matches[1], s)
 			}
 		}
-		n, _ := strconv.Atoi(matches[2])
+		n, _ := strconv.Atoi(matches[2]) //nolint:errcheck // regexp ensures this is number
 		for i := localMin; i <= localMax; i += n {
 			r[i] = struct{}{}
 		}
@@ -305,26 +317,26 @@ func parsePart(s string, min, max int) (map[int]struct{}, error) {
 	parts := strings.Split(s, ",")
 	for _, x := range parts {
 		if rng := matchRange.FindStringSubmatch(x); rng != nil {
-			localMin, _ := strconv.Atoi(rng[1])
-			localMax, _ := strconv.Atoi(rng[2])
-			if localMin < min || localMax > max {
-				return nil, fmt.Errorf("Out of range for %s in %s. %s must be in range %d-%d", x, s, x, min, max)
+			localMin, _ := strconv.Atoi(rng[1]) //nolint:errcheck // checked below
+			localMax, _ := strconv.Atoi(rng[2]) //nolint:errcheck // checked below
+			if localMin < minimum || localMax > maximum {
+				return nil, fmt.Errorf("out of range for %s in %s. %s must be in range %d-%d", x, s, x, minimum, maximum)
 			}
 			for i := localMin; i <= localMax; i++ {
 				r[i] = struct{}{}
 			}
 		} else if i, err := strconv.Atoi(x); err == nil {
-			if i < min || i > max {
-				return nil, fmt.Errorf("Out of range for %d in %s. %d must be in range %d-%d", i, s, i, min, max)
+			if i < minimum || i > maximum {
+				return nil, fmt.Errorf("out of range for %d in %s. %d must be in range %d-%d", i, s, i, minimum, maximum)
 			}
 			r[i] = struct{}{}
 		} else {
-			return nil, fmt.Errorf("Unable to parse %s part in %s", x, s)
+			return nil, fmt.Errorf("unable to parse %s part in %s", x, s)
 		}
 	}
 
 	if len(r) == 0 {
-		return nil, fmt.Errorf("Unable to parse %s", s)
+		return nil, fmt.Errorf("unable to parse %s", s)
 	}
 
 	return r, nil
@@ -340,3 +352,5 @@ func getTick(t time.Time) tick {
 		dayOfWeek: int(t.Weekday()),
 	}
 }
+
+// vim: ft=go

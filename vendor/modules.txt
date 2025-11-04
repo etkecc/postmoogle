@@ -24,7 +24,10 @@ github.com/buger/jsonparser
 # github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a
 ## explicit
 github.com/cention-sany/utf7
-# github.com/clipperhouse/uax29/v2 v2.2.0
+# github.com/clipperhouse/stringish v0.1.1
+## explicit; go 1.18
+github.com/clipperhouse/stringish
+# github.com/clipperhouse/uax29/v2 v2.3.0
 ## explicit; go 1.18
 github.com/clipperhouse/uax29/v2/graphemes
 github.com/clipperhouse/uax29/v2/internal/iterators
@@ -40,6 +43,9 @@ github.com/emersion/go-sasl
 # github.com/emersion/go-smtp v0.24.0
 ## explicit; go 1.13
 github.com/emersion/go-smtp
+# github.com/etkecc/go-crontab v1.2.1
+## explicit; go 1.22
+github.com/etkecc/go-crontab
 # github.com/etkecc/go-env v1.2.1
 ## explicit; go 1.18
 github.com/etkecc/go-env
@@ -53,7 +59,7 @@ github.com/etkecc/go-healthchecks/v2
 # github.com/etkecc/go-kit v1.7.5
 ## explicit; go 1.22
 github.com/etkecc/go-kit
-# github.com/etkecc/go-linkpearl v0.0.0-20251009114554-5985fe44a189
+# github.com/etkecc/go-linkpearl v0.0.0-20251016112544-0d85fb3bccdc
 ## explicit; go 1.24.0
 github.com/etkecc/go-linkpearl
 # github.com/etkecc/go-mxidwc v1.0.1
@@ -75,7 +81,7 @@ github.com/fatih/color
 ## explicit; go 1.17
 github.com/fsnotify/fsnotify
 github.com/fsnotify/fsnotify/internal
-# github.com/gabriel-vasile/mimetype v1.4.10
+# github.com/gabriel-vasile/mimetype v1.4.11
 ## explicit; go 1.21
 github.com/gabriel-vasile/mimetype
 github.com/gabriel-vasile/mimetype/internal/charset
@@ -84,13 +90,16 @@ github.com/gabriel-vasile/mimetype/internal/json
 github.com/gabriel-vasile/mimetype/internal/magic
 github.com/gabriel-vasile/mimetype/internal/markup
 github.com/gabriel-vasile/mimetype/internal/scan
-# github.com/getsentry/sentry-go v0.35.3
-## explicit; go 1.22
+# github.com/getsentry/sentry-go v0.36.2
+## explicit; go 1.23
 github.com/getsentry/sentry-go
 github.com/getsentry/sentry-go/attribute
 github.com/getsentry/sentry-go/internal/debug
+github.com/getsentry/sentry-go/internal/debuglog
+github.com/getsentry/sentry-go/internal/http
 github.com/getsentry/sentry-go/internal/otel/baggage
 github.com/getsentry/sentry-go/internal/otel/baggage/internal/baggage
+github.com/getsentry/sentry-go/internal/protocol
 github.com/getsentry/sentry-go/internal/ratelimit
 # github.com/go-openapi/jsonpointer v0.19.5
 ## explicit; go 1.13
@@ -159,9 +168,6 @@ github.com/mcnijman/go-emailaddress
 # github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
 ## explicit
 github.com/mikesmitty/edkey
-# github.com/mileusna/crontab v1.2.0
-## explicit; go 1.14
-github.com/mileusna/crontab
 # github.com/ncruces/go-strftime v1.0.0
 ## explicit; go 1.17
 github.com/ncruces/go-strftime
@@ -171,7 +177,7 @@ github.com/olekukonko/cat
 # github.com/olekukonko/errors v1.1.0
 ## explicit; go 1.21
 github.com/olekukonko/errors
-# github.com/olekukonko/ll v0.1.1
+# github.com/olekukonko/ll v0.1.2
 ## explicit; go 1.21
 github.com/olekukonko/ll
 github.com/olekukonko/ll/lh
@@ -233,7 +239,7 @@ github.com/yuin/goldmark/renderer
 github.com/yuin/goldmark/renderer/html
 github.com/yuin/goldmark/text
 github.com/yuin/goldmark/util
-# go.mau.fi/util v0.9.1
+# go.mau.fi/util v0.9.2
 ## explicit; go 1.24.0
 go.mau.fi/util/base58
 go.mau.fi/util/confusable
@@ -243,6 +249,7 @@ go.mau.fi/util/exbytes
 go.mau.fi/util/exerrors
 go.mau.fi/util/exgjson
 go.mau.fi/util/exhttp
+go.mau.fi/util/exmaps
 go.mau.fi/util/exslices
 go.mau.fi/util/exstrings
 go.mau.fi/util/exsync
@@ -267,7 +274,7 @@ golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/exp v0.0.0-20251002181428-27f1f14c8bb9
+# golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
 ## explicit; go 1.24.0
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
@@ -312,7 +319,7 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/tools v0.37.0
+# golang.org/x/tools v0.38.0
 ## explicit; go 1.24.0
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/buildutil
@@ -321,7 +328,7 @@ golang.org/x/tools/go/loader
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
-# maunium.net/go/mautrix v0.25.1
+# maunium.net/go/mautrix v0.25.2
 ## explicit; go 1.24.0
 maunium.net/go/mautrix
 maunium.net/go/mautrix/crypto
@@ -389,7 +396,7 @@ modernc.org/mathutil
 # modernc.org/memory v1.11.0
 ## explicit; go 1.23.0
 modernc.org/memory
-# modernc.org/sqlite v1.39.0
-## explicit; go 1.23.0
+# modernc.org/sqlite v1.40.0
+## explicit; go 1.24.0
 modernc.org/sqlite
 modernc.org/sqlite/lib

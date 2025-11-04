@@ -7,28 +7,28 @@ require (
 	github.com/emersion/go-msgauth v0.7.0
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/emersion/go-smtp v0.24.0
+	github.com/etkecc/go-crontab v1.2.1
 	github.com/etkecc/go-env v1.2.1
 	github.com/etkecc/go-fswatcher v1.0.1
 	github.com/etkecc/go-healthchecks/v2 v2.2.2
 	github.com/etkecc/go-kit v1.7.5
-	github.com/etkecc/go-linkpearl v0.0.0-20251009114554-5985fe44a189
+	github.com/etkecc/go-linkpearl v0.0.0-20251016112544-0d85fb3bccdc
 	github.com/etkecc/go-mxidwc v1.0.1
 	github.com/etkecc/go-secgen v1.4.0
 	github.com/etkecc/go-validator/v2 v2.2.6
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/gabriel-vasile/mimetype v1.4.10
-	github.com/getsentry/sentry-go v0.35.3
+	github.com/gabriel-vasile/mimetype v1.4.11
+	github.com/getsentry/sentry-go v0.36.2
 	github.com/jhillyerd/enmime/v2 v2.2.0
 	github.com/kvannotten/mailstrip v0.0.0-20200711213611-0002f5c0467e
 	github.com/lib/pq v1.10.9
 	github.com/mcnijman/go-emailaddress v1.1.1
-	github.com/mileusna/crontab v1.2.0
 	github.com/raja/argon2pw v1.0.2-0.20210910183755-a391af63bd39
 	github.com/rs/zerolog v1.34.0
 	github.com/swaggo/swag v1.16.3
-	golang.org/x/exp v0.0.0-20251002181428-27f1f14c8bb9
-	maunium.net/go/mautrix v0.25.1
-	modernc.org/sqlite v1.39.0
+	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
+	maunium.net/go/mautrix v0.25.2
+	modernc.org/sqlite v1.40.0
 )
 
 require (
@@ -39,7 +39,8 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
-	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
+	github.com/clipperhouse/stringish v0.1.1 // indirect
+	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/etkecc/go-trysmtp v1.1.5 // indirect
 	github.com/fatih/color v1.18.0 // indirect
@@ -61,7 +62,7 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
 	github.com/olekukonko/errors v1.1.0 // indirect
-	github.com/olekukonko/ll v0.1.1 // indirect
+	github.com/olekukonko/ll v0.1.2 // indirect
 	github.com/olekukonko/tablewriter v1.1.0 // indirect
 	github.com/petermattis/goid v0.0.0-20250904145737-900bdf8bb490 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -73,12 +74,12 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect
-	go.mau.fi/util v0.9.1 // indirect
+	go.mau.fi/util v0.9.2 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
-	golang.org/x/tools v0.37.0 // indirect
+	golang.org/x/tools v0.38.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	modernc.org/libc v1.66.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

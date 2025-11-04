@@ -173,6 +173,9 @@ func (db *Database) filterSQLUpgrade(lines [][]byte) (string, error) {
 				}
 				if dialect == db.Dialect {
 					if uncomment {
+						if !bytes.HasPrefix(lines[i], []byte("--")) {
+							return "", fmt.Errorf("line %d isn't commented even though the dialect filter claimed it is (-- must be at beginning of line)", i+1)
+						}
 						output = append(output, bytes.TrimPrefix(lines[i], []byte("--")))
 					} else {
 						output = append(output, lines[i])

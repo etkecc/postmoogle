@@ -7,6 +7,7 @@
 package exsync
 
 import (
+	"iter"
 	"sync"
 )
 
@@ -133,4 +134,16 @@ func (s *Set[T]) AsList() []T {
 	}
 	s.l.RUnlock()
 	return list
+}
+
+func (s *Set[T]) Iter() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		s.l.RLock()
+		defer s.l.RUnlock()
+		for item := range s.m {
+			if !yield(item) {
+				return
+			}
+		}
+	}
 }

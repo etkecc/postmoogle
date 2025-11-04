@@ -11,11 +11,11 @@ import (
 	"time"
 
 	zlogsentry "github.com/archdx/zerolog-sentry"
+	"github.com/etkecc/go-crontab"
 	"github.com/etkecc/go-healthchecks/v2"
 	"github.com/etkecc/go-linkpearl"
 	"github.com/getsentry/sentry-go"
 	_ "github.com/lib/pq"
-	"github.com/mileusna/crontab"
 	"github.com/rs/zerolog"
 	_ "modernc.org/sqlite"
 
@@ -157,6 +157,9 @@ func initSMTP(cfg *config.Config) {
 
 func initCron() {
 	cron = crontab.New()
+	cron.SetPanicLogger(func(r any) {
+		log.Error().Any("recover", r).Msg("cronjob panicked")
+	})
 
 	err := cron.AddJob("* * * * *", q.Process)
 	if err != nil {

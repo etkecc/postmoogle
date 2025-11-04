@@ -6,7 +6,11 @@
 
 package exsync
 
-import "sync"
+import (
+	"iter"
+	"maps"
+	"sync"
+)
 
 // Map is a simple map with a built-in mutex.
 type Map[Key comparable, Value any] struct {
@@ -15,8 +19,13 @@ type Map[Key comparable, Value any] struct {
 }
 
 func NewMap[Key comparable, Value any]() *Map[Key, Value] {
+	return NewMapWithData(make(map[Key]Value))
+}
+
+// NewMapWithData constructs a Map with the given map as data. Accessing the map directly after passing it here is not safe.
+func NewMapWithData[Key comparable, Value any](data map[Key]Value) *Map[Key, Value] {
 	return &Map[Key, Value]{
-		data: make(map[Key]Value),
+		data: data,
 	}
 }
 
@@ -77,18 +86,50 @@ func (sm *Map[Key, Value]) GetOrSet(key Key, value Value) (actual Value, wasGet 
 	return
 }
 
+// Clear removes all items from the map.
+func (sm *Map[Key, Value]) Clear() {
+	sm.lock.Lock()
+	clear(sm.data)
+	sm.lock.Unlock()
+}
+
+// Len returns the number of items in the map.
+func (sm *Map[Key, Value]) Len() int {
+	sm.lock.RLock()
+	l := len(sm.data)
+	sm.lock.RUnlock()
+	return l
+}
+
+// CopyFrom copies all key/value pairs from the given map into this map, overriding any existing keys.
+// Keys present in this map but not in the given map are not removed.
+func (sm *Map[Key, Value]) CopyFrom(other map[Key]Value) {
+	sm.lock.Lock()
+	maps.Copy(sm.data, other)
+	sm.lock.Unlock()
+}
+
 // Clone returns a copy of the map.
 func (sm *Map[Key, Value]) Clone() *Map[Key, Value] {
-	return &Map[Key, Value]{data: sm.CopyData()}
+	return NewMapWithData(sm.CopyData())
 }
 
 // CopyData returns a copy of the data in the map as a normal (non-atomic) map.
 func (sm *Map[Key, Value]) CopyData() map[Key]Value {
 	sm.lock.RLock()
-	copied := make(map[Key]Value, len(sm.data))
-	for key, value := range sm.data {
-		copied[key] = value
-	}
+	copied := maps.Clone(sm.data)
 	sm.lock.RUnlock()
 	return copied
+}
+
+func (sm *Map[Key, Value]) Iter() iter.Seq2[Key, Value] {
+	return func(yield func(Key, Value) bool) {
+		sm.lock.RLock()
+		defer sm.lock.RUnlock()
+		for k, v := range sm.data {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
 }

@@ -114,5 +114,6 @@
 // whole file is limited to that dialect.
 //
 // If the filter ends with `(lines commented)`, then ALL lines chosen
-// by the filter will be uncommented.
+// by the filter will be uncommented. The `--` comment prefix must be
+// at the beginning of the line with no whitespace ahead of it.
 package dbutil

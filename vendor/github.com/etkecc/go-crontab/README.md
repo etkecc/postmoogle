@@ -1,10 +1,16 @@
-# Go/Golang package for Crontab tickers [![GoDoc](https://godoc.org/github.com/mileusna/crontab?status.svg)](https://godoc.org/github.com/mileusna/crontab)
+# Go/Golang package for Crontab tickers [![GoDoc](https://godoc.org/github.com/etkecc/go-crontab?status.svg)](https://godoc.org/github.com/etkecc/go-crontab)
 
 This package provides crontab tickers to golang apps, supporting crontab-like syntax like `* * * * *` or `*/2 * * * *` etc.
 
+This is a fork of [github.com/mileusna/crontab](https://github.com/mileusna/crontab) with small modifications:
+
+- added `SetPanicLogger` function to set custom panic logger function used in panic recovery
+- added linter and refactored code to pass linter checks
+- changed minimal go version to 1.22
+
 ## Installation <a id="installation"></a>
 ```
-go get github.com/mileusna/crontab
+go get github.com/etkecc/go-crontab
 ```
 
 ## Example<a id="example"></a>
@@ -16,7 +22,7 @@ import (
     "fmt"
     "log"
 
-    "github.com/mileusna/crontab"
+    "github.com/etkecc/go-crontab"
 )
 
 func main() {

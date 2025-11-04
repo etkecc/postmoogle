@@ -323,6 +323,7 @@ const (
 	LogBodyContextKey contextKey = iota
 	LogRequestIDContextKey
 	MaxAttemptsContextKey
+	SyncTokenContextKey
 )
 
 func (cli *Client) RequestStart(req *http.Request) {
@@ -418,8 +419,18 @@ var requestID int32
 var logSensitiveContent = os.Getenv("MAUTRIX_LOG_SENSITIVE_CONTENT") == "yes"
 
 func (params *FullRequest) compileRequest(ctx context.Context) (*http.Request, error) {
+	reqID := atomic.AddInt32(&requestID, 1)
+	logger := zerolog.Ctx(ctx)
+	if logger.GetLevel() == zerolog.Disabled || logger == zerolog.DefaultContextLogger {
+		logger = params.Logger
+	}
+	ctx = logger.With().
+		Int32("req_id", reqID).
+		Logger().WithContext(ctx)
+
 	var logBody any
-	reqBody := params.RequestBody
+	var reqBody io.Reader
+	var reqLen int64
 	if params.RequestJSON != nil {
 		jsonStr, err := json.Marshal(params.RequestJSON)
 		if err != nil {
@@ -434,12 +445,22 @@ func (params *FullRequest) compileRequest(ctx context.Context) (*http.Request, e
 			logBody = params.RequestJSON
 		}
 		reqBody = bytes.NewReader(jsonStr)
+		reqLen = int64(len(jsonStr))
 	} else if params.RequestBytes != nil {
 		logBody = fmt.Sprintf("<%d bytes>", len(params.RequestBytes))
 		reqBody = bytes.NewReader(params.RequestBytes)
-		params.RequestLength = int64(len(params.RequestBytes))
-	} else if params.RequestLength > 0 && params.RequestBody != nil {
-		logBody = fmt.Sprintf("<%d bytes>", params.RequestLength)
+		reqLen = int64(len(params.RequestBytes))
+	} else if params.RequestBody != nil {
+		logBody = "<unknown stream of bytes>"
+		reqLen = -1
+		if params.RequestLength > 0 {
+			logBody = fmt.Sprintf("<%d bytes>", params.RequestLength)
+			reqLen = params.RequestLength
+		} else if params.RequestLength == 0 {
+			zerolog.Ctx(ctx).Warn().
+				Msg("RequestBody passed without specifying request length")
+		}
+		reqBody = params.RequestBody
 		if rsc, ok := params.RequestBody.(io.ReadSeekCloser); ok {
 			// Prevent HTTP from closing the request body, it might be needed for retries
 			reqBody = nopCloseSeeker{rsc}
@@ -448,15 +469,8 @@ func (params *FullRequest) compileRequest(ctx context.Context) (*http.Request, e
 		params.RequestJSON = struct{}{}
 		logBody = params.RequestJSON
 		reqBody = bytes.NewReader([]byte("{}"))
+		reqLen = 2
 	}
-	reqID := atomic.AddInt32(&requestID, 1)
-	logger := zerolog.Ctx(ctx)
-	if logger.GetLevel() == zerolog.Disabled || logger == zerolog.DefaultContextLogger {
-		logger = params.Logger
-	}
-	ctx = logger.With().
-		Int32("req_id", reqID).
-		Logger().WithContext(ctx)
 	ctx = context.WithValue(ctx, LogBodyContextKey, logBody)
 	ctx = context.WithValue(ctx, LogRequestIDContextKey, int(reqID))
 	req, err := http.NewRequestWithContext(ctx, params.Method, params.URL, reqBody)
@@ -472,9 +486,7 @@ func (params *FullRequest) compileRequest(ctx context.Context) (*http.Request, e
 	if params.RequestJSON != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if params.RequestLength > 0 && params.RequestBody != nil {
-		req.ContentLength = params.RequestLength
-	}
+	req.ContentLength = reqLen
 	return req, nil
 }
 
@@ -1055,6 +1067,15 @@ func (cli *Client) GetProfile(ctx context.Context, mxid id.UserID) (resp *RespUs
 	return
 }
 
+func (cli *Client) SearchUserDirectory(ctx context.Context, query string, limit int) (resp *RespSearchUserDirectory, err error) {
+	urlPath := cli.BuildClientURL("v3", "user_directory", "search")
+	_, err = cli.MakeRequest(ctx, http.MethodPost, urlPath, &ReqSearchUserDirectory{
+		SearchTerm: query,
+		Limit:      limit,
+	}, &resp)
+	return
+}
+
 func (cli *Client) GetMutualRooms(ctx context.Context, otherUserID id.UserID, extras ...ReqMutualRooms) (resp *RespMutualRooms, err error) {
 	if cli.SpecVersions != nil && !cli.SpecVersions.Supports(FeatureMutualRooms) {
 		err = fmt.Errorf("server does not support fetching mutual rooms")
@@ -1105,6 +1126,9 @@ func (cli *Client) SetDisplayName(ctx context.Context, displayName string) (err 
 // SetProfileField sets an arbitrary profile field. See https://spec.matrix.org/v1.16/client-server-api/#put_matrixclientv3profileuseridkeyname
 func (cli *Client) SetProfileField(ctx context.Context, key string, value any) (err error) {
 	urlPath := cli.BuildClientURL("v3", "profile", cli.UserID, key)
+	if key != "displayname" && key != "avatar_url" && !cli.SpecVersions.Supports(FeatureArbitraryProfileFields) && cli.SpecVersions.Supports(FeatureUnstableProfileFields) {
+		urlPath = cli.BuildClientURL("unstable", "uk.tcpip.msc4133", "profile", cli.UserID, key)
+	}
 	_, err = cli.MakeRequest(ctx, http.MethodPut, urlPath, map[string]any{
 		key: value,
 	}, nil)
@@ -1114,6 +1138,9 @@ func (cli *Client) SetProfileField(ctx context.Context, key string, value any) (
 // DeleteProfileField deletes an arbitrary profile field. See https://spec.matrix.org/v1.16/client-server-api/#put_matrixclientv3profileuseridkeyname
 func (cli *Client) DeleteProfileField(ctx context.Context, key string) (err error) {
 	urlPath := cli.BuildClientURL("v3", "profile", cli.UserID, key)
+	if key != "displayname" && key != "avatar_url" && !cli.SpecVersions.Supports(FeatureArbitraryProfileFields) && cli.SpecVersions.Supports(FeatureUnstableProfileFields) {
+		urlPath = cli.BuildClientURL("unstable", "uk.tcpip.msc4133", "profile", cli.UserID, key)
+	}
 	_, err = cli.MakeRequest(ctx, http.MethodDelete, urlPath, nil, nil)
 	return
 }
@@ -1121,6 +1148,9 @@ func (cli *Client) DeleteProfileField(ctx context.Context, key string) (err erro
 // GetProfileField gets an arbitrary profile field and parses the response into the given struct. See https://spec.matrix.org/unstable/client-server-api/#get_matrixclientv3profileuseridkeyname
 func (cli *Client) GetProfileField(ctx context.Context, userID id.UserID, key string, into any) (err error) {
 	urlPath := cli.BuildClientURL("v3", "profile", userID, key)
+	if key != "displayname" && key != "avatar_url" && !cli.SpecVersions.Supports(FeatureArbitraryProfileFields) && cli.SpecVersions.Supports(FeatureUnstableProfileFields) {
+		urlPath = cli.BuildClientURL("unstable", "uk.tcpip.msc4133", "profile", cli.UserID, key)
+	}
 	_, err = cli.MakeRequest(ctx, http.MethodGet, urlPath, nil, into)
 	return
 }
@@ -1280,6 +1310,32 @@ func (cli *Client) SendMassagedStateEvent(ctx context.Context, roomID id.RoomID,
 	if err == nil && cli.StateStore != nil {
 		cli.updateStoreWithOutgoingEvent(ctx, roomID, eventType, stateKey, contentJSON)
 	}
+	return
+}
+
+func (cli *Client) DelayedEvents(ctx context.Context, req *ReqDelayedEvents) (resp *RespDelayedEvents, err error) {
+	query := map[string]string{}
+	if req.DelayID != "" {
+		query["delay_id"] = string(req.DelayID)
+	}
+	if req.Status != "" {
+		query["status"] = string(req.Status)
+	}
+	if req.NextBatch != "" {
+		query["next_batch"] = req.NextBatch
+	}
+
+	urlPath := cli.BuildURLWithQuery(ClientURLPath{"unstable", "org.matrix.msc4140", "delayed_events"}, query)
+	_, err = cli.MakeRequest(ctx, http.MethodGet, urlPath, req, &resp)
+
+	// Migration: merge old keys with new ones
+	if resp != nil {
+		resp.Scheduled = append(resp.Scheduled, resp.DelayedEvents...)
+		resp.DelayedEvents = nil
+		resp.Finalised = append(resp.Finalised, resp.FinalisedEvents...)
+		resp.FinalisedEvents = nil
+	}
+
 	return
 }
 
