@@ -9,6 +9,7 @@ package exstrings
 import (
 	"crypto/sha256"
 	"crypto/subtle"
+	"slices"
 	"strings"
 	"unsafe"
 )
@@ -101,4 +102,21 @@ func LongestSequenceOfFunc(a string, fn func(b rune) int) int {
 		}
 	}
 	return maxCount
+}
+
+func LongestCommonPrefix(in []string) string {
+	if len(in) == 0 {
+		return ""
+	} else if len(in) == 1 {
+		return in[0]
+	}
+
+	minStr := slices.Min(in)
+	maxStr := slices.Max(in)
+	for i := 0; i < len(minStr) && i < len(maxStr); i++ {
+		if minStr[i] != maxStr[i] {
+			return minStr[:i]
+		}
+	}
+	return minStr
 }

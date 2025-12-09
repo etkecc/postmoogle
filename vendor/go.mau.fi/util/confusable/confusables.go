@@ -54,6 +54,8 @@ func GetReplacement(input rune) string {
 		return "ة"
 	case 248:
 		return "o̸"
+	case 254:
+		return "p"
 	case 272:
 		return "D̵"
 	case 273:
@@ -84,6 +86,8 @@ func GetReplacement(input rune) string {
 		return "ɲ"
 	case 329:
 		return "'n"
+	case 331:
+		return "n̩"
 	case 336:
 		return "Ö"
 	case 338:
@@ -121,7 +125,7 @@ func GetReplacement(input rune) string {
 	case 401:
 		return "F̦"
 	case 402:
-		return "f̦"
+		return "f"
 	case 403:
 		return "G'"
 	case 406:
@@ -177,7 +181,7 @@ func GetReplacement(input rune) string {
 	case 445:
 		return "s"
 	case 447:
-		return "þ"
+		return "p"
 	case 448:
 		return "l"
 	case 449:
@@ -336,6 +340,8 @@ func GetReplacement(input rune) string {
 		return "ȝ"
 	case 660:
 		return "?"
+	case 661:
+		return "\ua7ce"
 	case 672:
 		return "q̔"
 	case 675:
@@ -351,7 +357,7 @@ func GetReplacement(input rune) string {
 	case 680:
 		return "tɕ"
 	case 681:
-		return "fŋ"
+		return "fn̩"
 	case 682:
 		return "ls"
 	case 683:
@@ -434,6 +440,8 @@ func GetReplacement(input rune) string {
 		return "̓"
 	case 791:
 		return "ِ"
+	case 794:
+		return "\u1ae9"
 	case 800:
 		return "̱"
 	case 801:
@@ -460,6 +468,8 @@ func GetReplacement(input rune) string {
 		return "̨"
 	case 839:
 		return "̳"
+	case 840:
+		return "\U00010efa"
 	case 855:
 		return "͐"
 	case 856:
@@ -572,10 +582,18 @@ func GetReplacement(input rune) string {
 		return "ς"
 	case 988:
 		return "F"
+	case 996:
+		return "Ч"
+	case 997:
+		return "ч"
 	case 1000:
 		return "2"
 	case 1001:
 		return "ƨ"
+	case 1004:
+		return "6"
+	case 1005:
+		return "o"
 	case 1008:
 		return "ĸ"
 	case 1009:
@@ -591,7 +609,7 @@ func GetReplacement(input rune) string {
 	case 1015:
 		return "Þ"
 	case 1016:
-		return "þ"
+		return "p"
 	case 1017:
 		return "C"
 	case 1018:
@@ -688,6 +706,8 @@ func GetReplacement(input rune) string {
 		return "ɸ"
 	case 1093:
 		return "x"
+	case 1096:
+		return "w"
 	case 1098:
 		return "ˉb"
 	case 1099:
@@ -708,6 +728,8 @@ func GetReplacement(input rune) string {
 		return "h̵"
 	case 1117:
 		return "й"
+	case 1119:
+		return "u̩"
 	case 1121:
 		return "w"
 	case 1122:
@@ -815,7 +837,7 @@ func GetReplacement(input rune) string {
 	case 1230:
 		return "ʍ̦"
 	case 1231:
-		return "i"
+		return "l"
 	case 1236:
 		return "AE"
 	case 1237:
@@ -880,6 +902,8 @@ func GetReplacement(input rune) string {
 		return "ẟ"
 	case 1392:
 		return "h"
+	case 1394:
+		return "n̩"
 	case 1397:
 		return "ȷ"
 	case 1400:
@@ -892,12 +916,14 @@ func GetReplacement(input rune) string {
 		return "u"
 	case 1409:
 		return "g"
+	case 1410:
+		return "i"
 	case 1412:
 		return "f"
 	case 1413:
 		return "o"
 	case 1415:
-		return "եւ"
+		return "եi"
 	case 1417:
 		return ":"
 	case 1436:
@@ -1052,6 +1078,8 @@ func GetReplacement(input rune) string {
 		return "ىٴ"
 	case 1657:
 		return "ىؕ"
+	case 1658:
+		return "ت"
 	case 1662:
 		return "ىۛ"
 	case 1665:
@@ -1063,6 +1091,8 @@ func GetReplacement(input rune) string {
 	case 1675:
 		return "ڊؕ"
 	case 1678:
+		return "دۛ"
+	case 1679:
 		return "دۛ"
 	case 1681:
 		return "رؕ"
@@ -1161,9 +1191,9 @@ func GetReplacement(input rune) string {
 	case 1785:
 		return "٩"
 	case 1789:
-		return "ء͈"
+		return "ء\U00010efa"
 	case 1790:
-		return "م͈"
+		return "م\U00010efa"
 	case 1791:
 		return "ô"
 	case 1793:
@@ -1184,6 +1214,8 @@ func GetReplacement(input rune) string {
 		return "́"
 	case 1873:
 		return "بۛ"
+	case 1874:
+		return "ىۛ"
 	case 1878:
 		return "ى̆"
 	case 1890:
@@ -1222,6 +1254,8 @@ func GetReplacement(input rune) string {
 		return "'"
 	case 2042:
 		return "_"
+	case 2191:
+		return "ى̊"
 	case 2209:
 		return "بٔ"
 	case 2212:
@@ -1256,6 +1290,16 @@ func GetReplacement(input rune) string {
 		return "ڡ"
 	case 2237:
 		return "ى"
+	case 2238:
+		return "ىۛ̆"
+	case 2239:
+		return "ت̆"
+	case 2240:
+		return "ىؕ̆"
+	case 2241:
+		return "چ̆"
+	case 2242:
+		return "ك̆"
 	case 2277:
 		return "ٌ"
 	case 2280:
@@ -1299,33 +1343,57 @@ func GetReplacement(input rune) string {
 	case 2312:
 		return "र्इ"
 	case 2317:
-		return "एॅ"
+		return "ए̆"
 	case 2318:
 		return "एॆ"
 	case 2320:
-		return "एे"
+		return "ए\U00011b64"
 	case 2321:
-		return "अॉ"
+		return "अा̆"
 	case 2322:
 		return "अाॆ"
 	case 2323:
-		return "अाे"
+		return "अा\U00011b64"
 	case 2324:
 		return "अाै"
+	case 2363:
+		return "ाऺ"
 	case 2364:
 		return "̣"
+	case 2367:
+		return "ি"
+	case 2373:
+		return "̆"
+	case 2375:
+		return "\U00011b64"
+	case 2377:
+		return "ा̆"
 	case 2386:
 		return "̱"
 	case 2387:
 		return "̀"
 	case 2388:
 		return "́"
+	case 2390:
+		return "\U00011b62"
+	case 2391:
+		return "\U00011b63"
 	case 2405:
 		return "।।"
 	case 2406:
 		return "o"
 	case 2407:
 		return "٩"
+	case 2409:
+		return "3"
+	case 2418:
+		return "अ̆"
+	case 2419:
+		return "अऺ"
+	case 2420:
+		return "अाऺ"
+	case 2421:
+		return "अॏ"
 	case 2429:
 		return "?"
 	case 2433:
@@ -1339,11 +1407,13 @@ func GetReplacement(input rune) string {
 	case 2529:
 		return "ঋৃ"
 	case 2534:
-		return "O"
+		return "o"
 	case 2538:
 		return "8"
 	case 2541:
 		return "9"
+	case 2544:
+		return "র"
 	case 2562:
 		return "̇"
 	case 2563:
@@ -1351,21 +1421,51 @@ func GetReplacement(input rune) string {
 	case 2566:
 		return "ਅਾ"
 	case 2567:
-		return "ੲਿ"
+		return "प्टি"
 	case 2568:
-		return "ੲੀ"
+		return "प्टੀ"
 	case 2569:
-		return "ੳੁ"
+		return "ੳ\U00011b62"
 	case 2570:
-		return "ੳੂ"
+		return "ੳ\U00011b63"
 	case 2575:
-		return "ੲੇ"
+		return "प्ट\U00011b64"
 	case 2576:
-		return "ਅੈ"
+		return "ਅै"
 	case 2580:
 		return "ਅੌ"
+	case 2581:
+		return "व"
+	case 2588:
+		return "त्त"
+	case 2591:
+		return "ट"
+	case 2592:
+		return "ठ"
+	case 2596:
+		return "उ"
+	case 2599:
+		return "प"
+	case 2603:
+		return "ढ"
+	case 2606:
+		return "भ"
+	case 2613:
+		return "ह"
+	case 2616:
+		return "म"
 	case 2620:
 		return "̣"
+	case 2623:
+		return "ি"
+	case 2625:
+		return "\U00011b62"
+	case 2626:
+		return "\U00011b63"
+	case 2631:
+		return "\U00011b64"
+	case 2632:
+		return "ै"
 	case 2635:
 		return "ॆ"
 	case 2637:
@@ -1376,6 +1476,8 @@ func GetReplacement(input rune) string {
 		return "9"
 	case 2666:
 		return "8"
+	case 2674:
+		return "प्ट"
 	case 2689:
 		return "̆̇"
 	case 2690:
@@ -1396,6 +1498,10 @@ func GetReplacement(input rune) string {
 		return "અાે"
 	case 2708:
 		return "અાૈ"
+	case 2730:
+		return "ч"
+	case 2736:
+		return "२"
 	case 2748:
 		return "̣"
 	case 2749:
@@ -1411,9 +1517,11 @@ func GetReplacement(input rune) string {
 	case 2792:
 		return "२"
 	case 2793:
-		return "३"
+		return "3"
 	case 2794:
 		return "४"
+	case 2795:
+		return "ч"
 	case 2798:
 		return "८"
 	case 2800:
@@ -1429,17 +1537,21 @@ func GetReplacement(input rune) string {
 	case 2876:
 		return "̣"
 	case 2918:
-		return "O"
+		return "o"
 	case 2920:
 		return "9"
 	case 2946:
 		return "̊"
 	case 2954:
 		return "உள"
+	case 2964:
+		return "ஒள"
 	case 2972:
 		return "ஐ"
 	case 2992:
 		return "ஈ"
+	case 3000:
+		return "ஶ"
 	case 3006:
 		return "ஈ"
 	case 3016:
@@ -1494,6 +1606,8 @@ func GetReplacement(input rune) string {
 		return "ఒౕ"
 	case 3092:
 		return "ఒౌ"
+	case 3094:
+		return "ಖ̣"
 	case 3104:
 		return "రּ"
 	case 3106:
@@ -1530,28 +1644,52 @@ func GetReplacement(input rune) string {
 		return "ఆ"
 	case 3207:
 		return "ఇ"
+	case 3216:
+		return "ఐ"
 	case 3218:
 		return "ఒ"
 	case 3219:
 		return "ఒౕ"
 	case 3220:
 		return "ఒౌ"
+	case 3223:
+		return "గ"
 	case 3228:
 		return "జ"
+	case 3229:
+		return "ఝ"
 	case 3230:
 		return "ఞ"
+	case 3231:
+		return "ట"
 	case 3235:
 		return "ణ"
+	case 3238:
+		return "ద"
+	case 3240:
+		return "న"
 	case 3247:
 		return "య"
+	case 3248:
+		return "ర"
 	case 3249:
 		return "ఱ"
 	case 3250:
 		return "ల"
+	case 3251:
+		return "ళ"
+	case 3263:
+		return "ి"
+	case 3265:
+		return "ు"
+	case 3267:
+		return "ృ"
+	case 3292:
+		return "\u0c5c"
 	case 3297:
 		return "ಌಾ"
 	case 3302:
-		return "o"
+		return "O"
 	case 3303:
 		return "౧"
 	case 3304:
@@ -1573,19 +1711,25 @@ func GetReplacement(input rune) string {
 	case 3340:
 		return "നു"
 	case 3344:
-		return "എെ"
+		return "ெഎ"
 	case 3347:
 		return "ഒാ"
 	case 3348:
 		return "ഒൗ"
+	case 3350:
+		return "வ"
 	case 3353:
 		return "നു"
 	case 3356:
 		return "ஐ"
+	case 3359:
+		return "s"
 	case 3360:
 		return "o"
 	case 3363:
 		return "ண"
+	case 3365:
+		return "ம"
 	case 3377:
 		return "ര"
 	case 3380:
@@ -1602,8 +1746,12 @@ func GetReplacement(input rune) string {
 		return "ു"
 	case 3395:
 		return "ു"
+	case 3398:
+		return "ெ"
+	case 3399:
+		return "ே"
 	case 3400:
-		return "െെ"
+		return "ெெ"
 	case 3406:
 		return "ॱ"
 	case 3418:
@@ -1630,14 +1778,36 @@ func GetReplacement(input rune) string {
 		return "ഹ്മ"
 	case 3449:
 		return "നു"
+	case 3450:
+		return "ண്"
 	case 3451:
 		return "ന്"
 	case 3452:
 		return "ര്"
+	case 3453:
+		return "ല്"
+	case 3454:
+		return "ള്"
 	case 3458:
 		return "o"
 	case 3459:
 		return "ঃ"
+	case 3469:
+		return "සෘ"
+	case 3474:
+		return "එ්"
+	case 3475:
+		return "එෙ"
+	case 3509:
+		return "එ"
+	case 3510:
+		return "ඛ"
+	case 3513:
+		return "ඔ"
+	case 3520:
+		return "ච"
+	case 3524:
+		return "භ"
 	case 3561:
 		return "෨ා"
 	case 3562:
@@ -1732,6 +1902,10 @@ func GetReplacement(input rune) string {
 		return "ྲཱྀ"
 	case 3961:
 		return "ླཱྀ"
+	case 3963:
+		return "ེེ"
+	case 3965:
+		return "ོོ"
 	case 4046:
 		return "༝༚"
 	case 4053:
@@ -1739,17 +1913,25 @@ func GetReplacement(input rune) string {
 	case 4054:
 		return "卍"
 	case 4096:
-		return "ဂာ"
+		return "രာ"
+	case 4098:
+		return "ര"
+	case 4100:
+		return "c"
 	case 4112:
 		return "oာ"
 	case 4125:
 		return "o"
 	case 4127:
 		return "ပာ"
+	case 4131:
+		return "രာ္രာ"
 	case 4137:
 		return "သြ"
 	case 4138:
-		return "သြော်"
+		return "သြେာ်"
+	case 4145:
+		return "େ"
 	case 4150:
 		return "̊"
 	case 4152:
@@ -1758,6 +1940,10 @@ func GetReplacement(input rune) string {
 		return "o"
 	case 4171:
 		return "၊၊"
+	case 4186:
+		return "c"
+	case 4193:
+		return "ရှ"
 	case 4197:
 		return "၁"
 	case 4198:
@@ -1769,11 +1955,15 @@ func GetReplacement(input rune) string {
 	case 4222:
 		return "ၽှ"
 	case 4225:
-		return "ဂှ"
+		return "രှ"
 	case 4254:
 		return "ႃ̊"
 	case 4256:
 		return "Ꞇ"
+	case 4311:
+		return "oာ"
+	case 4312:
+		return "ര"
 	case 4327:
 		return "y"
 	case 4339:
@@ -2856,6 +3046,8 @@ func GetReplacement(input rune) string {
 		return "᜕"
 	case 5941:
 		return "/"
+	case 6031:
+		return "ដ"
 	case 6051:
 		return "អ"
 	case 6071:
@@ -2880,6 +3072,8 @@ func GetReplacement(input rune) string {
 		return "๏"
 	case 6106:
 		return "๛"
+	case 6112:
+		return "o"
 	case 6147:
 		return ":"
 	case 6153:
@@ -2964,6 +3158,14 @@ func GetReplacement(input rune) string {
 		return "ۛ"
 	case 6839:
 		return "̨"
+	case 6873:
+		return "᫆"
+	case 6882:
+		return "̄"
+	case 6887:
+		return "\u1ae5"
+	case 6888:
+		return "̄̄"
 	case 6994:
 		return "ᬍ"
 	case 6995:
@@ -3084,6 +3286,8 @@ func GetReplacement(input rune) string {
 		return "ᣔ"
 	case 7611:
 		return "ᙆ"
+	case 7656:
+		return "\u1ada"
 	case 7662:
 		return "ⷬ"
 	case 7747:
@@ -3258,6 +3462,8 @@ func GetReplacement(input rune) string {
 		return "lt"
 	case 8381:
 		return "Ք"
+	case 8385:
+		return "رىlل"
 	case 8411:
 		return "ۛ"
 	case 8448:
@@ -3460,6 +3666,10 @@ func GetReplacement(input rune) string {
 		return "ᛚ"
 	case 8639:
 		return "ᛐ"
+	case 8644:
+		return "\U0001f8d0"
+	case 8652:
+		return "\U0001f8d1"
 	case 8704:
 		return "Ɐ"
 	case 8707:
@@ -3832,6 +4042,8 @@ func GetReplacement(input rune) string {
 		return "┌"
 	case 9507:
 		return "├"
+	case 9578:
+		return "ǂ"
 	case 9585:
 		return "/"
 	case 9587:
@@ -3881,11 +4093,15 @@ func GetReplacement(input rune) string {
 	case 9765:
 		return "𐦞"
 	case 9776:
-		return "Ⲷ"
+		return "Ξ"
 	case 9784:
 		return "⎈"
 	case 9806:
 		return "≏"
+	case 9815:
+		return "\U0001fa55"
+	case 9821:
+		return "\U0001fa57"
 	case 9826:
 		return "ᛜ"
 	case 9833:
@@ -3932,6 +4148,8 @@ func GetReplacement(input rune) string {
 		return "❬"
 	case 10217:
 		return "❭"
+	case 10495:
+		return "\U0001cee0"
 	case 10539:
 		return "x"
 	case 10540:
@@ -3948,6 +4166,8 @@ func GetReplacement(input rune) string {
 		return "ⵂ"
 	case 10672:
 		return "⍉"
+	case 10677:
+		return "\U0001cef0"
 	case 10686:
 		return "⌾"
 	case 10692:
@@ -4040,6 +4260,8 @@ func GetReplacement(input rune) string {
 		return "///"
 	case 11005:
 		return "//"
+	case 11158:
+		return "=᪲"
 	case 11244:
 		return "↞"
 	case 11245:
@@ -4052,6 +4274,10 @@ func GetReplacement(input rune) string {
 		return "H̩"
 	case 11369:
 		return "K̩"
+	case 11394:
+		return "B"
+	case 11395:
+		return "ʙ"
 	case 11396:
 		return "Γ"
 	case 11397:
@@ -4062,26 +4288,52 @@ func GetReplacement(input rune) string {
 		return "Ꞓ"
 	case 11401:
 		return "ꞓ"
+	case 11403:
+		return "ς"
+	case 11404:
+		return "Ⱬ"
+	case 11405:
+		return "ⱬ"
 	case 11406:
 		return "H"
+	case 11407:
+		return "ʜ"
+	case 11408:
+		return "O̵"
+	case 11409:
+		return "o̵"
 	case 11410:
 		return "l"
+	case 11411:
+		return "i"
 	case 11412:
 		return "K"
 	case 11413:
 		return "ĸ"
 	case 11414:
 		return "λ"
+	case 11415:
+		return "ʌ"
 	case 11416:
 		return "M"
+	case 11417:
+		return "ʍ"
 	case 11418:
 		return "N"
+	case 11419:
+		return "ɴ"
+	case 11420:
+		return "3"
+	case 11421:
+		return "ʓ"
 	case 11422:
 		return "O"
 	case 11423:
 		return "o"
 	case 11424:
 		return "Π"
+	case 11425:
+		return "π"
 	case 11426:
 		return "P"
 	case 11427:
@@ -4092,8 +4344,12 @@ func GetReplacement(input rune) string {
 		return "c"
 	case 11430:
 		return "T"
+	case 11431:
+		return "ᴛ"
 	case 11432:
 		return "Y"
+	case 11433:
+		return "y"
 	case 11434:
 		return "Φ"
 	case 11435:
@@ -4104,34 +4360,76 @@ func GetReplacement(input rune) string {
 		return "χ"
 	case 11438:
 		return "Ψ"
+	case 11439:
+		return "ψ"
+	case 11440:
+		return "Ꙍ"
 	case 11441:
 		return "ω"
+	case 11442:
+		return "-̇"
+	case 11443:
+		return "-̇"
 	case 11444:
 		return "<·"
+	case 11445:
+		return "<·"
+	case 11446:
+		return "Ξ"
+	case 11447:
+		return "≡"
 	case 11450:
+		return "-"
+	case 11451:
 		return "-"
 	case 11452:
 		return "Ш"
 	case 11453:
-		return "ш"
+		return "w"
+	case 11456:
+		return "Ք"
+	case 11457:
+		return "ϼ"
+	case 11460:
+		return "3"
+	case 11461:
+		return "ȝ"
 	case 11462:
 		return "/"
+	case 11463:
+		return "/"
 	case 11466:
+		return "9"
+	case 11467:
 		return "9"
 	case 11468:
 		return "3"
 	case 11469:
 		return "ȝ"
+	case 11470:
+		return "P"
+	case 11471:
+		return "p"
 	case 11472:
 		return "L"
 	case 11473:
 		return "ʟ"
 	case 11474:
 		return "6"
+	case 11475:
+		return "6"
 	case 11484:
-		return "Ϭ"
+		return "6"
+	case 11485:
+		return "ẟ"
+	case 11488:
+		return "ɸ"
+	case 11489:
+		return "ɸ"
 	case 11492:
 		return "ϗ"
+	case 11496:
+		return "Ք"
 	case 11497:
 		return "☧"
 	case 11513:
@@ -4174,6 +4472,8 @@ func GetReplacement(input rune) string {
 		return "̊"
 	case 11757:
 		return "ͨ"
+	case 11758:
+		return "\u1adb"
 	case 11759:
 		return "ͯ"
 	case 11766:
@@ -4313,7 +4613,7 @@ func GetReplacement(input rune) string {
 	case 11984:
 		return "钅"
 	case 11985:
-		return "長"
+		return "ᄐーᄂᄌ"
 	case 11986:
 		return "镸"
 	case 11987:
@@ -4543,7 +4843,7 @@ func GetReplacement(input rune) string {
 	case 12120:
 		return "爻"
 	case 12121:
-		return "爿"
+		return "누丨"
 	case 12122:
 		return "片"
 	case 12123:
@@ -4699,7 +4999,7 @@ func GetReplacement(input rune) string {
 	case 12198:
 		return "金"
 	case 12199:
-		return "長"
+		return "ᄐーᄂᄌ"
 	case 12200:
 		return "門"
 	case 12201:
@@ -5342,16 +5642,32 @@ func GetReplacement(input rune) string {
 		return "㖈"
 	case 17440:
 		return "㬻"
+	case 18069:
+		return "𧢮"
 	case 19968:
 		return "ー"
+	case 19989:
+		return "조"
+	case 19995:
+		return "ᄉᄉー"
 	case 20022:
 		return "\\"
 	case 20031:
 		return "/"
+	case 20110:
+		return "𛄢"
+	case 20170:
+		return "ᄉーᄀ"
 	case 20482:
 		return "併"
 	case 20540:
 		return "値"
+	case 20818:
+		return "\U00016ff3"
+	case 21343:
+		return "마"
+	case 21512:
+		return "ᄉーᄆ"
 	case 21855:
 		return "啓"
 	case 22231:
@@ -5368,6 +5684,8 @@ func GetReplacement(input rune) string {
 		return "帡"
 	case 24144:
 		return "㬺"
+	case 24888:
+		return "\U0002b73f"
 	case 25144:
 		return "戶"
 	case 25609:
@@ -5388,6 +5706,8 @@ func GetReplacement(input rune) string {
 		return "榝"
 	case 28505:
 		return "溈"
+	case 29247:
+		return "누丨"
 	case 30799:
 		return "研"
 	case 32118:
@@ -5432,6 +5752,8 @@ func GetReplacement(input rune) string {
 		return "郎"
 	case 37806:
 		return "鎭"
+	case 38263:
+		return "ᄐーᄂᄌ"
 	case 38584:
 		return "隷"
 	case 40515:
@@ -5698,6 +6020,12 @@ func GetReplacement(input rune) string {
 		return "Ꙍ"
 	case 42935:
 		return "ω"
+	case 42959:
+		return "\ua7ce"
+	case 42962:
+		return "ꟓ"
+	case 42964:
+		return "ꟕ"
 	case 42966:
 		return "ß"
 	case 42970:
@@ -5706,6 +6034,8 @@ func GetReplacement(input rune) string {
 		return "λ"
 	case 42972:
 		return "Ʌ̸"
+	case 42993:
+		return "ᣵ"
 	case 42999:
 		return "ー"
 	case 43056:
@@ -7021,13 +7351,13 @@ func GetReplacement(input rune) string {
 	case 64349:
 		return "ڀ"
 	case 64350:
-		return "ٺ"
+		return "ت"
 	case 64351:
-		return "ٺ"
+		return "ت"
 	case 64352:
-		return "ٺ"
+		return "ت"
 	case 64353:
-		return "ٺ"
+		return "ت"
 	case 64354:
 		return "ٿ"
 	case 64355:
@@ -8575,7 +8905,7 @@ func GetReplacement(input rune) string {
 	case 65945:
 		return "l̵l̵"
 	case 65952:
-		return "⳨"
+		return "Ք"
 	case 66178:
 		return "B"
 	case 66181:
@@ -8770,6 +9100,12 @@ func GetReplacement(input rune) string {
 		return "𐲥"
 	case 68860:
 		return "𐲂"
+	case 69318:
+		return "ن"
+	case 69319:
+		return "ڀ"
+	case 69328:
+		return "°̲"
 	case 69819:
 		return "॰"
 	case 70087:
@@ -8865,7 +9201,7 @@ func GetReplacement(input rune) string {
 	case 70853:
 		return "ẇ"
 	case 70864:
-		return "O"
+		return "o"
 	case 70865:
 		return "১"
 	case 70866:
@@ -9002,14 +9338,36 @@ func GetReplacement(input rune) string {
 		return "𑫳𑫳𑫯"
 	case 72440:
 		return "𑫳𑫳𑫰"
+	case 72544:
+		return "ऺ"
+	case 72550:
+		return "̆"
 	case 72770:
 		return "𑱁𑱁"
 	case 72882:
 		return "𑲪"
+	case 73177:
+		return ":"
+	case 73178:
+		return "l"
+	case 73184:
+		return "O"
+	case 73185:
+		return "l"
 	case 73784:
 		return "𐎚"
 	case 78585:
 		return "𐦞"
+	case 93862:
+		return "Π"
+	case 93866:
+		return "l"
+	case 93878:
+		return "b"
+	case 93889:
+		return "π"
+	case 93905:
+		return "ƅ"
 	case 93959:
 		return "Γ"
 	case 93960:
@@ -9048,6 +9406,8 @@ func GetReplacement(input rune) string {
 		return "'"
 	case 94034:
 		return "'"
+	case 94194:
+		return "儿"
 	case 117974:
 		return "A"
 	case 117975:
@@ -9120,6 +9480,10 @@ func GetReplacement(input rune) string {
 		return "8"
 	case 118009:
 		return "9"
+	case 118011:
+		return "🛸"
+	case 118511:
+		return "ⵂ"
 	case 119060:
 		return "{"
 	case 119149:
@@ -11170,6 +11534,10 @@ func GetReplacement(input rune) string {
 		return "8"
 	case 120831:
 		return "9"
+	case 124649:
+		return "+"
+	case 124654:
+		return "᫈"
 	case 125127:
 		return "l"
 	case 125128:
@@ -11570,6 +11938,26 @@ func GetReplacement(input rune) string {
 		return "☾"
 	case 127769:
 		return "☽"
+	case 127795:
+		return "\U0001cebc"
+	case 127822:
+		return "\U0001cebd"
+	case 127823:
+		return "\U0001cebd"
+	case 127826:
+		return "\U0001cebe"
+	case 127827:
+		return "\U0001cebf"
+	case 127863:
+		return "\U0001ceba"
+	case 127970:
+		return "\U0001cebb"
+	case 128013:
+		return "\U0001ccfa"
+	case 128067:
+		return "\U0001ccfc"
+	case 128276:
+		return "\U0001fbfa"
 	case 128768:
 		return "QE"
 	case 128769:
@@ -11628,8 +12016,38 @@ func GetReplacement(input rune) string {
 		return "8"
 	case 130041:
 		return "9"
+	case 132724:
+		return "凵"
+	case 136499:
+		return "壷"
+	case 136583:
+		return "多"
+	case 136871:
+		return "𡚨"
 	case 139240:
 		return "❬"
+	case 140549:
+		return "徚"
+	case 146752:
+		return "涅"
+	case 149757:
+		return "玥"
+	case 151834:
+		return "𥄙"
+	case 154324:
+		return "贛"
+	case 157085:
+		return "𦖨"
+	case 158982:
+		return "𦰶"
+	case 175813:
+		return "𤠔"
+	case 177978:
+		return "峀"
+	case 177982:
+		return "𣍟"
+	case 184673:
+		return "卑"
 	case 194560:
 		return "丽"
 	case 194561:
@@ -12714,6 +13132,8 @@ func GetReplacement(input rune) string {
 		return "鼻"
 	case 195101:
 		return "𪘀"
+	case 204412:
+		return "緇"
 
 	default:
 		return ""

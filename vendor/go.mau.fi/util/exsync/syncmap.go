@@ -71,6 +71,17 @@ func (sm *Map[Key, Value]) Get(key Key) (value Value, ok bool) {
 	return
 }
 
+// GetDefault gets a value in the map, or the given default value if there's no such key.
+func (sm *Map[Key, Value]) GetDefault(key Key, def Value) Value {
+	sm.lock.RLock()
+	value, ok := sm.data[key]
+	sm.lock.RUnlock()
+	if ok {
+		return value
+	}
+	return def
+}
+
 // GetOrSet gets a value in the map if the key already exists, otherwise inserts the given value and returns it.
 //
 // The boolean return parameter is true if the key already exists, and false if the given value was inserted.

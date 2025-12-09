@@ -3,6 +3,7 @@ package dbutil
 import (
 	"context"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -92,12 +93,14 @@ func (z zeroLogger) DoUpgrade(from, to int, message string, txn TxnMode) {
 
 var whitespaceRegex = regexp.MustCompile(`\s+`)
 
+var GlobalSafeQueryLog bool
+
 func (z zeroLogger) QueryTiming(ctx context.Context, method, query string, args []any, nrows int, duration time.Duration, err error) {
 	log := zerolog.Ctx(ctx)
 	if log.GetLevel() == zerolog.Disabled || log == zerolog.DefaultContextLogger {
 		log = z.l
 	}
-	if (!z.TraceLogAllQueries || log.GetLevel() != zerolog.TraceLevel) && duration < 1*time.Second {
+	if (!z.TraceLogAllQueries || log.GetLevel() != zerolog.TraceLevel) && !GlobalSafeQueryLog && duration < 1*time.Second {
 		return
 	}
 	if nrows > -1 {
@@ -105,13 +108,32 @@ func (z zeroLogger) QueryTiming(ctx context.Context, method, query string, args 
 		log = &rowLog
 	}
 	query = strings.TrimSpace(whitespaceRegex.ReplaceAllLiteralString(query, " "))
-	log.Trace().
-		Err(err).
-		Int64("duration_µs", duration.Microseconds()).
-		Str("method", method).
-		Str("query", query).
-		Interface("query_args", args).
-		Msg("Query")
+	callerSkipFrame := z.CallerSkipFrame
+	if GlobalSafeQueryLog || duration > 1*time.Second {
+		for ; callerSkipFrame < 10; callerSkipFrame++ {
+			_, filename, _, _ := runtime.Caller(callerSkipFrame)
+			if !strings.Contains(filename, "/dbutil/") {
+				break
+			}
+		}
+	}
+	if GlobalSafeQueryLog {
+		log.Debug().
+			Err(err).
+			Int64("duration_µs", duration.Microseconds()).
+			Str("method", method).
+			Str("query", query).
+			Caller(callerSkipFrame).
+			Msg("Query")
+	} else {
+		log.Trace().
+			Err(err).
+			Int64("duration_µs", duration.Microseconds()).
+			Str("method", method).
+			Str("query", query).
+			Interface("query_args", args).
+			Msg("Query")
+	}
 	if duration >= 1*time.Second {
 		evt := log.Warn().
 			Float64("duration_seconds", duration.Seconds()).
@@ -119,7 +141,7 @@ func (z zeroLogger) QueryTiming(ctx context.Context, method, query string, args 
 			Str("method", method).
 			Str("query", query)
 		if z.Caller {
-			evt = evt.Caller(z.CallerSkipFrame)
+			evt = evt.Caller(callerSkipFrame)
 		}
 		evt.Msg("Query took long")
 	}

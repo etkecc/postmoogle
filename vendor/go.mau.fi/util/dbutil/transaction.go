@@ -120,7 +120,11 @@ func (db *Database) DoTxn(ctx context.Context, opts *TxnOptions, fn func(ctx con
 		log.Trace().Err(err).Msg("Failed to begin transaction")
 		return exerrors.NewDualError(ErrTxnBegin, err)
 	}
-	log.Trace().Msg("Transaction started")
+	logLevel := zerolog.TraceLevel
+	if GlobalSafeQueryLog {
+		logLevel = zerolog.DebugLevel
+	}
+	log.WithLevel(logLevel).Msg("Transaction started")
 	tx.noTotalLog = true
 	ctx = log.WithContext(ctx)
 	ctx = context.WithValue(ctx, db.txnCtxKey, tx)
@@ -131,16 +135,16 @@ func (db *Database) DoTxn(ctx context.Context, opts *TxnOptions, fn func(ctx con
 		if rollbackErr != nil {
 			log.Warn().Err(rollbackErr).Msg("Rollback after transaction error failed")
 		} else {
-			log.Trace().Msg("Rollback successful")
+			log.WithLevel(logLevel).Msg("Rollback successful")
 		}
 		return err
 	}
 	err = tx.Commit()
 	if err != nil {
-		log.Trace().Err(err).Msg("Commit failed")
+		log.WithLevel(logLevel).Err(err).Msg("Commit failed")
 		return exerrors.NewDualError(ErrTxnCommit, err)
 	}
-	log.Trace().Msg("Commit successful")
+	log.WithLevel(logLevel).Msg("Commit successful")
 	return nil
 }
 
