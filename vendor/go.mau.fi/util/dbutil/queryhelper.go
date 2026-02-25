@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"reflect"
 	"time"
 
 	"golang.org/x/exp/constraints"
@@ -29,7 +30,40 @@ type QueryHelper[T DataStruct[T]] struct {
 	newFunc func(qh *QueryHelper[T]) T
 }
 
+// MakeQueryHelperSimple is a form of MakeQueryHelper where the constructor function does not
+// take parameters. It can be used to reduce boilerplate when not using an active record model.
+//
+// If the provided function is nil, the behavior is same as MakeQueryHelper.
+func MakeQueryHelperSimple[T DataStruct[T]](db *Database, new func() T) *QueryHelper[T] {
+	if new == nil {
+		return MakeQueryHelper[T](db, nil)
+	}
+	return MakeQueryHelper(db, func(qh *QueryHelper[T]) T {
+		return new()
+	})
+}
+
+// MakeQueryHelperReflect is a form of MakeQueryHelper that uses reflection to
+// create new instances of T. This requires that T is a pointer to a struct type.
+func MakeQueryHelperReflect[T DataStruct[T]](db *Database) *QueryHelper[T] {
+	return MakeQueryHelper[T](db, nil)
+}
+
+func reflectBuilder[T DataStruct[T]](ref reflect.Type) func(*QueryHelper[T]) T {
+	return func(_ *QueryHelper[T]) T {
+		return reflect.New(ref).Interface().(T)
+	}
+}
+
+// MakeQueryHelper creates a new QueryHelper for the given type T, using the provided constructor function.
+//
+// If the constructor function is nil, it will be generated using reflection.
+// This requires that T is a pointer to a struct type.
 func MakeQueryHelper[T DataStruct[T]](db *Database, new func(qh *QueryHelper[T]) T) *QueryHelper[T] {
+	if new == nil {
+		var zero T
+		new = reflectBuilder[T](reflect.TypeOf(zero).Elem())
+	}
 	return &QueryHelper[T]{db: db, newFunc: new}
 }
 

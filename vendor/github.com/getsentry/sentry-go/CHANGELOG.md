@@ -1,5 +1,91 @@
 # Changelog
 
+## 0.43.0
+
+### Breaking Changes 🛠
+
+- Add support for go 1.26 by @giortzisg in [#1193](https://github.com/getsentry/sentry-go/pull/1193)
+  - bump minimum supported go version to 1.24
+- change type signature of attributes for Logs and Metrics. by @giortzisg in [#1205](https://github.com/getsentry/sentry-go/pull/1205)
+  - users are not supposed to modify Attributes directly on the Log/Metric itself, but this is still is a breaking change on the type.
+- Send uint64 overflowing attributes as numbers. by @giortzisg in [#1198](https://github.com/getsentry/sentry-go/pull/1198)
+  - The SDK was converting overflowing uint64 attributes to strings for slog and logrus integrations. To eliminate double types for these attributes, the SDK now sends the overflowing attribute as is, and lets the server handle the overflow appropriately.
+  - It is expected that overflowing unsigned integers would now get dropped, instead of converted to strings.
+
+### New Features ✨
+
+- Add zap logging integration by @giortzisg in [#1184](https://github.com/getsentry/sentry-go/pull/1184)
+- Log specific message for RequestEntityTooLarge by @giortzisg in [#1185](https://github.com/getsentry/sentry-go/pull/1185)
+
+### Bug Fixes 🐛
+
+- Improve otel span map cleanup performance by @giortzisg in [#1200](https://github.com/getsentry/sentry-go/pull/1200)
+- Ensure correct signal delivery on multi-client setups by @giortzisg in [#1190](https://github.com/getsentry/sentry-go/pull/1190)
+
+### Internal Changes 🔧
+
+#### Deps
+
+- Bump golang.org/x/crypto to 0.48.0 by @giortzisg in [#1196](https://github.com/getsentry/sentry-go/pull/1196)
+- Use go1.24.0 by @giortzisg in [#1195](https://github.com/getsentry/sentry-go/pull/1195)
+- Bump github.com/gofiber/fiber/v2 from 2.52.9 to 2.52.11 in /fiber by @dependabot in [#1191](https://github.com/getsentry/sentry-go/pull/1191)
+- Bump getsentry/craft from 2.19.0 to 2.20.1 by @dependabot in [#1187](https://github.com/getsentry/sentry-go/pull/1187)
+
+#### Other
+
+- Add omitzero and remove custom serialization by @giortzisg in [#1197](https://github.com/getsentry/sentry-go/pull/1197)
+- Rename Telemetry Processor components by @giortzisg in [#1186](https://github.com/getsentry/sentry-go/pull/1186)
+
+## 0.42.0
+
+### Breaking Changes 🛠
+
+- refactor Telemetry Processor to use TelemetryItem instead of ItemConvertible by @giortzisg in [#1180](https://github.com/getsentry/sentry-go/pull/1180)
+  - remove ToEnvelopeItem from single log items
+  - rename TelemetryBuffer to Telemetry Processor to adhere to spec
+  - remove unsed ToEnvelopeItem(dsn) from Event.
+
+### New Features ✨
+
+- Add metric support by @aldy505 in [#1151](https://github.com/getsentry/sentry-go/pull/1151)
+  - support for three metric methods (counter, gauge, distribution)
+  - custom metric units
+  - unexport batchlogger
+
+### Internal Changes 🔧
+
+#### Release
+
+- Fix changelog-preview permissions by @BYK in [#1181](https://github.com/getsentry/sentry-go/pull/1181)
+- Switch from action-prepare-release to Craft by @BYK in [#1167](https://github.com/getsentry/sentry-go/pull/1167)
+
+#### Other
+
+- (repo) Add Claude Code settings with basic permissions by @philipphofmann in [#1175](https://github.com/getsentry/sentry-go/pull/1175)
+- Update release and changelog-preview workflows by @giortzisg in [#1177](https://github.com/getsentry/sentry-go/pull/1177)
+- Bump echo to 4.10.1 by @giortzisg in [#1174](https://github.com/getsentry/sentry-go/pull/1174)
+
+## 0.41.0
+
+The Sentry SDK team is happy to announce the immediate availability of Sentry Go SDK v0.41.0.
+
+### Features
+
+- Add HTTP client integration for distributed tracing via `sentryhttpclient` package ([#876](https://github.com/getsentry/sentry-go/pull/876))
+  - Provides an `http.RoundTripper` implementation that automatically creates spans for outgoing HTTP requests
+  - Supports trace propagation targets configuration via `WithTracePropagationTargets` option
+  - Example usage:
+    ```go
+    import sentryhttpclient "github.com/getsentry/sentry-go/httpclient"
+
+    roundTripper := sentryhttpclient.NewSentryRoundTripper(nil)
+    client := &http.Client{
+        Transport: roundTripper,
+    }
+    ```
+- Add `ClientOptions.PropagateTraceparent` option to control W3C `traceparent` header propagation in outgoing HTTP requests ([#1161](https://github.com/getsentry/sentry-go/pull/1161))
+- Add `SpanID` field to structured logs ([#1169](https://github.com/getsentry/sentry-go/pull/1169))
+
 ## 0.40.0
 
 The Sentry SDK team is happy to announce the immediate availability of Sentry Go SDK v0.40.0.

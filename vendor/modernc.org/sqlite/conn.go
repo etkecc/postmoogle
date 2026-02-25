@@ -30,6 +30,7 @@ type conn struct {
 	writeTimeFormat   string
 	beginMode         string
 	intToTime         bool
+	textToTime        bool
 	integerTimeFormat string
 }
 
@@ -1067,4 +1068,34 @@ func (c *conn) QueryContext(ctx context.Context, query string, args []driver.Nam
 		}()
 	}
 	return c.query(ctx, query, args)
+}
+
+// IsReadOnly reports whether the database schema specified by dbName is read-only.
+//
+// dbName is the internal name of the attached database, not the filename.
+// Use "main" for the primary database, "temp" for the temporary database,
+// or the name used in an ATTACH statement.
+func (c *conn) IsReadOnly(schema string) (bool, error) {
+	if dmesgs {
+		defer func() {
+			dmesg("conn %p", c)
+		}()
+	}
+	cs, err := libc.CString(schema)
+	if err != nil {
+		return false, err
+	}
+
+	defer libc.Xfree(c.tls, cs)
+
+	switch r := sqlite3.Xsqlite3_db_readonly(c.tls, c.db, cs); r {
+	case 1:
+		return true, nil
+	case 0:
+		return false, nil
+	case -1:
+		return false, fmt.Errorf("not a name of a database on connection: '%s'", schema)
+	default:
+		return false, fmt.Errorf("unexpected sqlite3_db_readonly(%q) return value: %v", schema, r)
+	}
 }

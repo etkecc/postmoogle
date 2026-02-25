@@ -91,11 +91,16 @@ func IsShareError(err error) bool {
 }
 
 func ParseMegolmMessageIndex(ciphertext []byte) (uint, error) {
+	if len(ciphertext) == 0 {
+		return 0, fmt.Errorf("empty ciphertext")
+	}
 	decoded := make([]byte, base64.RawStdEncoding.DecodedLen(len(ciphertext)))
 	var err error
 	_, err = base64.RawStdEncoding.Decode(decoded, ciphertext)
 	if err != nil {
 		return 0, err
+	} else if len(decoded) < 2+binary.MaxVarintLen64 {
+		return 0, fmt.Errorf("decoded ciphertext too short: %d bytes", len(decoded))
 	} else if decoded[0] != 3 || decoded[1] != 8 {
 		return 0, fmt.Errorf("unexpected initial bytes %d and %d", decoded[0], decoded[1])
 	}
@@ -168,6 +173,15 @@ func (mach *OlmMachine) EncryptMegolmEventWithStateKey(ctx context.Context, room
 		// These are deprecated
 		SenderKey: mach.account.IdentityKey(),
 		DeviceID:  mach.Client.DeviceID,
+	}
+	if mach.MSC4392Relations && encrypted.RelatesTo != nil {
+		// When MSC4392 mode is enabled, reply and reaction metadata is stripped from the unencrypted content.
+		// Other relations like threads are still left unencrypted.
+		encrypted.RelatesTo.InReplyTo = nil
+		encrypted.RelatesTo.IsFallingBack = false
+		if evtType == event.EventReaction || encrypted.RelatesTo.Type == "" {
+			encrypted.RelatesTo = nil
+		}
 	}
 	if mach.PlaintextMentions {
 		encrypted.Mentions = getMentions(content)

@@ -33,19 +33,12 @@ const (
 	LogSeverityFatal   int = 21
 )
 
-var mapTypesToStr = map[attribute.Type]AttrType{
-	attribute.INVALID: AttributeInvalid,
-	attribute.BOOL:    AttributeBool,
-	attribute.INT64:   AttributeInt,
-	attribute.FLOAT64: AttributeFloat,
-	attribute.STRING:  AttributeString,
-}
-
 type sentryLogger struct {
-	ctx        context.Context
-	client     *Client
-	attributes map[string]Attribute
-	mu         sync.RWMutex
+	ctx               context.Context
+	hub               *Hub
+	attributes        map[string]attribute.Value
+	defaultAttributes map[string]attribute.Value
+	mu                sync.RWMutex
 }
 
 type logEntry struct {
@@ -53,12 +46,13 @@ type logEntry struct {
 	ctx         context.Context
 	level       LogLevel
 	severity    int
-	attributes  map[string]Attribute
+	attributes  map[string]attribute.Value
 	shouldPanic bool
+	shouldFatal bool
 }
 
 // NewLogger returns a Logger that emits logs to Sentry. If logging is turned off, all logs get discarded.
-func NewLogger(ctx context.Context) Logger {
+func NewLogger(ctx context.Context) Logger { // nolint: dupl
 	var hub *Hub
 	hub = GetHubFromContext(ctx)
 	if hub == nil {
@@ -67,11 +61,33 @@ func NewLogger(ctx context.Context) Logger {
 
 	client := hub.Client()
 	if client != nil && client.options.EnableLogs {
+		// Build default attrs
+		serverAddr := client.options.ServerName
+		if serverAddr == "" {
+			serverAddr, _ = os.Hostname()
+		}
+
+		defaults := map[string]string{
+			"sentry.release":        client.options.Release,
+			"sentry.environment":    client.options.Environment,
+			"sentry.server.address": serverAddr,
+			"sentry.sdk.name":       client.sdkIdentifier,
+			"sentry.sdk.version":    client.sdkVersion,
+		}
+
+		defaultAttrs := make(map[string]attribute.Value, len(defaults))
+		for k, v := range defaults {
+			if v != "" {
+				defaultAttrs[k] = attribute.StringValue(v)
+			}
+		}
+
 		return &sentryLogger{
-			ctx:        ctx,
-			client:     client,
-			attributes: make(map[string]Attribute),
-			mu:         sync.RWMutex{},
+			ctx:               ctx,
+			hub:               hub,
+			attributes:        make(map[string]attribute.Value),
+			defaultAttributes: defaultAttrs,
+			mu:                sync.RWMutex{},
 		}
 	}
 
@@ -85,55 +101,32 @@ func (l *sentryLogger) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (l *sentryLogger) log(ctx context.Context, level LogLevel, severity int, message string, entryAttrs map[string]Attribute, args ...interface{}) {
+func (l *sentryLogger) log(ctx context.Context, level LogLevel, severity int, message string, entryAttrs map[string]attribute.Value, args ...interface{}) {
 	if message == "" {
 		return
 	}
-	var traceID TraceID
-	var spanID SpanID
-	var span *Span
-	var user User
 
-	span = SpanFromContext(ctx)
-	if span == nil {
-		span = SpanFromContext(l.ctx)
-	}
-	hub := GetHubFromContext(ctx)
+	hub := hubFromContexts(ctx, l.ctx)
 	if hub == nil {
-		hub = GetHubFromContext(l.ctx)
+		hub = l.hub
 	}
-	if hub == nil {
-		hub = CurrentHub()
+	client := hub.Client()
+	if client == nil {
+		return
 	}
 
 	scope := hub.Scope()
-	if scope != nil {
-		scope.mu.Lock()
-		// Use span from hub only as last resort
-		if span == nil {
-			span = scope.span
-		}
-		if span != nil {
-			traceID = span.TraceID
-			spanID = span.SpanID
-		} else {
-			traceID = scope.propagationContext.TraceID
-		}
-		user = scope.user
-		scope.mu.Unlock()
-	}
+	traceID, spanID := resolveTrace(scope, ctx, l.ctx)
 
-	attrs := map[string]Attribute{}
-	if len(args) > 0 {
-		attrs["sentry.message.template"] = Attribute{
-			Value: message, Type: AttributeString,
-		}
-		for i, p := range args {
-			attrs[fmt.Sprintf("sentry.message.parameters.%d", i)] = Attribute{
-				Value: fmt.Sprintf("%+v", p), Type: AttributeString,
-			}
-		}
+	// Pre-allocate with capacity hint to avoid map growth reallocations
+	estimatedCap := len(l.defaultAttributes) + len(entryAttrs) + len(args) + 8 // scope ~3 + instance ~5
+	attrs := make(map[string]attribute.Value, estimatedCap)
+
+	// attribute precedence: default -> scope -> instance (from SetAttrs) -> entry-specific
+	for k, v := range l.defaultAttributes {
+		attrs[k] = v
 	}
+	scope.populateAttrs(attrs)
 
 	l.mu.RLock()
 	for k, v := range l.attributes {
@@ -144,63 +137,26 @@ func (l *sentryLogger) log(ctx context.Context, level LogLevel, severity int, me
 	for k, v := range entryAttrs {
 		attrs[k] = v
 	}
-	if release := l.client.options.Release; release != "" {
-		attrs["sentry.release"] = Attribute{Value: release, Type: AttributeString}
-	}
-	if environment := l.client.options.Environment; environment != "" {
-		attrs["sentry.environment"] = Attribute{Value: environment, Type: AttributeString}
-	}
-	if serverName := l.client.options.ServerName; serverName != "" {
-		attrs["sentry.server.address"] = Attribute{Value: serverName, Type: AttributeString}
-	} else if serverAddr, err := os.Hostname(); err == nil {
-		attrs["sentry.server.address"] = Attribute{Value: serverAddr, Type: AttributeString}
-	}
 
-	if !user.IsEmpty() {
-		if user.ID != "" {
-			attrs["user.id"] = Attribute{Value: user.ID, Type: AttributeString}
+	if len(args) > 0 {
+		attrs["sentry.message.template"] = attribute.StringValue(message)
+		for i, p := range args {
+			attrs[fmt.Sprintf("sentry.message.parameters.%d", i)] = attribute.StringValue(fmt.Sprintf("%+v", p))
 		}
-		if user.Name != "" {
-			attrs["user.name"] = Attribute{Value: user.Name, Type: AttributeString}
-		}
-		if user.Email != "" {
-			attrs["user.email"] = Attribute{Value: user.Email, Type: AttributeString}
-		}
-	}
-	if span != nil {
-		attrs["sentry.trace.parent_span_id"] = Attribute{Value: spanID.String(), Type: AttributeString}
-	}
-	if sdkIdentifier := l.client.sdkIdentifier; sdkIdentifier != "" {
-		attrs["sentry.sdk.name"] = Attribute{Value: sdkIdentifier, Type: AttributeString}
-	}
-	if sdkVersion := l.client.sdkVersion; sdkVersion != "" {
-		attrs["sentry.sdk.version"] = Attribute{Value: sdkVersion, Type: AttributeString}
 	}
 
 	log := &Log{
 		Timestamp:  time.Now(),
 		TraceID:    traceID,
+		SpanID:     spanID,
 		Level:      level,
 		Severity:   severity,
 		Body:       fmt.Sprintf(message, args...),
 		Attributes: attrs,
 	}
 
-	if l.client.options.BeforeSendLog != nil {
-		log = l.client.options.BeforeSendLog(log)
-	}
-
-	if log != nil {
-		if l.client.telemetryBuffer != nil {
-			if !l.client.telemetryBuffer.Add(log) {
-				debuglog.Print("Dropping event: log buffer full or category missing")
-			}
-		} else if l.client.batchLogger != nil {
-			l.client.batchLogger.logCh <- *log
-		}
-	}
-
-	if l.client.options.Debug {
+	client.captureLog(log, scope)
+	if client.options.Debug {
 		debuglog.Printf(message, args...)
 	}
 }
@@ -209,17 +165,12 @@ func (l *sentryLogger) SetAttributes(attrs ...attribute.Builder) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	for _, v := range attrs {
-		t, ok := mapTypesToStr[v.Value.Type()]
-		if !ok || t == "" {
-			debuglog.Printf("invalid attribute type set: %v", t)
+	for _, a := range attrs {
+		if a.Value.Type() == attribute.INVALID {
+			debuglog.Printf("invalid attribute: %v", a)
 			continue
 		}
-
-		l.attributes[v.Key] = Attribute{
-			Value: v.Value.AsInterface(),
-			Type:  t,
-		}
+		l.attributes[a.Key] = a.Value
 	}
 }
 
@@ -229,7 +180,7 @@ func (l *sentryLogger) Trace() LogEntry {
 		ctx:        l.ctx,
 		level:      LogLevelTrace,
 		severity:   LogSeverityTrace,
-		attributes: make(map[string]Attribute),
+		attributes: make(map[string]attribute.Value),
 	}
 }
 
@@ -239,7 +190,7 @@ func (l *sentryLogger) Debug() LogEntry {
 		ctx:        l.ctx,
 		level:      LogLevelDebug,
 		severity:   LogSeverityDebug,
-		attributes: make(map[string]Attribute),
+		attributes: make(map[string]attribute.Value),
 	}
 }
 
@@ -249,7 +200,7 @@ func (l *sentryLogger) Info() LogEntry {
 		ctx:        l.ctx,
 		level:      LogLevelInfo,
 		severity:   LogSeverityInfo,
-		attributes: make(map[string]Attribute),
+		attributes: make(map[string]attribute.Value),
 	}
 }
 
@@ -259,7 +210,7 @@ func (l *sentryLogger) Warn() LogEntry {
 		ctx:        l.ctx,
 		level:      LogLevelWarn,
 		severity:   LogSeverityWarning,
-		attributes: make(map[string]Attribute),
+		attributes: make(map[string]attribute.Value),
 	}
 }
 
@@ -269,17 +220,18 @@ func (l *sentryLogger) Error() LogEntry {
 		ctx:        l.ctx,
 		level:      LogLevelError,
 		severity:   LogSeverityError,
-		attributes: make(map[string]Attribute),
+		attributes: make(map[string]attribute.Value),
 	}
 }
 
 func (l *sentryLogger) Fatal() LogEntry {
 	return &logEntry{
-		logger:     l,
-		ctx:        l.ctx,
-		level:      LogLevelFatal,
-		severity:   LogSeverityFatal,
-		attributes: make(map[string]Attribute),
+		logger:      l,
+		ctx:         l.ctx,
+		level:       LogLevelFatal,
+		severity:    LogSeverityFatal,
+		attributes:  make(map[string]attribute.Value),
+		shouldFatal: true,
 	}
 }
 
@@ -289,8 +241,18 @@ func (l *sentryLogger) Panic() LogEntry {
 		ctx:         l.ctx,
 		level:       LogLevelFatal,
 		severity:    LogSeverityFatal,
-		attributes:  make(map[string]Attribute),
+		attributes:  make(map[string]attribute.Value),
 		shouldPanic: true,
+	}
+}
+
+func (l *sentryLogger) LFatal() LogEntry {
+	return &logEntry{
+		logger:     l,
+		ctx:        l.ctx,
+		level:      LogLevelFatal,
+		severity:   LogSeverityFatal,
+		attributes: make(map[string]attribute.Value),
 	}
 }
 
@@ -306,31 +268,40 @@ func (e *logEntry) WithCtx(ctx context.Context) LogEntry {
 		severity:    e.severity,
 		attributes:  maps.Clone(e.attributes),
 		shouldPanic: e.shouldPanic,
+		shouldFatal: e.shouldFatal,
 	}
 }
 
 func (e *logEntry) String(key, value string) LogEntry {
-	e.attributes[key] = Attribute{Value: value, Type: AttributeString}
+	e.attributes[key] = attribute.StringValue(value)
 	return e
 }
 
 func (e *logEntry) Int(key string, value int) LogEntry {
-	e.attributes[key] = Attribute{Value: int64(value), Type: AttributeInt}
+	e.attributes[key] = attribute.Int64Value(int64(value))
 	return e
 }
 
 func (e *logEntry) Int64(key string, value int64) LogEntry {
-	e.attributes[key] = Attribute{Value: value, Type: AttributeInt}
+	e.attributes[key] = attribute.Int64Value(value)
 	return e
 }
 
 func (e *logEntry) Float64(key string, value float64) LogEntry {
-	e.attributes[key] = Attribute{Value: value, Type: AttributeFloat}
+	e.attributes[key] = attribute.Float64Value(value)
 	return e
 }
 
 func (e *logEntry) Bool(key string, value bool) LogEntry {
-	e.attributes[key] = Attribute{Value: value, Type: AttributeBool}
+	e.attributes[key] = attribute.BoolValue(value)
+	return e
+}
+
+// Uint64 adds uint64 attributes to the log entry.
+//
+// This method is intentionally not part of the LogEntry interface to avoid exposing uint64 in the public API.
+func (e *logEntry) Uint64(key string, value uint64) LogEntry {
+	e.attributes[key] = attribute.Uint64Value(value)
 	return e
 }
 
@@ -341,7 +312,9 @@ func (e *logEntry) Emit(args ...interface{}) {
 		if e.shouldPanic {
 			panic(fmt.Sprint(args...))
 		}
-		os.Exit(1)
+		if e.shouldFatal {
+			os.Exit(1)
+		}
 	}
 }
 
@@ -353,6 +326,8 @@ func (e *logEntry) Emitf(format string, args ...interface{}) {
 			formattedMessage := fmt.Sprintf(format, args...)
 			panic(formattedMessage)
 		}
-		os.Exit(1)
+		if e.shouldFatal {
+			os.Exit(1)
+		}
 	}
 }

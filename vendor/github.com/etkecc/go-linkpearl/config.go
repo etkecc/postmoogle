@@ -19,7 +19,7 @@ type Config struct {
 	// Login is a localpart for password auth or full mxid for shared secret auth (honoroit - for password, @honoroit:example.com - for shared secret)
 	Login string
 	// Password for login/password auth only
-	Password string
+	Password string //nolint:gosec // Password for login/password auth only, not used for shared secret auth
 	// Shared secret for login/sharedsecret auth only
 	SharedSecret string
 

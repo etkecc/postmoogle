@@ -29,8 +29,8 @@ var (
 	ErrDuplicateMessageIndex         = errors.New("duplicate megolm message index")
 	ErrWrongRoom                     = errors.New("encrypted megolm event is not intended for this room")
 	ErrDeviceKeyMismatch             = errors.New("device keys in event and verified device info do not match")
-	ErrSenderKeyMismatch             = errors.New("sender keys in content and megolm session do not match")
 	ErrRatchetError                  = errors.New("failed to ratchet session after use")
+	ErrCorruptedMegolmPayload        = errors.New("corrupted megolm payload")
 )
 
 // Deprecated: use variables prefixed with Err
@@ -40,7 +40,6 @@ var (
 	DuplicateMessageIndex         = ErrDuplicateMessageIndex
 	WrongRoom                     = ErrWrongRoom
 	DeviceKeyMismatch             = ErrDeviceKeyMismatch
-	SenderKeyMismatch             = ErrSenderKeyMismatch
 	RatchetError                  = ErrRatchetError
 )
 
@@ -56,6 +55,17 @@ var (
 	relatesToTopLevelPath = exgjson.Path("content", "m.relates_to")
 )
 
+const sessionIDLength = 43
+
+func validateCiphertextCharacters(ciphertext []byte) bool {
+	for _, b := range ciphertext {
+		if (b < 'a' || b > 'z') && (b < 'A' || b > 'Z') && (b < '0' || b > '9') && b != '+' && b != '/' {
+			return false
+		}
+	}
+	return true
+}
+
 // DecryptMegolmEvent decrypts an m.room.encrypted event where the algorithm is m.megolm.v1.aes-sha2
 func (mach *OlmMachine) DecryptMegolmEvent(ctx context.Context, evt *event.Event) (*event.Event, error) {
 	content, ok := evt.Content.Parsed.(*event.EncryptedEventContent)
@@ -63,6 +73,12 @@ func (mach *OlmMachine) DecryptMegolmEvent(ctx context.Context, evt *event.Event
 		return nil, ErrIncorrectEncryptedContentType
 	} else if content.Algorithm != id.AlgorithmMegolmV1 {
 		return nil, ErrUnsupportedAlgorithm
+	} else if len(content.MegolmCiphertext) < 74 {
+		return nil, fmt.Errorf("%w: ciphertext too short (%d bytes)", ErrCorruptedMegolmPayload, len(content.MegolmCiphertext))
+	} else if len(content.SessionID) != sessionIDLength {
+		return nil, fmt.Errorf("%w: invalid session ID length %d", ErrCorruptedMegolmPayload, len(content.SessionID))
+	} else if !validateCiphertextCharacters(content.MegolmCiphertext) {
+		return nil, fmt.Errorf("%w: invalid characters in ciphertext", ErrCorruptedMegolmPayload)
 	}
 	log := mach.machOrContextLog(ctx).With().
 		Str("action", "decrypt megolm event").
@@ -236,8 +252,6 @@ func (mach *OlmMachine) actuallyDecryptMegolmEvent(ctx context.Context, evt *eve
 		return nil, nil, 0, fmt.Errorf("failed to get group session: %w", err)
 	} else if sess == nil {
 		return nil, nil, 0, fmt.Errorf("%w (ID %s)", ErrNoSessionFound, content.SessionID)
-	} else if content.SenderKey != "" && content.SenderKey != sess.SenderKey {
-		return sess, nil, 0, ErrSenderKeyMismatch
 	}
 	plaintext, messageIndex, err := sess.Internal.Decrypt(content.MegolmCiphertext)
 	if err != nil {

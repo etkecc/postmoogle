@@ -3,21 +3,8 @@ package displaywidth
 import (
 	"unicode/utf8"
 
-	"github.com/clipperhouse/stringish"
 	"github.com/clipperhouse/uax29/v2/graphemes"
 )
-
-// Options allows you to specify the treatment of ambiguous East Asian
-// characters. When EastAsianWidth is false (default), ambiguous East Asian
-// characters are treated as width 1. When EastAsianWidth is true, ambiguous
-// East Asian characters are treated as width 2.
-type Options struct {
-	EastAsianWidth bool
-}
-
-// DefaultOptions is the default options for the display width
-// calculation, which is EastAsianWidth: false.
-var DefaultOptions = Options{EastAsianWidth: false}
 
 // String calculates the display width of a string,
 // by iterating over grapheme clusters in the string
@@ -29,19 +16,44 @@ func String(s string) int {
 // String calculates the display width of a string, for the given options, by
 // iterating over grapheme clusters in the string and summing their widths.
 func (options Options) String(s string) int {
-	// Optimization: no need to parse grapheme
-	switch len(s) {
-	case 0:
-		return 0
-	case 1:
-		return asciiWidth(s[0])
+	width := 0
+	pos := 0
+
+	for pos < len(s) {
+		// Try ASCII optimization
+		asciiLen := printableASCIILength(s[pos:])
+		if asciiLen > 0 {
+			width += asciiLen
+			pos += asciiLen
+			continue
+		}
+
+		// Not ASCII, use grapheme parsing
+		g := graphemes.FromString(s[pos:])
+		g.AnsiEscapeSequences = options.ControlSequences
+		g.AnsiEscapeSequences8Bit = options.ControlSequences8Bit
+
+		start := pos
+
+		for g.Next() {
+			v := g.Value()
+			width += graphemeWidth(v, options)
+			pos += len(v)
+
+			// Quick check: if remaining might have printable ASCII, break to outer loop
+			if pos < len(s) && s[pos] >= 0x20 && s[pos] <= 0x7E {
+				break
+			}
+		}
+
+		// Defensive, should not happen: if no progress was made,
+		// skip a byte to prevent infinite loop. Only applies if
+		// the grapheme parser misbehaves.
+		if pos == start {
+			pos++
+		}
 	}
 
-	width := 0
-	g := graphemes.FromString(s)
-	for g.Next() {
-		width += graphemeWidth(g.Value(), options)
-	}
 	return width
 }
 
@@ -55,19 +67,44 @@ func Bytes(s []byte) int {
 // Bytes calculates the display width of a []byte, for the given options, by
 // iterating over grapheme clusters in the slice and summing their widths.
 func (options Options) Bytes(s []byte) int {
-	// Optimization: no need to parse grapheme
-	switch len(s) {
-	case 0:
-		return 0
-	case 1:
-		return asciiWidth(s[0])
+	width := 0
+	pos := 0
+
+	for pos < len(s) {
+		// Try ASCII optimization
+		asciiLen := printableASCIILength(s[pos:])
+		if asciiLen > 0 {
+			width += asciiLen
+			pos += asciiLen
+			continue
+		}
+
+		// Not ASCII, use grapheme parsing
+		g := graphemes.FromBytes(s[pos:])
+		g.AnsiEscapeSequences = options.ControlSequences
+		g.AnsiEscapeSequences8Bit = options.ControlSequences8Bit
+
+		start := pos
+
+		for g.Next() {
+			v := g.Value()
+			width += graphemeWidth(v, options)
+			pos += len(v)
+
+			// Quick check: if remaining might have printable ASCII, break to outer loop
+			if pos < len(s) && s[pos] >= 0x20 && s[pos] <= 0x7E {
+				break
+			}
+		}
+
+		// Defensive, should not happen: if no progress was made,
+		// skip a byte to prevent infinite loop. Only applies if
+		// the grapheme parser misbehaves.
+		if pos == start {
+			pos++
+		}
 	}
 
-	width := 0
-	g := graphemes.FromBytes(s)
-	for g.Next() {
-		width += graphemeWidth(g.Value(), options)
-	}
 	return width
 }
 
@@ -109,13 +146,26 @@ const _Default property = 0
 
 // graphemeWidth returns the display width of a grapheme cluster.
 // The passed string must be a single grapheme cluster.
-func graphemeWidth[T stringish.Interface](s T, options Options) int {
-	// Optimization: no need to look up properties
-	switch len(s) {
-	case 0:
+func graphemeWidth[T ~string | []byte](s T, options Options) int {
+	if len(s) == 0 {
 		return 0
-	case 1:
+	}
+
+	// C1 controls (0x80-0x9F) are zero-width when 8-bit control sequences
+	// are enabled. This must be checked before the single-byte optimization
+	// below, which would otherwise return width 1 for these bytes.
+	if options.ControlSequences8Bit && s[0] >= 0x80 && s[0] <= 0x9F {
+		return 0
+	}
+
+	// Optimization: single-byte graphemes need no property lookup
+	if len(s) == 1 {
 		return asciiWidth(s[0])
+	}
+
+	// Multi-byte grapheme clusters led by a C0 control (0x00-0x1F)
+	if s[0] <= 0x1F {
+		return 0
 	}
 
 	p, sz := lookup(s)
@@ -150,9 +200,31 @@ func asciiWidth(b byte) int {
 	return 1
 }
 
+// printableASCIILength returns the length of consecutive printable ASCII bytes
+// starting at the beginning of s.
+func printableASCIILength[T string | []byte](s T) int {
+	i := 0
+	for ; i < len(s); i++ {
+		b := s[i]
+		// Printable ASCII is 0x20-0x7E (space through tilde)
+		if b < 0x20 || b > 0x7E {
+			break
+		}
+	}
+
+	// If the next byte is non-ASCII (>= 0x80), back off by 1. The grapheme
+	// parser may group the last ASCII byte with subsequent non-ASCII bytes,
+	// such as combining marks.
+	if i > 0 && i < len(s) && s[i] >= 0x80 {
+		i--
+	}
+
+	return i
+}
+
 // isVS16 checks if the slice matches VS16 (U+FE0F) UTF-8 encoding
 // (EF B8 8F). It assumes len(s) >= 3.
-func isVS16[T stringish.Interface](s T) bool {
+func isVS16[T ~string | []byte](s T) bool {
 	return s[0] == 0xEF && s[1] == 0xB8 && s[2] == 0x8F
 }
 

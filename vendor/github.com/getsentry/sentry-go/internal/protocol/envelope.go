@@ -21,7 +21,7 @@ type EnvelopeHeader struct {
 
 	// SentAt is the timestamp when the event was sent from the SDK as string in RFC 3339 format.
 	// Used for clock drift correction of the event timestamp. The time zone must be UTC.
-	SentAt time.Time `json:"sent_at,omitempty"`
+	SentAt time.Time `json:"sent_at,omitzero"`
 
 	// Dsn can be used for self-authenticated envelopes.
 	// This means that the envelope has all the information necessary to be sent to sentry.
@@ -46,6 +46,7 @@ const (
 	EnvelopeItemTypeCheckIn     EnvelopeItemType = "check_in"
 	EnvelopeItemTypeAttachment  EnvelopeItemType = "attachment"
 	EnvelopeItemTypeLog         EnvelopeItemType = "log"
+	EnvelopeItemTypeTraceMetric EnvelopeItemType = "trace_metric"
 )
 
 // EnvelopeItemHeader represents the header of an envelope item.
@@ -69,7 +70,7 @@ type EnvelopeItemHeader struct {
 	ItemCount *int `json:"item_count,omitempty"`
 }
 
-// EnvelopeItem represents a single item within an envelope.
+// EnvelopeItem represents a single item or batch within an envelope.
 type EnvelopeItem struct {
 	Header  *EnvelopeItemHeader `json:"-"`
 	Payload []byte              `json:"-"`
@@ -85,6 +86,9 @@ func NewEnvelope(header *EnvelopeHeader) *Envelope {
 
 // AddItem adds an item to the envelope.
 func (e *Envelope) AddItem(item *EnvelopeItem) {
+	if item == nil {
+		return
+	}
 	e.Items = append(e.Items, item)
 }
 
@@ -165,12 +169,6 @@ func (e *Envelope) Size() (int, error) {
 	return len(data), nil
 }
 
-// MarshalJSON converts the EnvelopeHeader to JSON.
-func (h *EnvelopeHeader) MarshalJSON() ([]byte, error) {
-	type header EnvelopeHeader
-	return json.Marshal((*header)(h))
-}
-
 // NewEnvelopeItem creates a new envelope item with the specified type and payload.
 func NewEnvelopeItem(itemType EnvelopeItemType, payload []byte) *EnvelopeItem {
 	length := len(payload)
@@ -207,6 +205,20 @@ func NewLogItem(itemCount int, payload []byte) *EnvelopeItem {
 			Length:      &length,
 			ItemCount:   &itemCount,
 			ContentType: "application/vnd.sentry.items.log+json",
+		},
+		Payload: payload,
+	}
+}
+
+// NewTraceMetricItem creates a new envelope item for trace metrics.
+func NewTraceMetricItem(itemCount int, payload []byte) *EnvelopeItem {
+	length := len(payload)
+	return &EnvelopeItem{
+		Header: &EnvelopeItemHeader{
+			Type:        EnvelopeItemTypeTraceMetric,
+			Length:      &length,
+			ItemCount:   &itemCount,
+			ContentType: "application/vnd.sentry.items.trace-metric+json",
 		},
 		Payload: payload,
 	}

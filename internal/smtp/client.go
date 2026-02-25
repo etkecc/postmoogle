@@ -107,8 +107,8 @@ func (c *Client) createRelayClient(config *RelayConfig, from, to string) (*smtp.
 	}
 
 	if ok, _ := conn.Extension("STARTTLS"); ok {
-		tlsConfig := &tls.Config{ServerName: config.Host} //nolint:gosec // it's smtp, even that is too strict sometimes
-		conn.StartTLS(tlsConfig)                          //nolint:errcheck // if it doesn't work - we can't do anything anyway
+		tlsConfig := &tls.Config{ServerName: config.Host}
+		conn.StartTLS(tlsConfig) //nolint:errcheck // if it doesn't work - we can't do anything anyway
 	}
 
 	if config.Username != "" {
@@ -200,8 +200,8 @@ func (c *Client) connect(localname, serverOf, mxhost string) *smtp.Client {
 		return nil
 	}
 	if ok, _ := conn.Extension("STARTTLS"); ok {
-		config := &tls.Config{ServerName: mxhost} //nolint:gosec // it's smtp, even that is too strict sometimes
-		conn.StartTLS(config)                     //nolint:errcheck // if it doesn't work - we can't do anything anyway
+		config := &tls.Config{ServerName: mxhost}
+		conn.StartTLS(config) //nolint:errcheck // if it doesn't work - we can't do anything anyway
 	}
 
 	return conn

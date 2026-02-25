@@ -9,7 +9,7 @@ type Config struct {
 	// Login is a localpart if logging in with password (postmoogle) OR full MXID if logging in with shared secret (@postmoogle:example.com)
 	Login string
 	// Password for login/password auth only
-	Password string
+	Password string //nolint:gosec // Passwordfor login/password auth only
 	// SharedSecret for login/sharedsecret auth only
 	SharedSecret string
 	// Domains for SMTP
@@ -88,7 +88,7 @@ type Mailboxes struct {
 type PSD struct {
 	URL      string
 	Login    string
-	Password string
+	Password string //nolint:gosec // intended
 }
 
 // Relay config
@@ -96,5 +96,5 @@ type Relay struct {
 	Host     string
 	Port     string
 	Username string
-	Password string
+	Password string //nolint:gosec // intended
 }

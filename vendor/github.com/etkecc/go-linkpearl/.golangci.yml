@@ -114,6 +114,9 @@ linters:
       - linters:
           - revive
         text: returns unexported type
+      - linters:
+          - revive
+        text: 'var-naming: avoid meaningless package names'
     paths:
       - mocks
       - third_party$

@@ -46,7 +46,7 @@ type RelayConfig struct {
 	Host     string
 	Port     string
 	Username string
-	Password string
+	Password string //nolint:gosec // intended
 }
 
 type Manager struct {
@@ -213,7 +213,7 @@ func (m *Manager) loadTLSConfig() bool {
 		return false
 	}
 
-	m.tls.Config = &tls.Config{Certificates: certificates} //nolint:gosec // it's email, even that config is too strict sometimes
+	m.tls.Config = &tls.Config{Certificates: certificates}
 	m.smtp.TLSConfig = m.tls.Config
 	return true
 }
