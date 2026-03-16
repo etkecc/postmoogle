@@ -1,4 +1,4 @@
-package smtp //nolint:all // SMTP server implementation
+package smtp
 
 import (
 	"context"
