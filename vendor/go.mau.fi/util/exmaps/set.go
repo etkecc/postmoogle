@@ -13,6 +13,7 @@ import (
 // AbstractSet is an interface implemented by [Set] and [exsync.Set]
 type AbstractSet[T comparable] interface {
 	Add(item T) bool
+	AddSeq(seq iter.Seq[T])
 	Has(item T) bool
 	Pop(item T) bool
 	Remove(item T)
@@ -49,6 +50,12 @@ func (s Set[T]) Add(item T) bool {
 		return true
 	}
 	return false
+}
+
+func (s Set[T]) AddSeq(seq iter.Seq[T]) {
+	for item := range seq {
+		s[item] = emptyVal
+	}
 }
 
 func (s Set[T]) Remove(item T) {

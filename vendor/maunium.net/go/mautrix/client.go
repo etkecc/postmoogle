@@ -386,7 +386,14 @@ func (cli *Client) LogRequestDone(req *http.Request, resp *http.Response, err er
 		}
 	}
 	if body := req.Context().Value(LogBodyContextKey); body != nil {
-		evt.Interface("req_body", body)
+		switch typedLogBody := body.(type) {
+		case json.RawMessage:
+			evt.RawJSON("req_body", typedLogBody)
+		case string:
+			evt.Str("req_body", typedLogBody)
+		default:
+			panic(fmt.Errorf("invalid type for LogBodyContextKey: %T", body))
+		}
 	}
 	if errors.Is(err, context.Canceled) {
 		evt.Msg("Request canceled")
@@ -450,8 +457,10 @@ func (params *FullRequest) compileRequest(ctx context.Context) (*http.Request, e
 		}
 		if params.SensitiveContent && !logSensitiveContent {
 			logBody = "<sensitive content omitted>"
+		} else if len(jsonStr) > 32768 {
+			logBody = fmt.Sprintf("<large content omitted (%d bytes)>", len(jsonStr))
 		} else {
-			logBody = params.RequestJSON
+			logBody = json.RawMessage(jsonStr)
 		}
 		reqBody = bytes.NewReader(jsonStr)
 		reqLen = int64(len(jsonStr))
@@ -476,7 +485,7 @@ func (params *FullRequest) compileRequest(ctx context.Context) (*http.Request, e
 		}
 	} else if params.Method != http.MethodGet && params.Method != http.MethodHead {
 		params.RequestJSON = struct{}{}
-		logBody = params.RequestJSON
+		logBody = json.RawMessage("{}")
 		reqBody = bytes.NewReader([]byte("{}"))
 		reqLen = 2
 	}
@@ -909,7 +918,7 @@ func (cli *Client) RegisterAvailable(ctx context.Context, username string) (resp
 	return
 }
 
-func (cli *Client) register(ctx context.Context, url string, req *ReqRegister) (resp *RespRegister, uiaResp *RespUserInteractive, err error) {
+func (cli *Client) register(ctx context.Context, url string, req *ReqRegister[any]) (resp *RespRegister, uiaResp *RespUserInteractive, err error) {
 	var bodyBytes []byte
 	bodyBytes, err = cli.MakeFullRequest(ctx, FullRequest{
 		Method:           http.MethodPost,
@@ -933,7 +942,7 @@ func (cli *Client) register(ctx context.Context, url string, req *ReqRegister) (
 // Register makes an HTTP request according to https://spec.matrix.org/v1.2/client-server-api/#post_matrixclientv3register
 //
 // Registers with kind=user. For kind=guest, see RegisterGuest.
-func (cli *Client) Register(ctx context.Context, req *ReqRegister) (*RespRegister, *RespUserInteractive, error) {
+func (cli *Client) Register(ctx context.Context, req *ReqRegister[any]) (*RespRegister, *RespUserInteractive, error) {
 	u := cli.BuildClientURL("v3", "register")
 	return cli.register(ctx, u, req)
 }
@@ -942,7 +951,7 @@ func (cli *Client) Register(ctx context.Context, req *ReqRegister) (*RespRegiste
 // with kind=guest.
 //
 // For kind=user, see Register.
-func (cli *Client) RegisterGuest(ctx context.Context, req *ReqRegister) (*RespRegister, *RespUserInteractive, error) {
+func (cli *Client) RegisterGuest(ctx context.Context, req *ReqRegister[any]) (*RespRegister, *RespUserInteractive, error) {
 	query := map[string]string{
 		"kind": "guest",
 	}
@@ -965,7 +974,7 @@ func (cli *Client) RegisterGuest(ctx context.Context, req *ReqRegister) (*RespRe
 //		panic(err)
 //	}
 //	token := res.AccessToken
-func (cli *Client) RegisterDummy(ctx context.Context, req *ReqRegister) (*RespRegister, error) {
+func (cli *Client) RegisterDummy(ctx context.Context, req *ReqRegister[any]) (*RespRegister, error) {
 	_, uia, err := cli.Register(ctx, req)
 	if err != nil && uia == nil {
 		return nil, err
@@ -1149,7 +1158,9 @@ func (cli *Client) SearchUserDirectory(ctx context.Context, query string, limit 
 }
 
 func (cli *Client) GetMutualRooms(ctx context.Context, otherUserID id.UserID, extras ...ReqMutualRooms) (resp *RespMutualRooms, err error) {
-	if cli.SpecVersions != nil && !cli.SpecVersions.Supports(FeatureMutualRooms) {
+	supportsStable := cli.SpecVersions.Supports(FeatureStableMutualRooms)
+	supportsUnstable := cli.SpecVersions.Supports(FeatureUnstableMutualRooms)
+	if cli.SpecVersions != nil && !supportsUnstable && !supportsStable {
 		err = fmt.Errorf("server does not support fetching mutual rooms")
 		return
 	}
@@ -1159,7 +1170,10 @@ func (cli *Client) GetMutualRooms(ctx context.Context, otherUserID id.UserID, ex
 	if len(extras) > 0 {
 		query["from"] = extras[0].From
 	}
-	urlPath := cli.BuildURLWithQuery(ClientURLPath{"unstable", "uk.half-shot.msc2666", "user", "mutual_rooms"}, query)
+	urlPath := cli.BuildURLWithQuery(ClientURLPath{"v1", "mutual_rooms"}, query)
+	if !supportsStable && supportsUnstable {
+		urlPath = cli.BuildURLWithQuery(ClientURLPath{"unstable", "uk.half-shot.msc2666", "user", "mutual_rooms"}, query)
+	}
 	_, err = cli.MakeRequest(ctx, http.MethodGet, urlPath, nil, &resp)
 	return
 }
@@ -1345,6 +1359,48 @@ func (cli *Client) SendMessageEvent(ctx context.Context, roomID id.RoomID, event
 	}
 
 	urlData := ClientURLPath{"v3", "rooms", roomID, "send", eventType.String(), txnID}
+	urlPath := cli.BuildURLWithQuery(urlData, queryParams)
+	_, err = cli.MakeRequest(ctx, http.MethodPut, urlPath, contentJSON, &resp)
+	return
+}
+
+// BeeperSendEphemeralEvent sends an ephemeral event into a room using Beeper's unstable endpoint.
+// contentJSON should be a value that can be encoded as JSON using json.Marshal.
+func (cli *Client) BeeperSendEphemeralEvent(ctx context.Context, roomID id.RoomID, eventType event.Type, contentJSON any, extra ...ReqSendEvent) (resp *RespSendEvent, err error) {
+	var req ReqSendEvent
+	if len(extra) > 0 {
+		req = extra[0]
+	}
+
+	var txnID string
+	if len(req.TransactionID) > 0 {
+		txnID = req.TransactionID
+	} else {
+		txnID = cli.TxnID()
+	}
+
+	queryParams := map[string]string{}
+	if req.Timestamp > 0 {
+		queryParams["ts"] = strconv.FormatInt(req.Timestamp, 10)
+	}
+
+	if !req.DontEncrypt && cli != nil && cli.Crypto != nil && eventType != event.EventEncrypted {
+		var isEncrypted bool
+		isEncrypted, err = cli.StateStore.IsEncrypted(ctx, roomID)
+		if err != nil {
+			err = fmt.Errorf("failed to check if room is encrypted: %w", err)
+			return
+		}
+		if isEncrypted {
+			if contentJSON, err = cli.Crypto.Encrypt(ctx, roomID, eventType, contentJSON); err != nil {
+				err = fmt.Errorf("failed to encrypt event: %w", err)
+				return
+			}
+			eventType = event.EventEncrypted
+		}
+	}
+
+	urlData := ClientURLPath{"unstable", "com.beeper.ephemeral", "rooms", roomID, "ephemeral", eventType.String(), txnID}
 	urlPath := cli.BuildURLWithQuery(urlData, queryParams)
 	_, err = cli.MakeRequest(ctx, http.MethodPut, urlPath, contentJSON, &resp)
 	return
@@ -1990,7 +2046,10 @@ type ReqUploadMedia struct {
 }
 
 func (cli *Client) tryUploadMediaToURL(ctx context.Context, url, contentType string, content io.Reader, contentLength int64) (*http.Response, error) {
-	cli.Log.Debug().Str("url", url).Msg("Uploading media to external URL")
+	cli.Log.Debug().
+		Str("url", url).
+		Int64("content_length", contentLength).
+		Msg("Uploading media to external URL")
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, content)
 	if err != nil {
 		return nil, err
@@ -2628,13 +2687,13 @@ func (cli *Client) SetDeviceInfo(ctx context.Context, deviceID id.DeviceID, req 
 	return err
 }
 
-func (cli *Client) DeleteDevice(ctx context.Context, deviceID id.DeviceID, req *ReqDeleteDevice) error {
+func (cli *Client) DeleteDevice(ctx context.Context, deviceID id.DeviceID, req *ReqDeleteDevice[any]) error {
 	urlPath := cli.BuildClientURL("v3", "devices", deviceID)
 	_, err := cli.MakeRequest(ctx, http.MethodDelete, urlPath, req, nil)
 	return err
 }
 
-func (cli *Client) DeleteDevices(ctx context.Context, req *ReqDeleteDevices) error {
+func (cli *Client) DeleteDevices(ctx context.Context, req *ReqDeleteDevices[any]) error {
 	urlPath := cli.BuildClientURL("v3", "delete_devices")
 	_, err := cli.MakeRequest(ctx, http.MethodPost, urlPath, req, nil)
 	return err
@@ -2645,7 +2704,7 @@ type UIACallback = func(*RespUserInteractive) interface{}
 // UploadCrossSigningKeys uploads the given cross-signing keys to the server.
 // Because the endpoint requires user-interactive authentication a callback must be provided that,
 // given the UI auth parameters, produces the required result (or nil to end the flow).
-func (cli *Client) UploadCrossSigningKeys(ctx context.Context, keys *UploadCrossSigningKeysReq, uiaCallback UIACallback) error {
+func (cli *Client) UploadCrossSigningKeys(ctx context.Context, keys *UploadCrossSigningKeysReq[any], uiaCallback UIACallback) error {
 	content, err := cli.MakeFullRequest(ctx, FullRequest{
 		Method:           http.MethodPost,
 		URL:              cli.BuildClientURL("v3", "keys", "device_signing", "upload"),

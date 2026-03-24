@@ -113,9 +113,9 @@ func (et *Type) GuessClass() TypeClass {
 		StatePinnedEvents.Type, StateTombstone.Type, StateEncryption.Type, StateBridge.Type, StateHalfShotBridge.Type,
 		StateSpaceParent.Type, StateSpaceChild.Type, StatePolicyRoom.Type, StatePolicyServer.Type, StatePolicyUser.Type,
 		StateElementFunctionalMembers.Type, StateBeeperRoomFeatures.Type, StateBeeperDisappearingTimer.Type,
-		StateMSC4391BotCommand.Type:
+		StateMSC4391BotCommand.Type, StateRoomPolicy.Type, StateUnstableRoomPolicy.Type:
 		return StateEventType
-	case EphemeralEventReceipt.Type, EphemeralEventTyping.Type, EphemeralEventPresence.Type:
+	case EphemeralEventReceipt.Type, EphemeralEventTyping.Type, EphemeralEventPresence.Type, BeeperEphemeralEventAIStream.Type:
 		return EphemeralEventType
 	case AccountDataDirectChats.Type, AccountDataPushRules.Type, AccountDataRoomTags.Type,
 		AccountDataFullyRead.Type, AccountDataIgnoredUserList.Type, AccountDataMarkedUnread.Type,
@@ -195,6 +195,9 @@ var (
 	StateSpaceChild        = Type{"m.space.child", StateEventType}
 	StateSpaceParent       = Type{"m.space.parent", StateEventType}
 
+	StateRoomPolicy         = Type{"m.room.policy", StateEventType}
+	StateUnstableRoomPolicy = Type{"org.matrix.msc4284.policy", StateEventType}
+
 	StateLegacyPolicyRoom     = Type{"m.room.rule.room", StateEventType}
 	StateLegacyPolicyServer   = Type{"m.room.rule.server", StateEventType}
 	StateLegacyPolicyUser     = Type{"m.room.rule.user", StateEventType}
@@ -247,9 +250,11 @@ var (
 
 // Ephemeral events
 var (
-	EphemeralEventReceipt  = Type{"m.receipt", EphemeralEventType}
-	EphemeralEventTyping   = Type{"m.typing", EphemeralEventType}
-	EphemeralEventPresence = Type{"m.presence", EphemeralEventType}
+	EphemeralEventReceipt        = Type{"m.receipt", EphemeralEventType}
+	EphemeralEventTyping         = Type{"m.typing", EphemeralEventType}
+	EphemeralEventPresence       = Type{"m.presence", EphemeralEventType}
+	EphemeralEventEncrypted      = Type{"m.room.encrypted", EphemeralEventType}
+	BeeperEphemeralEventAIStream = Type{"com.beeper.ai.stream_event", EphemeralEventType}
 )
 
 // Account data events

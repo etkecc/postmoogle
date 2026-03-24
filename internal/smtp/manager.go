@@ -46,7 +46,7 @@ type RelayConfig struct {
 	Host     string
 	Port     string
 	Username string
-	Password string //nolint:gosec // intended
+	Password string
 }
 
 type Manager struct {

@@ -18,7 +18,7 @@ github.com/PuerkitoBio/urlesc
 # github.com/archdx/zerolog-sentry v1.8.5
 ## explicit; go 1.20
 github.com/archdx/zerolog-sentry
-# github.com/buger/jsonparser v1.1.1
+# github.com/buger/jsonparser v1.1.2
 ## explicit; go 1.13
 github.com/buger/jsonparser
 # github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a
@@ -61,7 +61,7 @@ github.com/etkecc/go-healthchecks/v2
 # github.com/etkecc/go-kit v1.7.7
 ## explicit; go 1.22
 github.com/etkecc/go-kit
-# github.com/etkecc/go-linkpearl v0.0.0-20260225074715-a449ce58a664
+# github.com/etkecc/go-linkpearl v0.0.0-20260317172541-0cdd23fa0303
 ## explicit; go 1.25.0
 github.com/etkecc/go-linkpearl
 # github.com/etkecc/go-mxidwc v1.0.1
@@ -76,8 +76,8 @@ github.com/etkecc/go-trysmtp
 # github.com/etkecc/go-validator/v2 v2.2.6
 ## explicit; go 1.24.0
 github.com/etkecc/go-validator/v2
-# github.com/fatih/color v1.18.0
-## explicit; go 1.17
+# github.com/fatih/color v1.19.0
+## explicit; go 1.25.0
 github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.9.0
 ## explicit; go 1.17
@@ -92,7 +92,7 @@ github.com/gabriel-vasile/mimetype/internal/json
 github.com/gabriel-vasile/mimetype/internal/magic
 github.com/gabriel-vasile/mimetype/internal/markup
 github.com/gabriel-vasile/mimetype/internal/scan
-# github.com/getsentry/sentry-go v0.43.0
+# github.com/getsentry/sentry-go v0.44.1
 ## explicit; go 1.24.0
 github.com/getsentry/sentry-go
 github.com/getsentry/sentry-go/attribute
@@ -105,6 +105,7 @@ github.com/getsentry/sentry-go/internal/protocol
 github.com/getsentry/sentry-go/internal/ratelimit
 github.com/getsentry/sentry-go/internal/telemetry
 github.com/getsentry/sentry-go/internal/util
+github.com/getsentry/sentry-go/report
 # github.com/go-openapi/jsonpointer v0.19.5
 ## explicit; go 1.13
 github.com/go-openapi/jsonpointer
@@ -155,14 +156,17 @@ github.com/josharian/intern
 # github.com/kvannotten/mailstrip v0.0.0-20200711213611-0002f5c0467e
 ## explicit; go 1.14
 github.com/kvannotten/mailstrip
-# github.com/lib/pq v1.11.2
+# github.com/lib/pq v1.12.0
 ## explicit; go 1.21
 github.com/lib/pq
 github.com/lib/pq/internal/pgpass
+github.com/lib/pq/internal/pgservice
 github.com/lib/pq/internal/pqsql
+github.com/lib/pq/internal/pqtime
 github.com/lib/pq/internal/pqutil
 github.com/lib/pq/internal/proto
 github.com/lib/pq/oid
+github.com/lib/pq/pqerror
 github.com/lib/pq/scram
 # github.com/mailru/easyjson v0.7.7
 ## explicit; go 1.12
@@ -178,7 +182,7 @@ github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.21
 ## explicit; go 1.20
 github.com/mattn/go-runewidth
-# github.com/mattn/go-sqlite3 v1.14.34
+# github.com/mattn/go-sqlite3 v1.14.37
 ## explicit; go 1.19
 github.com/mattn/go-sqlite3
 # github.com/mcnijman/go-emailaddress v1.1.1
@@ -196,7 +200,7 @@ github.com/olekukonko/cat
 # github.com/olekukonko/errors v1.2.0
 ## explicit; go 1.21
 github.com/olekukonko/errors
-# github.com/olekukonko/ll v0.1.7
+# github.com/olekukonko/ll v0.1.8
 ## explicit; go 1.21
 github.com/olekukonko/ll
 github.com/olekukonko/ll/lh
@@ -245,7 +249,7 @@ github.com/tidwall/pretty
 # github.com/tidwall/sjson v1.2.5
 ## explicit; go 1.14
 github.com/tidwall/sjson
-# github.com/yuin/goldmark v1.7.16
+# github.com/yuin/goldmark v1.8.1
 ## explicit; go 1.22
 github.com/yuin/goldmark
 github.com/yuin/goldmark/ast
@@ -256,7 +260,7 @@ github.com/yuin/goldmark/renderer
 github.com/yuin/goldmark/renderer/html
 github.com/yuin/goldmark/text
 github.com/yuin/goldmark/util
-# go.mau.fi/util v0.9.6
+# go.mau.fi/util v0.9.7
 ## explicit; go 1.25.0
 go.mau.fi/util/base58
 go.mau.fi/util/confusable
@@ -348,7 +352,7 @@ golang.org/x/tools/go/loader
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
-# maunium.net/go/mautrix v0.26.3
+# maunium.net/go/mautrix v0.26.4
 ## explicit; go 1.25.0
 maunium.net/go/mautrix
 maunium.net/go/mautrix/crypto
@@ -416,8 +420,8 @@ modernc.org/mathutil
 # modernc.org/memory v1.11.0
 ## explicit; go 1.23.0
 modernc.org/memory
-# modernc.org/sqlite v1.46.1
-## explicit; go 1.24.0
+# modernc.org/sqlite v1.47.0
+## explicit; go 1.25.0
 modernc.org/sqlite
 modernc.org/sqlite/lib
 modernc.org/sqlite/vtab

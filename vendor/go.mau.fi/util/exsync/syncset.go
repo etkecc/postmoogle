@@ -66,6 +66,17 @@ func (s *Set[T]) Add(item T) bool {
 	return true
 }
 
+func (s *Set[T]) AddSeq(seq iter.Seq[T]) {
+	if s == nil {
+		return
+	}
+	s.l.Lock()
+	defer s.l.Unlock()
+	for item := range seq {
+		s.m[item] = emptyVal
+	}
+}
+
 // Has checks if the given item is in the set.
 func (s *Set[T]) Has(item T) bool {
 	if s == nil {
