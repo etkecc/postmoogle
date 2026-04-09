@@ -184,6 +184,14 @@ func applyQueryParams(c *conn, query string) error {
 		c.integerTimeFormat = v
 	}
 
+	if v := q.Get("_timezone"); v != "" {
+		loc, err := time.LoadLocation(v)
+		if err != nil {
+			return fmt.Errorf("unknown _timezone %q: %w", v, err)
+		}
+		c.loc = loc
+	}
+
 	if v := q.Get("_txlock"); v != "" {
 		lower := strings.ToLower(v)
 		if lower != "deferred" && lower != "immediate" && lower != "exclusive" {

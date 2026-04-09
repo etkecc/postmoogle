@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -34,7 +33,7 @@ func (c *Client) init(options ...Option) {
 	c.log = DefaultErrLog
 	c.baseURL = DefaultAPI
 	c.userAgent = DefaultUserAgent
-	c.http = &http.Client{Timeout: 10 * time.Second}
+	c.http = DefaultHTTPClient()
 	c.done = make(chan bool, 1)
 	c.uuid = ""
 
