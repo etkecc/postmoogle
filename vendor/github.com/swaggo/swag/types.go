@@ -3,7 +3,6 @@ package swag
 import (
 	"go/ast"
 	"go/token"
-	"regexp"
 	"strings"
 
 	"github.com/go-openapi/spec"
@@ -30,6 +29,8 @@ type TypeSpecDef struct {
 	PkgPath    string
 	ParentSpec ast.Decl
 
+	SchemaName string
+
 	NotUnique bool
 }
 
@@ -46,20 +47,6 @@ func (t *TypeSpecDef) Name() string {
 func (t *TypeSpecDef) TypeName() string {
 	if ignoreNameOverride(t.TypeSpec.Name.Name) {
 		return t.TypeSpec.Name.Name[1:]
-	} else if t.TypeSpec.Comment != nil {
-		// get alias from comment '// @name '
-		const regexCaseInsensitive = "(?i)"
-		reTypeName, err := regexp.Compile(regexCaseInsensitive + `^@name\s+(\S+)`)
-		if err != nil {
-			panic(err)
-		}
-		for _, comment := range t.TypeSpec.Comment.List {
-			trimmedComment := strings.TrimSpace(strings.TrimLeft(comment.Text, "/"))
-			texts := reTypeName.FindStringSubmatch(trimmedComment)
-			if len(texts) > 1 {
-				return texts[1]
-			}
-		}
 	}
 
 	var names []string
@@ -84,6 +71,19 @@ func (t *TypeSpecDef) TypeName() string {
 // FullPath return the full path of the typeSpec.
 func (t *TypeSpecDef) FullPath() string {
 	return t.PkgPath + "." + t.Name()
+}
+
+func (t *TypeSpecDef) Alias() string {
+	return nameOverride(t.TypeSpec.Comment)
+}
+
+func (t *TypeSpecDef) SetSchemaName() {
+	if alias := t.Alias(); alias != "" {
+		t.SchemaName = alias
+		return
+	}
+
+	t.SchemaName = t.TypeName()
 }
 
 // AstFileInfo information of an ast.File.

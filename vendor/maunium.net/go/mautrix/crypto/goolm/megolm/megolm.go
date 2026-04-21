@@ -16,10 +16,6 @@ import (
 )
 
 const (
-	megolmPickleVersion uint8 = 1
-)
-
-const (
 	protocolVersion   = 3
 	RatchetParts      = 4       // number of ratchet parts
 	RatchetPartLength = 256 / 8 // length of each ratchet part in bytes
@@ -99,7 +95,7 @@ func (m *Ratchet) AdvanceTo(target uint32) {
 
 		// how many times do we need to rehash this part?
 		// '& 0xff' ensures we handle integer wraparound correctly
-		steps := ((target >> shift) - m.Counter>>shift) & uint32(0xff)
+		steps := ((target >> shift) - (m.Counter >> shift)) & uint32(0xff)
 
 		if steps == 0 {
 			/*
@@ -177,7 +173,7 @@ func (r Ratchet) SessionExportMessage(key crypto.Ed25519PublicKey) ([]byte, erro
 }
 
 // Decrypt decrypts the ciphertext and verifies the MAC but not the signature.
-func (r Ratchet) Decrypt(ciphertext []byte, signingkey *crypto.Ed25519PublicKey, msg *message.GroupMessage) ([]byte, error) {
+func (r Ratchet) Decrypt(ciphertext []byte, msg *message.GroupMessage) ([]byte, error) {
 	//verify mac
 	cipher, err := aessha2.NewAESSHA2(r.Data[:], megolmKeysKDFInfo)
 	if err != nil {
@@ -192,16 +188,6 @@ func (r Ratchet) Decrypt(ciphertext []byte, signingkey *crypto.Ed25519PublicKey,
 	}
 
 	return cipher.Decrypt(msg.Ciphertext)
-}
-
-// PickleAsJSON returns a ratchet as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (r Ratchet) PickleAsJSON(key []byte) ([]byte, error) {
-	return libolmpickle.PickleAsJSON(r, megolmPickleVersion, key)
-}
-
-// UnpickleAsJSON updates a ratchet by a base64 encrypted string using the supplied key. The unencrypted representation has to be in JSON format.
-func (r *Ratchet) UnpickleAsJSON(pickled, key []byte) error {
-	return libolmpickle.UnpickleAsJSON(r, pickled, key, megolmPickleVersion)
 }
 
 // UnpickleLibOlm decodes the unencryted value and populates the Ratchet accordingly. It returns the number of bytes read.

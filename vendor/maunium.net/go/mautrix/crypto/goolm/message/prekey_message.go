@@ -36,7 +36,7 @@ func (r *PreKeyMessage) Decode(input []byte) (err error) {
 	r.OneTimeKey = nil
 	r.Message = nil
 	if len(input) == 0 {
-		return nil
+		return olm.ErrInputToSmall
 	}
 
 	decoder := NewDecoder(input)
@@ -85,6 +85,8 @@ func (r *PreKeyMessage) Decode(input []byte) (err error) {
 					r.Message = value
 				}
 			}
+		} else {
+			return fmt.Errorf("PreKeyMessage.Decode: unexpected proto key %d", curKey)
 		}
 	}
 }

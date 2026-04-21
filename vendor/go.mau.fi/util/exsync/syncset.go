@@ -126,6 +126,15 @@ func (s *Set[T]) ReplaceAll(newSet *Set[T]) {
 	s.l.Unlock()
 }
 
+func (s *Set[T]) Clear() {
+	if s == nil {
+		return
+	}
+	s.l.Lock()
+	clear(s.m)
+	s.l.Unlock()
+}
+
 func (s *Set[T]) Size() int {
 	if s == nil {
 		return 0

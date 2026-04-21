@@ -190,7 +190,7 @@ func (mach *OlmMachine) tryDecryptOlmCiphertext(ctx context.Context, sender id.U
 	accountBackup, _ := mach.account.Internal.Pickle([]byte("tmp"))
 	log.Trace().Msg("Trying to create inbound session")
 	endTimeTrace = mach.timeTrace(ctx, "creating inbound olm session", time.Second)
-	session, err := mach.createInboundSession(ctx, senderKey, ciphertext)
+	session, err := mach.account.NewInboundSessionFrom(senderKey, ciphertext)
 	endTimeTrace()
 	if err != nil {
 		go mach.unwedgeDevice(log, sender, senderKey)
@@ -225,16 +225,20 @@ func (mach *OlmMachine) tryDecryptOlmCiphertext(ctx context.Context, sender id.U
 		return nil, fmt.Errorf("failed to decrypt olm event with session created from prekey message: %w", err)
 	}
 
-	endTimeTrace = mach.timeTrace(ctx, "updating new session in database", time.Second)
+	endTimeTrace = mach.timeTrace(ctx, "saving new session in database", time.Second)
 	err = mach.CryptoStore.PutOlmHash(ctx, ciphertextHash, time.Now())
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to store olm message hash after decrypting")
 	}
-	err = mach.CryptoStore.UpdateSession(ctx, senderKey, session)
-	endTimeTrace()
+	err = mach.CryptoStore.AddSession(ctx, senderKey, session)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed to update new olm session in crypto store after decrypting")
+		log.Warn().Err(err).Msg("Failed to save new olm session in crypto store after decrypting")
+	} else if err = mach.account.Internal.RemoveOneTimeKeys(session.Internal); err != nil {
+		log.Warn().Err(err).Msg("Failed to remove one time keys from olm account after creating new session")
+	} else {
+		mach.saveAccount(ctx)
 	}
+	endTimeTrace()
 	return plaintext, nil
 }
 
@@ -338,19 +342,6 @@ func (mach *OlmMachine) tryDecryptOlmCiphertextWithExistingSession(
 		}
 	}
 	return nil, nil
-}
-
-func (mach *OlmMachine) createInboundSession(ctx context.Context, senderKey id.SenderKey, ciphertext string) (*OlmSession, error) {
-	session, err := mach.account.NewInboundSessionFrom(senderKey, ciphertext)
-	if err != nil {
-		return nil, err
-	}
-	mach.saveAccount(ctx)
-	err = mach.CryptoStore.AddSession(ctx, senderKey, session)
-	if err != nil {
-		zerolog.Ctx(ctx).Error().Err(err).Msg("Failed to store created inbound session")
-	}
-	return session, nil
 }
 
 const MinUnwedgeInterval = 1 * time.Hour

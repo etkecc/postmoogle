@@ -38,15 +38,6 @@ type Account struct {
 // Ensure that Account adheres to the olm.Account interface.
 var _ olm.Account = (*Account)(nil)
 
-// AccountFromJSONPickled loads the Account details from a pickled base64 string. The input is decrypted with the supplied key.
-func AccountFromJSONPickled(pickled, key []byte) (*Account, error) {
-	if len(pickled) == 0 {
-		return nil, fmt.Errorf("accountFromPickled: %w", olm.ErrEmptyInput)
-	}
-	a := &Account{}
-	return a, a.UnpickleAsJSON(pickled, key)
-}
-
 // AccountFromPickled loads the Account details from a pickled base64 string. The input is decrypted with the supplied key.
 func AccountFromPickled(pickled, key []byte) (*Account, error) {
 	if len(pickled) == 0 {
@@ -70,16 +61,6 @@ func NewAccount() (*Account, error) {
 	}
 	a.IdKeys.Curve25519 = kPCurve25519
 	return a, nil
-}
-
-// PickleAsJSON returns an Account as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (a *Account) PickleAsJSON(key []byte) ([]byte, error) {
-	return libolmpickle.PickleAsJSON(a, accountPickleVersionJSON, key)
-}
-
-// UnpickleAsJSON updates an Account by a base64 encrypted string using the supplied key. The unencrypted representation has to be in JSON format.
-func (a *Account) UnpickleAsJSON(pickled, key []byte) error {
-	return libolmpickle.UnpickleAsJSON(a, pickled, key, accountPickleVersionJSON)
 }
 
 // IdentityKeysJSON returns the public parts of the identity keys for the Account in a JSON string.

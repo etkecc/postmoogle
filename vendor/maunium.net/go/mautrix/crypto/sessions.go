@@ -79,7 +79,6 @@ func (account *OlmAccount) NewInboundSessionFrom(senderKey id.Curve25519, cipher
 	if err != nil {
 		return nil, err
 	}
-	_ = account.Internal.RemoveOneTimeKeys(session)
 	return wrapSession(session), nil
 }
 

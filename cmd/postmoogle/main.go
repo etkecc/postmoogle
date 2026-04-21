@@ -3,14 +3,12 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	zlogsentry "github.com/archdx/zerolog-sentry"
 	"github.com/etkecc/go-crontab"
 	"github.com/etkecc/go-healthchecks/v2"
 	"github.com/etkecc/go-linkpearl"
@@ -73,15 +71,8 @@ func initLog(cfg *config.Config) {
 		loglevel = zerolog.InfoLevel
 	}
 	zerolog.SetGlobalLevel(loglevel)
-	var w io.Writer
 	consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout, PartsExclude: []string{zerolog.TimestampFieldName}}
-	sentryWriter, err := zlogsentry.New(cfg.Monitoring.SentryDSN)
-	if err == nil {
-		w = io.MultiWriter(sentryWriter, consoleWriter)
-	} else {
-		w = consoleWriter
-	}
-	log = zerolog.New(w).With().Timestamp().Caller().Logger()
+	log = zerolog.New(consoleWriter).With().Timestamp().Caller().Logger()
 }
 
 func initHealthchecks(cfg *config.Config) {

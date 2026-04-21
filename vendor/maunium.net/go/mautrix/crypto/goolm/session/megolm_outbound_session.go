@@ -73,16 +73,6 @@ func (o *MegolmOutboundSession) ID() id.SessionID {
 	return id.SessionID(base64.RawStdEncoding.EncodeToString(o.SigningKey.PublicKey))
 }
 
-// PickleAsJSON returns an Session as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (o *MegolmOutboundSession) PickleAsJSON(key []byte) ([]byte, error) {
-	return libolmpickle.PickleAsJSON(o, megolmOutboundSessionPickleVersion, key)
-}
-
-// UnpickleAsJSON updates an Session by a base64 encrypted string with the key. The unencrypted representation has to be in JSON format.
-func (o *MegolmOutboundSession) UnpickleAsJSON(pickled, key []byte) error {
-	return libolmpickle.UnpickleAsJSON(o, pickled, key, megolmOutboundSessionPickleVersion)
-}
-
 // Unpickle decodes the base64 encoded string and decrypts the result with the key.
 // The decrypted value is then passed to UnpickleLibOlm.
 func (o *MegolmOutboundSession) Unpickle(pickled, key []byte) error {

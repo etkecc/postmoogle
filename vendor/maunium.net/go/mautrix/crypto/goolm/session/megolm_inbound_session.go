@@ -138,12 +138,14 @@ func (o *MegolmInboundSession) Decrypt(ciphertext []byte) ([]byte, uint, error) 
 		return nil, 0, fmt.Errorf("decrypt: %w", olm.ErrBadSignature)
 	}
 
+	// Note: this will mutate the latest ratchet state even if decryption fails.
+	// We don't care because the signature was already checked, plus the initial ratchet is preserved.
 	targetRatch, err := o.getRatchet(msg.MessageIndex)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	decrypted, err := targetRatch.Decrypt(decoded, &o.SigningKey, msg)
+	decrypted, err := targetRatch.Decrypt(decoded, msg)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -155,16 +157,6 @@ func (o *MegolmInboundSession) Decrypt(ciphertext []byte) ([]byte, uint, error) 
 // ID returns the base64 endoded signing key
 func (o *MegolmInboundSession) ID() id.SessionID {
 	return id.SessionID(base64.RawStdEncoding.EncodeToString(o.SigningKey))
-}
-
-// PickleAsJSON returns an MegolmInboundSession as a base64 string encrypted using the supplied key. The unencrypted representation of the Account is in JSON format.
-func (o *MegolmInboundSession) PickleAsJSON(key []byte) ([]byte, error) {
-	return libolmpickle.PickleAsJSON(o, megolmInboundSessionPickleVersionJSON, key)
-}
-
-// UnpickleAsJSON updates an MegolmInboundSession by a base64 encrypted string using the supplied key. The unencrypted representation has to be in JSON format.
-func (o *MegolmInboundSession) UnpickleAsJSON(pickled, key []byte) error {
-	return libolmpickle.UnpickleAsJSON(o, pickled, key, megolmInboundSessionPickleVersionJSON)
 }
 
 // Export returns the base64-encoded ratchet key for this session, at the given
