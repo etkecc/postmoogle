@@ -107,6 +107,10 @@ func (s *session) Mail(from string, _ *smtp.MailOptions) error {
 		s.bot.BanAuto(s.ctx, s.conn.Conn().RemoteAddr())
 		return ErrBanned
 	}
+	if slices.Contains(s.domains, utils.Hostname(from)) {
+		s.log.Info().Str("from", from).Msg("rejecting unauthenticated sender claiming local domain")
+		return ErrAuthRequired
+	}
 	s.from = email.Address(from)
 	s.log.Debug().Str("from", from).Msg("incoming mail")
 	return nil
@@ -219,15 +223,7 @@ func (s *session) validateOutgoingMail(from string) error {
 	if !email.AddressValid(from) {
 		return ErrInvalidEmail
 	}
-	hostname := utils.Hostname(from)
-	var domainok bool
-	for _, domain := range s.domains {
-		if hostname == domain {
-			domainok = true
-			break
-		}
-	}
-	if !domainok {
+	if !slices.Contains(s.domains, utils.Hostname(from)) {
 		s.log.Debug().Str("from", from).Msg("wrong domain")
 		return ErrNoUser
 	}
@@ -246,15 +242,7 @@ func (s *session) validateOutgoingMail(from string) error {
 
 // validateIncomingRcpt checks if the recipient is allowed to receive mail
 func (s *session) validateIncomingRcpt(to string) error {
-	hostname := utils.Hostname(to)
-	var domainok bool
-	for _, domain := range s.domains {
-		if hostname == domain {
-			domainok = true
-			break
-		}
-	}
-	if !domainok {
+	if !slices.Contains(s.domains, utils.Hostname(to)) {
 		s.log.Debug().Str("to", to).Msg("wrong domain")
 		return ErrNoUser
 	}

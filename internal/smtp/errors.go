@@ -16,6 +16,8 @@ const (
 	GreylistCode = 451
 	// RBLCode SMTP code
 	RBLCode = 450
+	// AuthRequiredCode SMTP code (RFC 4954)
+	AuthRequiredCode = 530
 )
 
 var (
@@ -50,6 +52,14 @@ var (
 		Code:         RBLCode,
 		EnhancedCode: RBLEnhancedCode,
 		Message:      "You are blacklisted, kupo.",
+	}
+	// AuthRequiredEnhancedCode is AuthRequiredCode in enhanced code notation
+	AuthRequiredEnhancedCode = smtp.EnhancedCode{5, 7, 0}
+	// ErrAuthRequired returned when unauthenticated sender claims a local domain in MAIL FROM
+	ErrAuthRequired = &smtp.SMTPError{
+		Code:         AuthRequiredCode,
+		EnhancedCode: AuthRequiredEnhancedCode,
+		Message:      "authentication required, kupo.",
 	}
 	// ErrInvalidEmail for invalid emails :)
 	ErrInvalidEmail = errors.New("please, provide valid email address")
