@@ -4,6 +4,7 @@ package linkpearl
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/rs/zerolog"
@@ -108,20 +109,50 @@ func New(cfg *Config) (*Linkpearl, error) {
 		return nil, err
 	}
 	db.Log = dbutil.ZeroLogger(cfg.Logger)
-	localpart, _, mxidErr := id.UserID(cfg.Login).Parse()
-	if mxidErr != nil {
-		localpart = cfg.Login
+
+	ctx := context.Background()
+	localpart, loginAs, err := resolveCredentials(ctx, cfg, api)
+	if err != nil {
+		return nil, err
 	}
+
 	lp.ch, err = cryptohelper.NewCryptoHelper(lp.api, []byte(localpart), db)
 	if err != nil {
 		return nil, err
 	}
-	lp.ch.LoginAs = cfg.LoginAs()
-	if err := lp.ch.Init(context.Background()); err != nil {
+	lp.ch.LoginAs = loginAs
+	if err := lp.ch.Init(ctx); err != nil {
 		return nil, err
 	}
 	lp.api.Crypto = lp.ch
 	return lp, nil
+}
+
+// resolveCredentials returns the Olm-store passphrase localpart and the
+// *mautrix.ReqLogin to pass to cryptohelper. For token auth, it sets
+// client.AccessToken/UserID/DeviceID via /account/whoami and returns a nil
+// ReqLogin so cryptohelper skips the /login step.
+func resolveCredentials(ctx context.Context, cfg *Config, api *mautrix.Client) (string, *mautrix.ReqLogin, error) {
+	if cfg.Token != "" {
+		api.AccessToken = cfg.Token
+		resp, err := api.Whoami(ctx)
+		if err != nil {
+			return "", nil, err
+		}
+		if resp.DeviceID == "" {
+			return "", nil, errors.New("homeserver /account/whoami returned empty device_id; token auth requires a device-scoped token (Matrix spec v1.1+)")
+		}
+		api.UserID = resp.UserID
+		api.DeviceID = resp.DeviceID
+		localpart, _, _ := resp.UserID.Parse() //nolint:errcheck // if something wrong happens HERE, then it will happen later on crypto init
+		return localpart, nil, nil
+	}
+
+	localpart, _, mxidErr := id.UserID(cfg.Login).Parse()
+	if mxidErr != nil {
+		localpart = cfg.Login
+	}
+	return localpart, cfg.LoginAs(), nil
 }
 
 // GetClient returns underlying API client

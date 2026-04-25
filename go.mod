@@ -3,7 +3,6 @@ module github.com/etkecc/postmoogle
 go 1.25.0
 
 require (
-	github.com/archdx/zerolog-sentry v1.8.5
 	github.com/emersion/go-msgauth v0.7.0
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/emersion/go-smtp v0.24.0
@@ -12,7 +11,7 @@ require (
 	github.com/etkecc/go-fswatcher v1.0.1
 	github.com/etkecc/go-healthchecks/v2 v2.3.0
 	github.com/etkecc/go-kit v1.9.0
-	github.com/etkecc/go-linkpearl v0.0.0-20260421193845-3d49ed852fc7
+	github.com/etkecc/go-linkpearl v0.0.0-20260423220308-e744f36e8f3a
 	github.com/etkecc/go-mxidwc v1.0.1
 	github.com/etkecc/go-secgen v1.4.0
 	github.com/etkecc/go-validator/v2 v2.2.6
@@ -35,7 +34,6 @@ require (
 	blitiri.com.ar/go/spf v1.5.1 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
-	github.com/buger/jsonparser v1.1.2 // indirect
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
@@ -89,7 +87,7 @@ require (
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
-	modernc.org/libc v1.72.0 // indirect
+	modernc.org/libc v1.72.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )

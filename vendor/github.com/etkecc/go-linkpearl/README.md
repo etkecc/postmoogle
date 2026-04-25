@@ -35,3 +35,11 @@ go lp.Start()
 * [Shared Secret Auth](https://github.com/devture/matrix-synapse-shared-secret-auth) support
 * Threads support
 * All wrapped components exported
+
+## Authentication modes
+
+| Mode | Config field | Notes |
+|------|-------------|-------|
+| Password | `Config.Password` | Standard Matrix password login |
+| Shared Secret | `Config.SharedSecret` | [Shared Secret Auth](https://github.com/devture/matrix-synapse-shared-secret-auth) |
+| Access Token | `Config.Token` | Pre-created token; skips `/login` entirely. `UserID` and `DeviceID` are resolved via `/account/whoami`. E2EE requires the device to have no prior Olm identity keys uploaded (fresh device) and a persistent `Config.DB` paired 1:1 with the token's `DeviceID`. |

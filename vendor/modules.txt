@@ -9,12 +9,6 @@ filippo.io/edwards25519/field
 # github.com/KyleBanks/depth v1.2.1
 ## explicit
 github.com/KyleBanks/depth
-# github.com/archdx/zerolog-sentry v1.8.5
-## explicit; go 1.20
-github.com/archdx/zerolog-sentry
-# github.com/buger/jsonparser v1.1.2
-## explicit; go 1.13
-github.com/buger/jsonparser
 # github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a
 ## explicit
 github.com/cention-sany/utf7
@@ -55,7 +49,7 @@ github.com/etkecc/go-healthchecks/v2
 # github.com/etkecc/go-kit v1.9.0
 ## explicit; go 1.25.0
 github.com/etkecc/go-kit
-# github.com/etkecc/go-linkpearl v0.0.0-20260421193845-3d49ed852fc7
+# github.com/etkecc/go-linkpearl v0.0.0-20260423220308-e744f36e8f3a
 ## explicit; go 1.25.0
 github.com/etkecc/go-linkpearl
 # github.com/etkecc/go-mxidwc v1.0.1
@@ -416,7 +410,7 @@ maunium.net/go/mautrix/format/mdext
 maunium.net/go/mautrix/id
 maunium.net/go/mautrix/pushrules
 maunium.net/go/mautrix/sqlstatestore
-# modernc.org/libc v1.72.0
+# modernc.org/libc v1.72.1
 ## explicit; go 1.25.0
 modernc.org/libc
 modernc.org/libc/errno

@@ -22,6 +22,19 @@ type Config struct {
 	Password string
 	// Shared secret for login/sharedsecret auth only
 	SharedSecret string
+	// Token is a pre-created Matrix access token. When set, linkpearl skips the
+	// /login flow entirely and uses this token directly. Login, Password, and
+	// SharedSecret are ignored.
+	//
+	// UserID and DeviceID are retrieved from the homeserver via /account/whoami,
+	// so the token must be live.
+	//
+	// E2EE compatibility: works ONLY if the device associated with this token
+	// has no prior Olm identity keys uploaded under its DeviceID (i.e. the
+	// token was created for a brand-new device that has never been used with
+	// another crypto-capable client). The crypto DB (see Config.DB) must be
+	// persistent across restarts and paired 1:1 with this token's DeviceID.
+	Token string
 
 	// JoinPermit is a callback function that tells
 	// if linkpearl should respond to the given "invite" event

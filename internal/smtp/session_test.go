@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -18,7 +19,8 @@ import (
 // Override individual methods via the function fields where a specific
 // test needs non-default behavior.
 type fakebot struct {
-	getMapping func(context.Context, string) (id.RoomID, bool)
+	getMapping    func(context.Context, string) (id.RoomID, bool)
+	incomingEmail func(context.Context, *email.Email) error
 }
 
 func (f *fakebot) AllowAuth(context.Context, string, string) (id.RoomID, bool) {
@@ -54,7 +56,10 @@ func (f *fakebot) GetIFOptions(context.Context, id.RoomID) email.IncomingFilteri
 	panic("GetIFOptions: unexpected call")
 }
 
-func (f *fakebot) IncomingEmail(context.Context, *email.Email) error {
+func (f *fakebot) IncomingEmail(ctx context.Context, eml *email.Email) error {
+	if f.incomingEmail != nil {
+		return f.incomingEmail(ctx, eml)
+	}
 	panic("IncomingEmail: unexpected call")
 }
 
@@ -90,7 +95,7 @@ func TestMailAuthenticatedLocalDomainDelegatesToOutgoingValidation(t *testing.T)
 			return room, true
 		},
 	}
-	s := newTestSession(bot, []string{"example.com"}, Outoing)
+	s := newTestSession(bot, []string{"example.com"}, Outgoing)
 	s.fromRoom = room
 
 	if err := s.Mail("alice@example.com", nil); err != nil {
@@ -118,5 +123,48 @@ func TestMailUnauthenticatedRemoteDomainAccepted(t *testing.T) {
 	}
 	if s.from != "someone@external.org" {
 		t.Fatalf("expected s.from to be populated, got %q", s.from)
+	}
+}
+
+func TestOutgoingDataLocalDomainDeliveredDirectly(t *testing.T) {
+	var called bool
+	bot := &fakebot{
+		incomingEmail: func(_ context.Context, eml *email.Email) error {
+			called = true
+			if eml.RcptTo != "bob@example.com" {
+				t.Fatalf("unexpected RcptTo: %q", eml.RcptTo)
+			}
+			return nil
+		},
+	}
+	s := newTestSession(bot, []string{"example.com"}, Outgoing)
+	s.from = "alice@example.com"
+	s.tos = []string{"bob@example.com"}
+	s.sendmail = func(_, _, _ string, _ *url.URL) error {
+		t.Fatal("sendmail must not be called for local domain delivery")
+		return nil
+	}
+
+	body := "From: alice@example.com\r\nTo: bob@example.com\r\nSubject: test\r\n\r\nHello"
+	if err := s.outgoingData(strings.NewReader(body)); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Fatal("expected IncomingEmail to be called for local recipient")
+	}
+}
+
+func TestOutgoingDataLocalDomainErrorPropagated(t *testing.T) {
+	sentinel := errors.New("delivery failed")
+	bot := &fakebot{
+		incomingEmail: func(context.Context, *email.Email) error { return sentinel },
+	}
+	s := newTestSession(bot, []string{"example.com"}, Outgoing)
+	s.from = "alice@example.com"
+	s.tos = []string{"bob@example.com"}
+
+	body := "From: alice@example.com\r\nTo: bob@example.com\r\nSubject: test\r\n\r\nHello"
+	if err := s.outgoingData(strings.NewReader(body)); !errors.Is(err, sentinel) {
+		t.Fatalf("expected sentinel error, got %v", err)
 	}
 }

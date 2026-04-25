@@ -24,7 +24,7 @@ const (
 	// Incoming is the direction of the email
 	Incoming = "incoming"
 	// Outgoing is the direction of the email
-	Outoing = "outgoing"
+	Outgoing = "outgoing"
 )
 
 // ensure that session implements smtp.AuthSession
@@ -90,14 +90,14 @@ func (s *session) authPlain(_, username, password string) error {
 		return ErrBanned
 	}
 
-	s.dir = Outoing
+	s.dir = Outgoing
 	s.from = username
 	s.fromRoom = roomID
 	return nil
 }
 
 func (s *session) Mail(from string, _ *smtp.MailOptions) error {
-	if s.dir == Outoing {
+	if s.dir == Outgoing {
 		return s.validateOutgoingMail(from)
 	}
 
@@ -119,7 +119,7 @@ func (s *session) Mail(from string, _ *smtp.MailOptions) error {
 func (s *session) Rcpt(to string, _ *smtp.RcptOptions) error {
 	s.tos = append(s.tos, to)
 	s.log.Debug().Str("to", to).Msg("mail")
-	if s.dir == Outoing {
+	if s.dir == Outgoing {
 		return nil
 	}
 	if err := s.validateIncomingRcpt(to); err != nil {
@@ -141,7 +141,7 @@ func (s *session) Rcpt(to string, _ *smtp.RcptOptions) error {
 }
 
 func (s *session) Data(r io.Reader) error {
-	if s.dir == Outoing {
+	if s.dir == Outgoing {
 		return s.outgoingData(r)
 	}
 	return s.incomingData(r)
@@ -162,6 +162,13 @@ func (s *session) outgoingData(r io.Reader) error {
 	eml := email.FromEnvelope(s.tos[0], envelope)
 	for _, to := range s.tos {
 		eml.RcptTo = to
+		// local domain: deliver directly to Matrix instead of looping through SMTP
+		if slices.Contains(s.domains, utils.Hostname(to)) {
+			if err := s.bot.IncomingEmail(s.ctx, eml); err != nil {
+				return err
+			}
+			continue
+		}
 		err := s.sendmail(eml.From, to, eml.Compose(s.privkey), s.bot.GetRelayConfig(s.ctx, s.fromRoom))
 		if err != nil {
 			return err
