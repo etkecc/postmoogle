@@ -1,6 +1,7 @@
 package kit
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -214,4 +215,9 @@ func MatrixErrorFrom(r io.Reader) *MatrixError {
 	}
 
 	return matrixErr
+}
+
+// IsContextError checks if the provided error is a context cancellation or deadline exceeded error.
+func IsContextError(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }

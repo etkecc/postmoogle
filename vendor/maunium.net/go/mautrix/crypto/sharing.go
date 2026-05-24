@@ -10,6 +10,7 @@ import (
 	"context"
 	"time"
 
+	"go.mau.fi/util/ptr"
 	"go.mau.fi/util/random"
 
 	"maunium.net/go/mautrix/event"
@@ -109,32 +110,19 @@ func (mach *OlmMachine) HandleSecretRequest(ctx context.Context, userID id.UserI
 		return
 	}
 
-	keys, err := mach.CryptoStore.GetCrossSigningKeys(ctx, mach.Client.UserID)
-	if err != nil {
-		log.Err(err).Msg("Failed to get cross signing keys from crypto store")
-		return
-	}
-
-	crossSigningKey, ok := keys[id.XSUsageSelfSigning]
-	if !ok {
-		log.Warn().Msg("Couldn't find self signing key to verify requesting device")
-		return
-	}
-
 	device, err := mach.GetOrFetchDevice(ctx, mach.Client.UserID, content.RequestingDeviceID)
 	if err != nil {
 		log.Err(err).Msg("Failed to get or fetch requesting device")
 		return
 	}
-
-	verified, err := mach.CryptoStore.IsKeySignedBy(ctx, mach.Client.UserID, device.SigningKey, mach.Client.UserID, crossSigningKey.Key)
+	trust, err := mach.ResolveTrustContext(ctx, device)
 	if err != nil {
 		log.Err(err).Msg("Failed to check if requesting device is verified")
 		return
 	}
 
-	if !verified {
-		log.Warn().Msg("Requesting device is not verified, ignoring request")
+	if trust < id.TrustStateCrossSignedVerified {
+		log.Warn().Stringer("trust_level", trust).Msg("Requesting device is not verified, ignoring request")
 		return
 	}
 
@@ -158,7 +146,8 @@ func (mach *OlmMachine) HandleSecretRequest(ctx context.Context, userID id.UserI
 func (mach *OlmMachine) receiveSecret(ctx context.Context, evt *DecryptedOlmEvent, content *event.SecretSendEventContent) {
 	log := mach.machOrContextLog(ctx).With().
 		Stringer("sender", evt.Sender).
-		Stringer("sender_device", evt.SenderDevice).
+		Stringer("sender_key", evt.SenderKey).
+		Stringer("sender_device", ptr.Val(evt.SenderDevice).DeviceID).
 		Str("request_id", content.RequestID).
 		Logger()
 
@@ -171,17 +160,14 @@ func (mach *OlmMachine) receiveSecret(ctx context.Context, evt *DecryptedOlmEven
 	} else if content.Secret == "" {
 		log.Warn().Msg("We were sent an empty secret")
 		return
+	} else if evt.SenderDevice == nil {
+		log.Warn().Msg("We were sent a secret from an unknown device")
+		return
 	}
 
 	// https://spec.matrix.org/v1.10/client-server-api/#msecretsend
 	// "The recipient must ensure... that the device is a verified device owned by the recipient"
-	if senderDevice, err := mach.GetOrFetchDevice(ctx, evt.Sender, evt.SenderDevice); err != nil {
-		log.Err(err).Msg("Failed to get or fetch sender device, rejecting secret")
-		return
-	} else if senderDevice == nil {
-		log.Warn().Msg("Unknown sender device, rejecting secret")
-		return
-	} else if !mach.IsDeviceTrusted(ctx, senderDevice) {
+	if !mach.IsDeviceTrusted(ctx, evt.SenderDevice) {
 		log.Warn().Msg("Sender device is not verified, rejecting secret")
 		return
 	}

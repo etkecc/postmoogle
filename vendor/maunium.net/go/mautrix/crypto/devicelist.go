@@ -96,11 +96,22 @@ func (mach *OlmMachine) GetCachedDevices(ctx context.Context, userID id.UserID) 
 	}
 	if userID == mach.Client.UserID {
 		if ownKeys != nil && ownKeys.MasterKey == theirMasterKey.Key {
-			resp.MasterKeySignedByUs, err = mach.CryptoStore.IsKeySignedBy(ctx, userID, theirMasterKey.Key, userID, mach.OwnIdentity().SigningKey)
+			resp.MasterKeySignedByUs, _, _, err = mach.GetOwnCrossSigningVerificationStatus(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to check if own cross-signing keys are trusted: %w", err)
+			}
 		}
 	} else if ownUserSigningKey != "" && theirMasterKey.Key != "" {
-		// TODO should own master key and user-signing key signatures be checked here too?
 		resp.MasterKeySignedByUs, err = mach.CryptoStore.IsKeySignedBy(ctx, userID, theirMasterKey.Key, mach.Client.UserID, ownUserSigningKey)
+		if resp.MasterKeySignedByUs {
+			ownMKTrusted, _, ownUSKTrusted, err := mach.GetOwnCrossSigningVerificationStatus(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to check if own cross-signing keys are trusted: %w", err)
+			} else if !ownMKTrusted || !ownUSKTrusted {
+				// TODO log warning?
+				resp.MasterKeySignedByUs = false
+			}
+		}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to check if user is trusted: %w", err)
@@ -235,11 +246,7 @@ func (mach *OlmMachine) FetchKeys(ctx context.Context, users []id.UserID, includ
 		changed := false
 		for deviceID, deviceKeys := range devices {
 			log := log.With().Stringer("device_id", deviceID).Logger()
-			existing, ok := existingDevices[deviceID]
-			if !ok {
-				// New device
-				changed = true
-			}
+			existing, existed := existingDevices[deviceID]
 			log.Trace().Msg("Validating device")
 			newDevice, err := mach.validateDevice(userID, deviceID, deviceKeys, existing)
 			if err != nil {
@@ -247,6 +254,11 @@ func (mach *OlmMachine) FetchKeys(ctx context.Context, users []id.UserID, includ
 			} else if newDevice != nil {
 				newDevices[deviceID] = newDevice
 				mach.storeDeviceSelfSignatures(ctx, userID, deviceID, resp)
+				if !existed {
+					// New device, always mark as changed so megolm keys are reset even if
+					// the total count stays the same (e.g. one device added and one removed).
+					changed = true
+				}
 			}
 		}
 		log.Trace().Int("new_device_count", len(newDevices)).Msg("Storing new device list")
@@ -350,15 +362,24 @@ func (mach *OlmMachine) validateDevice(userID id.UserID, deviceID id.DeviceID, d
 
 	name, ok := deviceKeys.Unsigned["device_display_name"].(string)
 	if !ok {
-		name = string(deviceID)
+		if deviceKeys.Dehydrated {
+			name = "Dehydrated device"
+		} else {
+			name = string(deviceID)
+		}
 	}
 
+	// This trust state doesn't matter much as most trust happens through cross-signing, but preserve it anyway.
+	trust := id.TrustStateUnset
+	if existing != nil {
+		trust = existing.Trust
+	}
 	return &id.Device{
 		UserID:      userID,
 		DeviceID:    deviceID,
 		IdentityKey: identityKey,
 		SigningKey:  signingKey,
-		Trust:       id.TrustStateUnset,
+		Trust:       trust,
 		Name:        name,
 		Deleted:     false,
 	}, nil

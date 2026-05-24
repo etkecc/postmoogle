@@ -105,10 +105,13 @@ func (mach *OlmMachine) DecryptMegolmEvent(ctx context.Context, evt *event.Event
 	var forwardedKeys bool
 	var device *id.Device
 	ownSigningKey, ownIdentityKey := mach.account.Keys()
-	if sess.SigningKey == ownSigningKey && sess.SenderKey == ownIdentityKey && len(sess.ForwardingChains) == 0 {
+	if sess.KeySource == id.KeySourceBackup || sess.KeySource == id.KeySourceImport {
+		// Key backup is currently not trusted, so use a special trust level for it.
+		trustLevel = id.TrustStateBackup
+	} else if sess.SigningKey == ownSigningKey && sess.SenderKey == ownIdentityKey && sess.KeySource == id.KeySourceDirect && len(sess.ForwardingChains) == 0 {
 		trustLevel = id.TrustStateVerified
 	} else {
-		if mach.DisableDecryptKeyFetching {
+		if mach.DisableDecryptKeyFetching || !mach.keyFetchAttempted.Add(userSenderKeyTuple{evt.Sender, sess.SenderKey}) {
 			device, err = mach.CryptoStore.FindDeviceByKey(ctx, evt.Sender, sess.SenderKey)
 		} else {
 			device, err = mach.GetOrFetchDeviceByKey(ctx, evt.Sender, sess.SenderKey)
@@ -239,7 +242,7 @@ func (mach *OlmMachine) checkUndecryptableMessageIndexDuplication(ctx context.Co
 	}
 	firstKnown := sess.Internal.FirstKnownIndex()
 	log = log.With().Uint("message_index", messageIndex).Uint32("first_known_index", firstKnown).Logger()
-	if ok, err := mach.CryptoStore.ValidateMessageIndex(ctx, sess.SenderKey, content.SessionID, evt.ID, messageIndex, evt.Timestamp); err != nil {
+	if ok, err := mach.CryptoStore.ValidateMessageIndex(ctx, sess.ID(), evt.ID, messageIndex, evt.Timestamp); err != nil {
 		log.Debug().Err(err).Msg("Failed to check if message index is duplicate")
 		return messageIndex, fmt.Errorf("%w (failed to check if index is duplicate; received: %d, earliest known: %d)", olm.ErrUnknownMessageIndex, messageIndex, firstKnown)
 	} else if !ok {
@@ -267,7 +270,7 @@ func (mach *OlmMachine) actuallyDecryptMegolmEvent(ctx context.Context, evt *eve
 			return sess, nil, messageIndex, fmt.Errorf("failed to decrypt megolm event: %w", err)
 		}
 		return sess, nil, 0, fmt.Errorf("failed to decrypt megolm event: %w", err)
-	} else if ok, err := mach.CryptoStore.ValidateMessageIndex(ctx, sess.SenderKey, content.SessionID, evt.ID, messageIndex, evt.Timestamp); err != nil {
+	} else if ok, err := mach.CryptoStore.ValidateMessageIndex(ctx, sess.ID(), evt.ID, messageIndex, evt.Timestamp); err != nil {
 		return sess, nil, messageIndex, fmt.Errorf("failed to check if message index is duplicate: %w", err)
 	} else if !ok {
 		return sess, nil, messageIndex, fmt.Errorf("%w %d", ErrDuplicateMessageIndex, messageIndex)

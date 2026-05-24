@@ -40,5 +40,8 @@ func (s *MegolmSessionExport) Decode(input []byte) error {
 	s.Counter = binary.BigEndian.Uint32(input[1:5])
 	copy(s.RatchetData[:], input[5:133])
 	s.PublicKey = input[133:]
+	if !s.PublicKey.IsValidKey() {
+		return fmt.Errorf("MegolmSessionExport.Decode: invalid Ed25519 public key")
+	}
 	return nil
 }

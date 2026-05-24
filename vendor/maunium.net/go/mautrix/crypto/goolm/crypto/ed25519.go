@@ -76,7 +76,7 @@ func (c Ed25519KeyPair) PickleLibOlm(encoder *libolmpickle.Encoder) {
 func (c *Ed25519KeyPair) UnpickleLibOlm(decoder *libolmpickle.Decoder) error {
 	if err := c.PublicKey.UnpickleLibOlm(decoder); err != nil {
 		return err
-	} else if privKey, err := decoder.ReadBytes(ed25519.PrivateKeySize); err != nil {
+	} else if privKey, err := decoder.ReadBytesOrNil(ed25519.PrivateKeySize); err != nil {
 		return err
 	} else {
 		c.PrivateKey = privKey
@@ -120,10 +120,17 @@ func (c Ed25519PublicKey) B64Encoded() id.Curve25519 {
 // In addition to the standard library ed25519 verification which checks signature malleability,
 // this also rejects non-canonical and small-order public keys.
 func (c Ed25519PublicKey) Verify(message, givenSignature []byte) bool {
-	if len(givenSignature) != Ed25519SignatureSize || len(c) != ed25519.PublicKeySize {
+	if len(givenSignature) != Ed25519SignatureSize || !c.IsValidKey() {
 		return false
 	}
 
+	return ed25519.Verify(ed25519.PublicKey(c), message, givenSignature)
+}
+
+func (c Ed25519PublicKey) IsValidKey() bool {
+	if len(c) != ed25519.PublicKeySize {
+		return false
+	}
 	pubPoint, err := (&edwards25519.Point{}).SetBytes(c)
 	if err != nil {
 		return false
@@ -136,8 +143,7 @@ func (c Ed25519PublicKey) Verify(message, givenSignature []byte) bool {
 	if new(edwards25519.Point).MultByCofactor(pubPoint).Equal(edwards25519.NewIdentityPoint()) == 1 {
 		return false
 	}
-
-	return ed25519.Verify(ed25519.PublicKey(c), message, givenSignature)
+	return true
 }
 
 // PickleLibOlm pickles the public key into the encoder.
@@ -152,7 +158,7 @@ func (c Ed25519PublicKey) PickleLibOlm(encoder *libolmpickle.Encoder) {
 // UnpickleLibOlm unpickles the unencryted value and populates the public key
 // accordingly.
 func (c *Ed25519PublicKey) UnpickleLibOlm(decoder *libolmpickle.Decoder) error {
-	key, err := decoder.ReadBytes(ed25519.PublicKeySize)
+	key, err := decoder.ReadBytesOrNil(ed25519.PublicKeySize)
 	*c = key
 	return err
 }
