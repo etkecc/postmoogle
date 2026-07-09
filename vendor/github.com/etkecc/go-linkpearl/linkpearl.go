@@ -5,7 +5,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
+	"github.com/etkecc/go-kit/httpclient"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/rs/zerolog"
 	"go.mau.fi/util/dbutil"
@@ -85,6 +87,15 @@ func New(cfg *Config) (*Linkpearl, error) {
 		return nil, err
 	}
 	api.Log = cfg.Logger
+
+	// single-host-optimized HTTP client
+	timeout := 1 * time.Minute // long polling + buffer
+	api.Client = httpclient.NewSingleHost(
+		httpclient.WithMaxRetries(1), // mautrix-go has protocol-specific retries built-in
+		httpclient.WithPerAttemptTimeout(timeout),
+		httpclient.WithResponseHeaderTimeout(timeout),
+	)
+	api.ExternalClient = api.Client
 
 	acc, _ := lru.New[string, map[string]string](cfg.AccountDataCache) //nolint:errcheck // addressed in setDefaults()
 	acr, err := initCrypter(cfg.AccountDataSecret)

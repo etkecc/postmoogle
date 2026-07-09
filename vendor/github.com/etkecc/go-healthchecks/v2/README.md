@@ -89,6 +89,17 @@ When you're done with the client, make sure to shut it down properly to release 
 client.Shutdown()
 ```
 
+## Retries and gotchas
+
+Every ping rides a retrying single-host client (from [go-kit/httpclient](https://github.com/etkecc/go-kit)): a flaky network or a 5xx from hc-ping.com buys a few automatic retries with per-attempt timeouts instead of silently dropping your heartbeat. Four things worth knowing before they bite:
+
+- **Bodies have to be rewindable.** If you send a body, send something with a `GetBody`: `strings.NewReader` and `bytes.NewReader` both qualify. Hand it a bare `io.Reader` and a retry can't rewind it, so rather than quietly shipping half a body on the second attempt, it refuses the whole thing loud with `ErrNonReplayableBody`. Loud-and-wrong beats silent-and-truncated.
+- **POSTs retry too, on purpose.** A body-carrying ping (POST) retries on failure just like an empty HEAD does. A repeat ping to hc-ping.com is a harmless idempotent beacon, so we'd rather retry a heartbeat than let a network blip drop it.
+- **`Shutdown` cancels, it does not wait.** It stops taking new pings, cancels whatever is in-flight, and returns fast, so it will not hang your process on exit waiting a retry sequence out.
+- **Do not double-wrap.** `WithHTTPClient` wants a plain `*http.Client`; we wrap it in the retry layer for you. Give it a client that already retries and the layers stack, so three attempts times three is nine pings for one heartbeat. Pass the raw client and let this library do the retrying.
+
+Each client keeps its own 256-connection pool, so run one client per check, not one per goroutine.
+
 ## Global Client
 
 You can also use a global instance of the client for convenience:
@@ -104,7 +115,7 @@ Then you can use `healthchecks.Global()` to access the global client instance th
 
 The client provides various configuration options via functional options:
 
-- `WithHTTPClient`: Sets the HTTP client used by the client.
+- `WithHTTPClient`: Sets the HTTP client we wrap in the retry layer. Give us a plain client, not one that already retries (see [Retries and gotchas](#retries-and-gotchas)).
 - `WithBaseURL`: Sets the base URL for healthchecks.io.
 - `WithUserAgent`: Sets the user agent string for HTTP requests.
 - `WithErrLog`: Sets a custom error logging function.

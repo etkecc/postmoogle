@@ -1,6 +1,7 @@
 package healthchecks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/etkecc/go-kit/httpclient"
 	"github.com/google/uuid"
 )
 
@@ -25,6 +27,10 @@ type Client struct {
 	rid       string
 	create    bool
 	done      chan bool
+	ctx       context.Context //nolint:containedctx // lifecycle ctx for a background pinger with no inbound request scope; Shutdown cancels it to bound in-flight retries
+	cancel    context.CancelFunc
+	mu        sync.Mutex // guards closed + wg.Add against Shutdown's Wait
+	closed    bool
 }
 
 // init client
@@ -33,9 +39,9 @@ func (c *Client) init(options ...Option) {
 	c.log = DefaultErrLog
 	c.baseURL = DefaultAPI
 	c.userAgent = DefaultUserAgent
-	c.http = DefaultHTTPClient()
 	c.done = make(chan bool, 1)
 	c.uuid = ""
+	c.ctx, c.cancel = context.WithCancel(context.Background())
 
 	if len(options) == 0 {
 		c.enabled = false
@@ -43,6 +49,14 @@ func (c *Client) init(options ...Option) {
 
 	for _, option := range options {
 		option(c)
+	}
+
+	// A WithHTTPClient option set c.http (BYO): wrap it in retry, keeping its transport.
+	// Otherwise build a fresh single-host retrying client. Both constructors are infallible.
+	if c.http != nil {
+		c.http = httpclient.Wrap(c.http, httpclient.WithRetryNonIdempotent(true), httpclient.WithOnAttempt(c.onAttempt))
+	} else {
+		c.http = httpclient.NewSingleHost(httpclient.WithRetryNonIdempotent(true), httpclient.WithOnAttempt(c.onAttempt))
 	}
 
 	if c.uuid == "" {
@@ -55,11 +69,15 @@ func (c *Client) init(options ...Option) {
 
 // Call API
 func (c *Client) Call(operation, endpoint string, body ...io.Reader) {
-	if !c.enabled {
+	// enabled/closed check and Add share the lock: an Add racing wg.Wait at zero panics.
+	c.mu.Lock()
+	if !c.enabled || c.closed {
+		c.mu.Unlock()
 		return
 	}
-
 	c.wg.Add(1)
+	c.mu.Unlock()
+
 	go c.call(operation, endpoint, body...)
 }
 
@@ -75,9 +93,9 @@ func (c *Client) call(operation, endpoint string, body ...io.Reader) {
 	var req *http.Request
 	var err error
 	if len(body) > 0 {
-		req, err = http.NewRequest(http.MethodPost, targetURL, body[0])
+		req, err = http.NewRequestWithContext(c.ctx, http.MethodPost, targetURL, body[0])
 	} else {
-		req, err = http.NewRequest(http.MethodHead, targetURL, http.NoBody)
+		req, err = http.NewRequestWithContext(c.ctx, http.MethodHead, targetURL, http.NoBody)
 	}
 	if err != nil {
 		c.log(operation, err)
@@ -88,7 +106,10 @@ func (c *Client) call(operation, endpoint string, body ...io.Reader) {
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		c.log(operation, err)
+		// A canceled-by-Shutdown ping is expected, not a failure worth logging.
+		if !errors.Is(err, context.Canceled) {
+			c.log(operation, err)
+		}
 		return
 	}
 	defer resp.Body.Close()
@@ -109,7 +130,9 @@ func (c *Client) call(operation, endpoint string, body ...io.Reader) {
 // if client initialized without any options, it will be disabled by default,
 // but you can override it by calling SetEnabled(true).
 func (c *Client) SetEnabled(enabled bool) {
+	c.mu.Lock()
 	c.enabled = enabled
+	c.mu.Unlock()
 }
 
 // Start signal means the job started
@@ -137,8 +160,24 @@ func (c *Client) ExitStatus(exitCode int, optionalBody ...io.Reader) {
 	c.Call("exit status", "/"+strconv.Itoa(exitCode), optionalBody...)
 }
 
-// Shutdown the client
+// onAttempt logs intermediate transport-error retries only; a status retry (503->200) has a nil Err and stays silent.
+func (c *Client) onAttempt(info httpclient.AttemptInfo) { //nolint:gocritic // by value to satisfy httpclient.WithOnAttempt's func(AttemptInfo) signature
+	if info.Retrying && info.Err != nil {
+		c.log("retry", fmt.Errorf("%s %s attempt %d: %w", info.Method, info.Host, info.Attempt, info.Err))
+	}
+}
+
+// Shutdown rejects new calls, cancels in-flight retries, then drains. Idempotent; cancel precedes Wait to bound the drain.
 func (c *Client) Shutdown() {
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return
+	}
+	c.closed = true
+	c.mu.Unlock()
+
+	c.cancel()
 	c.done <- true
 	c.wg.Wait()
 }

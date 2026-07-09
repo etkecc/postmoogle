@@ -3,71 +3,72 @@ package linkpearl
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"io"
+
+	"github.com/etkecc/go-kit/crypter"
 )
 
-// Crypter is special object that handles data encryption and decryption
-// apart from Matrix' standard encryption.
-// It can encrypt and decrypt arbitrary data using secret key (password)
+// Crypter encrypts account data with a secret key, apart from Matrix' standard
+// encryption. It writes go-kit's ENCv1[...] and reads that plus the old StdBase64 format.
 type Crypter struct {
-	cipher    cipher.AEAD
+	gokit     *crypter.Crypter // writes/reads ENCv1[...]
+	legacy    cipher.AEAD      // old StdBase64 AES-GCM, decrypt-only
 	nonceSize int
 }
 
-// ErrInvalidData returned in provided encrypted data (ciphertext) is invalid
+// ErrInvalidData is returned when the provided encrypted data (ciphertext) is invalid.
 var ErrInvalidData = errors.New("invalid data")
 
-// NewCrypter creates new Crypter
+// NewCrypter creates new Crypter. go-kit validates the 16/24/32-byte key first, so the
+// legacy AEAD cannot fail on length.
 func NewCrypter(secretkey string) (*Crypter, error) {
+	gokit, err := crypter.New(secretkey)
+	if err != nil {
+		return nil, err
+	}
 	block, err := aes.NewCipher([]byte(secretkey))
 	if err != nil {
 		return nil, err
 	}
-
-	aesGCM, err := cipher.NewGCM(block)
+	legacy, err := cipher.NewGCM(block)
 	if err != nil {
 		return nil, err
 	}
-
-	return &Crypter{
-		cipher:    aesGCM,
-		nonceSize: aesGCM.NonceSize(),
-	}, nil
+	return &Crypter{gokit: gokit, legacy: legacy, nonceSize: legacy.NonceSize()}, nil
 }
 
-// Decrypt data
+// Decrypt data. Route via go-kit's own IsEncrypted, never a hand-rolled prefix check:
+// a gate one byte looser waves "ENCv1[" through as fake plaintext with a straight face.
 func (c *Crypter) Decrypt(data string) (string, error) {
-	datab, err := base64.StdEncoding.DecodeString(data)
+	if c.gokit.IsEncrypted(data) {
+		plain, err := c.gokit.Decrypt(data)
+		if err != nil {
+			return data, err // return input, not "": caller stores this even on error, so plaintext-era values survive (accountdata.go:116)
+		}
+		return plain, nil
+	}
+
+	raw, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		return data, err
 	}
-
-	if len(datab) < c.nonceSize {
+	if len(raw) < c.nonceSize {
 		return data, ErrInvalidData
 	}
-
-	nonce := datab[:c.nonceSize]
-	ciphertext := datab[c.nonceSize:]
-
-	plaintext, err := c.cipher.Open(nil, nonce, ciphertext, nil)
+	nonce, ciphertext := raw[:c.nonceSize], raw[c.nonceSize:]
+	plain, err := c.legacy.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		return data, err
 	}
-
-	return string(plaintext), nil
+	return string(plain), nil
 }
 
-// Encrypt data
+// Encrypt data into ENCv1[...] format. Idempotent: an already-tagged value passes through.
 func (c *Crypter) Encrypt(data string) (string, error) {
-	nonce := make([]byte, c.nonceSize)
-	_, err := io.ReadFull(rand.Reader, nonce)
+	enc, err := c.gokit.Encrypt(data)
 	if err != nil {
 		return data, err
 	}
-
-	encrypted := c.cipher.Seal(nonce, nonce, []byte(data), nil)
-	return base64.StdEncoding.EncodeToString(encrypted), nil
+	return enc, nil
 }

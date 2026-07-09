@@ -4,6 +4,7 @@ run:
   modules-download-mode: readonly
   issues-exit-code: 1
   tests: true
+  allow-parallel-runners: true
 output:
   formats:
     text:
@@ -108,6 +109,9 @@ linters:
       - linters:
           - staticcheck
         text: 'SA9003:'
+      - linters:
+          - govet
+        text: 'cannot inline: type parameter inference is not yet supported'
       - linters:
           - lll
         source: '^//go:generate '

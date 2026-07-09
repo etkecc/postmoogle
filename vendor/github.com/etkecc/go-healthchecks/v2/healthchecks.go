@@ -10,7 +10,7 @@ const (
 	// DefaultAPI base url for checks
 	DefaultAPI = "https://hc-ping.com"
 	// DefaultUserAgent for the client
-	DefaultUserAgent = "Go-Healthchecks (lib; +https://gitlab.com/etke.cc/go/healthchecks)"
+	DefaultUserAgent = "Go-Healthchecks (lib; +https://github.com/etkecc/go-healthchecks/v2)"
 )
 
 // ErrLog used to log errors occurred during an operation

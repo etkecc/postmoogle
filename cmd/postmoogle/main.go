@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -9,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/etkecc/go-crontab"
 	"github.com/etkecc/go-healthchecks/v2"
+	"github.com/etkecc/go-kit/crontab"
 	"github.com/etkecc/go-linkpearl"
 	"github.com/getsentry/sentry-go"
 	_ "github.com/lib/pq"
@@ -147,20 +148,12 @@ func initSMTP(cfg *config.Config) {
 }
 
 func initCron() {
-	cron = crontab.New()
-	cron.SetPanicLogger(func(r any) {
-		log.Error().Any("recover", r).Msg("cronjob panicked")
-	})
+	cron = crontab.New(crontab.WithPanicHandler(func(spec string, recovered any) {
+		log.Error().Str("spec", spec).Any("recover", recovered).Msg("cronjob panicked")
+	}))
 
-	err := cron.AddJob("* * * * *", q.Process)
-	if err != nil {
-		log.Error().Err(err).Msg("cannot start queue processing cronjob")
-	}
-
-	err = cron.AddJob("*/5 * * * *", mxb.SyncRooms)
-	if err != nil {
-		log.Error().Err(err).Msg("cannot start sync rooms cronjob")
-	}
+	cron.MustAddJob("* * * * *", q.Process)
+	cron.MustAddJob("*/5 * * * *", mxb.SyncRooms)
 }
 
 func initShutdown(quit chan struct{}) {
@@ -186,7 +179,11 @@ func startBot(statusMsg string) {
 
 func shutdown() {
 	log.Info().Msg("Shutting down...")
-	cron.Shutdown()
+	cronCtx, cronCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if err := cron.Shutdown(cronCtx); err != nil {
+		log.Warn().Err(err).Msg("cron shutdown did not drain cleanly")
+	}
+	cronCancel()
 	smtpm.Stop()
 	mxb.Stop()
 	if hc != nil {
