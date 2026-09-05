@@ -605,7 +605,8 @@ func (b *Bot) getSendDetails(ctx context.Context) (to, subject, body string, ok 
 				"on as many lines\n"+
 				"as you want.\n"+
 				"```",
-			b.prefix),
+			b.prefix,
+		),
 			linkpearl.RelatesTo(evt.ID, cfg.NoThreads()),
 		)
 		return "", "", "", false

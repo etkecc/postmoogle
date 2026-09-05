@@ -177,8 +177,7 @@ func (c *Client) trySMTP(localname, hostname string) (*smtp.Client, error) {
 		}
 	}
 
-	// If there are no MX records, according to https://datatracker.ietf.org/doc/html/rfc5321#section-5.1,
-	// we're supposed to try talking directly to the host.
+	// no MX records: per RFC 5321 section 5.1, try talking directly to the host
 	client = c.connect(localname, hostname, hostname)
 	if client != nil {
 		return client, nil

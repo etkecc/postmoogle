@@ -265,8 +265,7 @@ func (s *session) validateIncomingRcpt(to string) error {
 	return nil
 }
 
-// getAddr gets real address of incoming email serder,
-// including special case of trusted proxy
+// getAddr gets the real address of the incoming email sender, including the trusted-proxy case
 func (s *session) getAddr(envelope *enmime.Envelope) net.Addr {
 	remoteAddr := s.conn.Conn().RemoteAddr()
 	if !s.bot.IsTrusted(remoteAddr) {

@@ -82,8 +82,7 @@ func (l *Listener) acceptTLS(conn net.Conn) (net.Conn, error) {
 	return tls.Server(conn, l.tls), nil
 }
 
-// Close closes the listener.
-// Any blocked Accept operations will be unblocked and return errors.
+// Close closes the listener; any blocked Accept calls unblock and return errors
 func (l *Listener) Close() error {
 	close(l.done)
 	return l.listener.Close()

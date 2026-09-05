@@ -188,8 +188,7 @@ func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Con
 	return &content
 }
 
-// ContentBody converts the email object to a Matrix event content that contains email body only
-// NOTE: returns nil if threadify is disabled
+// ContentBody converts the email to Matrix event content with only the body; nil if threadify is disabled
 func (e *Email) ContentBody(threadID id.EventID, options *ContentOptions) *event.Content {
 	if !options.Threadify {
 		return nil

@@ -14,10 +14,7 @@ import (
 	"github.com/etkecc/postmoogle/internal/email"
 )
 
-// fakebot is a test stub implementing matrixbot. Every method panics by
-// default so that any unexpected interaction fails the test loudly.
-// Override individual methods via the function fields where a specific
-// test needs non-default behavior.
+// fakebot is a test stub implementing matrixbot; every method panics by default, override via function fields
 type fakebot struct {
 	getMapping    func(context.Context, string) (id.RoomID, bool)
 	incomingEmail func(context.Context, *email.Email) error
@@ -71,9 +68,7 @@ func (f *fakebot) GetRelayConfig(context.Context, id.RoomID) *url.URL {
 	panic("GetRelayConfig: unexpected call")
 }
 
-// newTestSession builds a session without a live *smtp.Conn. Callers
-// must avoid Mail() code paths that dereference s.conn (invalid-format
-// branch).
+// newTestSession builds a session without a live *smtp.Conn; avoid Mail() paths that dereference s.conn
 func newTestSession(bot matrixbot, domains []string, dir string) *session {
 	log := zerolog.Nop()
 	return &session{

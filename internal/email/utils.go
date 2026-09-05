@@ -23,7 +23,7 @@ func MessageID(eventID id.EventID, domain string) string {
 	return fmt.Sprintf("<%s@%s>", eventID, domain)
 }
 
-// Address gets email address from a valid email address notation (eg: "Jane Doe" <jane@example.com> -> jane@example.com)
+// Address extracts the email address from a notation, e.g. "Jane Doe" <jane@example.com> -> jane@example.com
 func Address(email string) string {
 	email = strings.ToLower(strings.TrimSpace(email))
 	addr, _ := mail.ParseAddress(email) //nolint:errcheck // if it fails here, nothing will help
@@ -38,7 +38,7 @@ func Address(email string) string {
 	return addr.Address
 }
 
-// Address gets email address from a valid email address notation (eg: "Jane Doe" <jane@example.com>, john.doe@example.com -> jane@example.com, john.doe@example.com)
+// AddressList extracts email addresses from a comma-separated list of notations, e.g. "Jane Doe" <jane@x.com>
 func AddressList(emailList string) []string {
 	if emailList == "" {
 		return []string{}

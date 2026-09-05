@@ -98,8 +98,7 @@ func (b *Bot) onBotJoin(ctx context.Context) {
 		return
 	}
 
-	// Workaround for membership=join events which are delivered to us twice,
-	// as described in this bug report: https://github.com/matrix-org/synapse/issues/9768
+	// workaround for membership=join events delivered twice: https://github.com/matrix-org/synapse/issues/9768
 	_, ok := b.handledMembershipEvents.LoadOrStore(evt.ID, true)
 	if ok {
 		b.log.Info().Str("eventID", evt.ID.String()).Msg("Suppressing already handled event")

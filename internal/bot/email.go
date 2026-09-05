@@ -59,8 +59,7 @@ func (b *Bot) shouldQueue(msg string) bool {
 	return false
 }
 
-// Sendmail tries to send email immediately, but if it gets 4xx error (greylisting),
-// the email will be added to the queue and retried several times after that
+// Sendmail tries to send email immediately; on a 4xx (greylisting) error it queues the email for retry
 func (b *Bot) Sendmail(ctx context.Context, eventID id.EventID, from, to, data string, relayOverride *url.URL) (bool, error) {
 	log := b.log.With().Str("from", from).Str("to", to).Str("eventID", eventID.String()).Logger()
 	log.Info().Msg("attempting to deliver email")
@@ -158,8 +157,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 		}
 	}
 
-	// if automatic stripping is enabled, there is a chance something important may be stripped out
-	// to prevent that, we use a hacky way to generate content without stripping and save it as a file fist
+	// stripping may remove something important, so also render unstripped content and save it as a file
 	if cfg.Stripify() && !cfg.Threadify() {
 		contentOpts := cfg.ContentOptions()
 		contentOpts.Stripify = false
@@ -187,8 +185,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 	b.setLastEventID(ctx, roomID, threadID, eventID)
 
 	if newThread && cfg.Threadify() {
-		// if automatic stripping is enabled, there is a chance something important may be stripped out
-		// to prevent that, we use a hacky way to generate content without stripping and save it as a file fist
+		// stripping may remove something important, so also render unstripped content and save it as a file
 		if cfg.Stripify() {
 			contentOpts := cfg.ContentOptions()
 			contentOpts.Stripify = false
@@ -403,11 +400,7 @@ type parentEmail struct {
 	Recipients []string
 }
 
-// fixtofrom attempts to "fix" or rather reverse the To, From and CC headers
-// of parent email by using parent email as metadata source for a new email
-// that will be sent from postmoogle.
-// To do so, we need to reverse From and To headers, but Cc should be adjusted as well,
-// thus that hacky workaround below:
+// fixtofrom reverses the parent email's To/From (adjusting Cc) so the reply appears sent from postmoogle
 func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) string {
 	newSenders := make(map[string]string, len(domains))
 	for _, domain := range domains {
@@ -415,9 +408,7 @@ func (e *parentEmail) fixtofrom(newSenderMailbox string, domains []string) strin
 		newSenders[sender] = sender
 	}
 
-	// try to determine previous email of the room mailbox
-	// by matching RCPT TO, To and From fields
-	// why? Because of possible multi-domain setup and we won't leak information
+	// determine the previous email of the room mailbox by matching RCPT TO/To/From (multi-domain, no leaking)
 	var previousSender string
 	rcptToSender, ok := newSenders[e.RcptTo]
 	if ok {
@@ -548,8 +539,7 @@ func (b *Bot) getParentEmail(ctx context.Context, evt *event.Event, newFromMailb
 	return parent
 }
 
-// saveSentMetadata used to save metadata from !pm sent and thread reply events to a separate notice message
-// because that metadata is needed to determine email thread relations
+// saveSentMetadata saves !pm sent/thread-reply metadata to a notice message, used to determine email thread relations
 func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.EventID, to string, eml *email.Email, cfg config.Room, textOverride ...string) {
 	text := "Email has been sent to " + to
 	if queued {

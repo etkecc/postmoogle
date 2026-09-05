@@ -6,7 +6,7 @@ import "time"
 type Config struct {
 	// Homeserver url
 	Homeserver string
-	// Login is a localpart if logging in with password (postmoogle) OR full MXID if logging in with shared secret (@postmoogle:example.com)
+	// Login is a localpart (password auth) or full MXID (shared secret auth), e.g. @postmoogle:example.com
 	Login string
 	// Password for login/password auth only
 	Password string
@@ -32,7 +32,7 @@ type Config struct {
 	StatusMsg string
 	// Mailboxes config
 	Mailboxes Mailboxes
-	// Admins holds list of admin users (wildcards supported), e.g.: @*:example.com, @bot.*:example.com, @admin:*. Empty = no admins
+	// Admins holds admin users (wildcards supported), e.g. @*:example.com, @bot.*:example.com; empty = no admins
 	Admins []string
 
 	// DB config

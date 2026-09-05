@@ -74,12 +74,7 @@ func (b *Bot) migrateRoomSettings(ctx context.Context, roomID id.RoomID) {
 	}
 }
 
-// migrateMautrix015 adds a special timestamp to bot's config
-// to ignore any message events happened before that timestamp
-// with migration to maturix 0.15.x the state store has been changed
-// alongside with other database configs to simplify maintenance,
-// but with that simplification there is no proper way to migrate
-// existing sync token and session info. No data loss, tho.
+// migrateMautrix015 sets a timestamp to ignore events before the mautrix 0.15.x store migration (no data loss)
 func (b *Bot) migrateMautrix015(ctx context.Context) error {
 	cfg := b.cfg.GetBot(ctx)
 	ts := cfg.Mautrix015Migration()

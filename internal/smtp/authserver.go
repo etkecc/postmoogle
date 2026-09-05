@@ -21,10 +21,7 @@ var (
 	_ sasl.Server = (*LoginAuthServer)(nil)
 )
 
-// LoginAuthServer is a server implementation of the LOGIN authentication mechanism.
-// It's a modified implementation of the go-sasl's original loginServer (MIT License),
-// removed from go-sasl in https://github.com/emersion/go-sasl/commit/b788ff22d5a6b3970cde181998f52658a475bffc
-// DO NOT USE IT, unless you have no other choice.
+// LoginAuthServer: modified from go-sasl's removed loginServer (MIT license); avoid unless you have no choice
 type LoginAuthServer struct {
 	done         bool
 	state        int
@@ -77,11 +74,7 @@ func (a *LoginAuthServer) Next(response []byte) (challenge []byte, done bool, er
 	}
 }
 
-// PlainAuthServer is a server implementation of the PLAIN authentication mechanism.
-// It's a modified version of the original plainServer from https://github.com/emersion/go-sasl package (MIT License)
-// ref: https://github.com/emersion/go-sasl/blob/e73c9f7bad438a9bf3f5b28e661b74d752ecafdd/plain.go
-// The reason for modification is to extend automatic banning mechanism of Postmoogle, as the original implementation
-// doesn't provide a way to return an error to the caller before the actual authentication process.
+// PlainAuthServer: modified go-sasl plainServer (MIT), extended to return auth errors early for auto-banning
 type PlainAuthServer struct {
 	done         bool
 	ctx          context.Context //nolint:containedctx // that's per-request structure

@@ -176,7 +176,8 @@ func (b *Bot) runDKIM(ctx context.Context, commandSlice []string) {
 			"Add new DNS record with type = `TXT`, key (subdomain/from): `postmoogle._domainkey` and value (to):\n ```\n%s\n```\n"+
 			"Without that record other email servers may reject your emails as spam, kupo.\n"+
 			"To reset the signature, send `%s dkim reset`",
-		signature, signature, b.prefix),
+		signature, signature, b.prefix,
+	),
 		linkpearl.RelatesTo(evt.ID),
 	)
 }

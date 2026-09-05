@@ -51,7 +51,7 @@ type DNSBLResult struct {
 	Error   bool
 }
 
-// CheckDNSBLs checks if the given IP address is listed in any of the DNSBLs, and returns a decision, based on the results
+// CheckDNSBLs checks if addr is listed in any DNSBL and returns a decision based on the results
 func CheckDNSBLs(ctx context.Context, log *zerolog.Logger, addr net.Addr, optionalTimeout ...time.Duration) (blocked bool, reasons []string) {
 	ttl := DNSBLTimeout
 	if len(optionalTimeout) > 0 {
@@ -133,8 +133,7 @@ func (req *DNSBLRequest) checkRBL(rbl string, signals []string) {
 		req.results = append(req.results, &DNSBLResult{RBL: rbl, Error: true})
 		return
 	}
-	// if the host is resolved, check if there is any signal in the response
-	// if not = not listed
+	// if resolved, check for any signal in the response; no signal means not listed
 	if len(ips) == 0 {
 		req.results = append(req.results, &DNSBLResult{RBL: rbl, Listed: false})
 		return
