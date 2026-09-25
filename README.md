@@ -79,6 +79,7 @@ env vars
 * **POSTMOOGLE_LOGIN** - user login, localpart when logging in with password (e.g., `moogle`), OR full MXID when using shared secret (e.g., `@moogle:example.com`)
 * **POSTMOOGLE_PASSWORD** - user password, alternatively you may use shared secret
 * **POSTMOOGLE_SHAREDSECRET** - alternative to password, shared secret ([details](https://github.com/devture/matrix-synapse-shared-secret-auth)). Note: switch between password and shared secret authentication may result in encryption issues. If you face such issues, please report them
+* **POSTMOOGLE_TOKEN** - is alternative to password and shared secret. A pre-created access token: skips /login. E2EE needs a fresh device; crypto DB must persist paired to it.
 * **POSTMOOGLE_DOMAINS** - space separated list of SMTP domains to listen for new emails. The first domain acts as the default domain, all other as aliases
 
 <details>

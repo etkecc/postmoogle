@@ -17,6 +17,7 @@ func New() *Config {
 		Login:        env.String("login", defaultConfig.Login),
 		Password:     env.String("password", defaultConfig.Password),
 		SharedSecret: env.String("sharedsecret", defaultConfig.SharedSecret),
+		Token:        env.String("token", defaultConfig.Token),
 		Prefix:       env.String("prefix", defaultConfig.Prefix),
 		Domains:      migrateDomains("domain", "domains"),
 		Port:         env.String("port", defaultConfig.Port),

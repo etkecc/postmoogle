@@ -12,6 +12,8 @@ type Config struct {
 	Password string
 	// SharedSecret for login/sharedsecret auth only
 	SharedSecret string
+	// Token is a pre-created access token: skips /login. E2EE needs a fresh device; crypto DB must persist paired to it.
+	Token string
 	// Domains for SMTP
 	Domains []string
 	// Port for SMTP
