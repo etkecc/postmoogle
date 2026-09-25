@@ -3,6 +3,7 @@ package mediatype
 import (
 	"fmt"
 	"mime"
+	"slices"
 	"strings"
 	_utf8 "unicode/utf8"
 
@@ -68,7 +69,7 @@ func ParseWithOptions(ctype string, options ParseOptions) (mtype string, params 
 		delete(params, name)
 	}
 
-	return mtype, params, invalidParams, err
+	return mtype, params, invalidParams, nil
 }
 
 // fixMangledMediaType is used to insert ; separators into media type strings that lack them, and
@@ -81,6 +82,7 @@ func fixMangledMediaType(mtype string, sep rune, options ParseOptions) string {
 
 	parts := stringutil.SplitUnquoted(mtype, sep, '"')
 	mtype = ""
+	seen := map[string]bool{}
 	if strings.Contains(parts[0], "=") {
 		// A parameter pair at this position indicates we are missing a content-type.
 		parts[0] = fmt.Sprintf("%s%s %s", ctAppOctetStream, strsep, parts[0])
@@ -142,8 +144,10 @@ func fixMangledMediaType(mtype string, sep rune, options ParseOptions) string {
 				continue
 			}
 
-			if strings.Contains(mtype, strings.TrimSpace(pair[0])) {
-				// Ignore repeated parameters.
+			// Ignore repeated parameters. Compare exact param names
+			// case-insensitively (RFC 2045 §5.1), not by substring (#162).
+			key := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(pair[0], "=")))
+			if seen[key] {
 				continue
 			}
 
@@ -153,6 +157,8 @@ func fixMangledMediaType(mtype string, sep rune, options ParseOptions) string {
 				// attribute.  Discard the pair.
 				continue
 			}
+
+			seen[key] = true
 		}
 
 		mtype += p
@@ -272,11 +278,8 @@ findValueStart:
 		param.WriteString(`""`)
 	} else {
 		// The beginning of the value is not at the end of the string.
-		for _, v := range []byte{'(', ')', '<', '>', '@', ',', ':', '/', '[', ']', '?', '='} {
-			if s[0] == v {
-				quoteIfUnquoted()
-				break
-			}
+		if slices.Contains([]byte{'(', ')', '<', '>', '@', ',', ':', '/', '[', ']', '?', '='}, s[0]) {
+			quoteIfUnquoted()
 		}
 
 		_, runeLength := _utf8.DecodeRuneInString(s[i:])

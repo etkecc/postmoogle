@@ -79,7 +79,7 @@ func (b *boundaryReader) Read(dest []byte) (n int, err error) {
 		return n, err
 	}
 
-	for i := 0; i < len(dest); i++ {
+	for range dest {
 		var cs []byte
 		cs, err = b.r.Peek(1)
 		if err != nil && err != io.EOF {
@@ -223,7 +223,7 @@ func (b *boundaryReader) Next() (bool, error) {
 			continue
 		}
 		b.finished = true
-		return false, errors.WithMessagef(errNoBoundaryTerminator, "expecting boundary %q, got %q", string(b.prefix), string(line))
+		return false, errors.Wrapf(errNoBoundaryTerminator, "expecting boundary %q, got %q", string(b.prefix), string(line))
 	}
 }
 

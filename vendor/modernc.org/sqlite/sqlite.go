@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:generate go run generator.go -full-path-comments
-
 package sqlite // import "modernc.org/sqlite"
 
 import (
@@ -29,8 +27,9 @@ import (
 )
 
 var (
-	_ driver.Conn   = (*conn)(nil)
-	_ driver.Driver = (*Driver)(nil)
+	_ driver.Conn      = (*conn)(nil)
+	_ driver.Connector = (*connector)(nil)
+	_ driver.Driver    = (*Driver)(nil)
 	//lint:ignore SA1019 TODO implement ExecerContext
 	_ driver.Execer = (*conn)(nil)
 	//lint:ignore SA1019 TODO implement QueryerContext
@@ -54,7 +53,7 @@ const (
 )
 
 func init() {
-	sql.Register(driverName, newDriver())
+	sql.Register(driverName, defaultDriver())
 	sqlite3.PatchIssue199() // https://gitlab.com/cznic/sqlite/-/issues/199
 
 }
@@ -174,6 +173,46 @@ func applyDQSConfig(c *conn, query string) error {
 	return nil
 }
 
+// getDefensiveMode validates the _defensive DSN query parameter before
+// sqlite3_open_v2 can create or mutate a database. Absence or a false value
+// preserves SQLite's default behavior for backwards compatibility.
+//
+// The parameter is intentionally single-valued. Accepting duplicate values
+// would make the security posture depend on url.Values.Get choosing the first
+// value, so duplicates fail the connection before any query parameter is
+// applied.
+func getDefensiveMode(query string) (bool, error) {
+	q, err := url.ParseQuery(query)
+	if err != nil {
+		return false, err
+	}
+	values, ok := q["_defensive"]
+	if !ok {
+		return false, nil
+	}
+	if len(values) != 1 {
+		return false, fmt.Errorf("_defensive must be specified exactly once, got %d values", len(values))
+	}
+	on, err := strconv.ParseBool(values[0])
+	if err != nil {
+		return false, fmt.Errorf("invalid _defensive value %q: %w", values[0], err)
+	}
+	return on, nil
+}
+
+// applyDefensiveConfig enables SQLite's defensive connection mode after
+// sqlite3_open_v2 and before any user-supplied PRAGMA or statement can run.
+// See https://www.sqlite.org/c3ref/c_dbconfig_defensive.html.
+func applyDefensiveConfig(c *conn, on bool) error {
+	if !on {
+		return nil
+	}
+	if rc := c.dbConfigBool(sqlite3.SQLITE_DBCONFIG_DEFENSIVE, true); rc != sqlite3.SQLITE_OK {
+		return fmt.Errorf("sqlite3_db_config(SQLITE_DBCONFIG_DEFENSIVE, on) returned %d", rc)
+	}
+	return nil
+}
+
 // getErrorRcMode reads the _error_rc DSN query parameter and returns
 // the parsed boolean. Called from newConn before sqlite3_open_v2 so
 // open-time failures get the conditional errmsg treatment too: the
@@ -204,34 +243,114 @@ func getErrorRcMode(query string) (bool, error) {
 	return on, nil
 }
 
-func applyQueryParams(c *conn, query string) error {
+// dsnPick returns the value and key name for a mattn-compatible shorthand DSN
+// parameter and its alias. When both are present the alias wins, matching
+// github.com/mattn/go-sqlite3. Selection is by presence, not by value, so an
+// alias supplied with an empty value ("_foreign_keys=on&_fk=") selects the
+// alias and yields an empty value, suppressing the PRAGMA entirely rather than
+// falling back to the primary key. That too matches mattn.
+func dsnPick(q url.Values, primary, alias string) (key, val string) {
+	if _, ok := q[primary]; ok {
+		key, val = primary, q.Get(primary)
+	}
+	if _, ok := q[alias]; ok {
+		key, val = alias, q.Get(alias)
+	}
+	return key, val
+}
+
+// dsnBool reports an error unless val is a mattn-compatible boolean DSN value.
+func dsnBool(key, val string) error {
+	switch strings.ToLower(val) {
+	case "0", "no", "false", "off", "1", "yes", "true", "on":
+		return nil
+	}
+	return fmt.Errorf("invalid %s %q, expecting one of: 0 1 false true no yes off on", key, val)
+}
+
+// dsnEnum reports an error unless val matches one of allowed, case-insensitively.
+func dsnEnum(key, val string, allowed []string) error {
+	for _, a := range allowed {
+		if strings.EqualFold(val, a) {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid %s %q, expecting one of: %s", key, val, strings.Join(allowed, " "))
+}
+
+// applyQueryParams validates and applies the DSN query parameters. defensive
+// is the _defensive value newConn parsed and already acted on; the validation
+// phase below needs it to tell whether a parameter it is about to accept can
+// still take effect on the connection.
+func applyQueryParams(c *conn, query string, defensive bool) error {
 	q, err := url.ParseQuery(query)
 	if err != nil {
 		return err
 	}
 
-	var a []string
-	for _, v := range q["_pragma"] {
-		a = append(a, v)
+	// Validation phase. Everything that can be rejected is rejected here, before
+	// the apply phase below executes a single statement. PRAGMA journal_mode and
+	// auto_vacuum are persistent changes to the database file, so validating
+	// lazily as each key is applied would let a typo in a later parameter fail
+	// the connection only after the file had already been converted -- a failed
+	// Open must not leave the database half-configured. Assignments to c are
+	// exempt from that concern: newConn closes and discards the connection when
+	// this returns an error, so they cannot outlive the failure.
+	//
+	// Each shorthand value is validated against the same set
+	// github.com/mattn/go-sqlite3 accepts (case-insensitive). When a key and its
+	// alias are both present the alias wins, matching mattn. See the Driver
+	// documentation in driver.go for the full apply order and precedence.
+	//
+	// _pragma values are the one exception: they are executed verbatim and
+	// cannot be checked here, so a malformed _pragma can still fail partway.
+	busyKey, busyTimeout := dsnPick(q, "_busy_timeout", "_timeout")
+	if busyTimeout != "" {
+		if _, err := strconv.ParseInt(busyTimeout, 10, 64); err != nil {
+			return fmt.Errorf("invalid %s %q: %w", busyKey, busyTimeout, err)
+		}
 	}
-	// Push 'busy_timeout' first, the rest in lexicographic order, case insenstive.
-	// See https://gitlab.com/cznic/sqlite/-/issues/198#note_2233423463 for
-	// discussion.
-	sort.Slice(a, func(i, j int) bool {
-		x, y := strings.TrimSpace(strings.ToLower(a[i])), strings.TrimSpace(strings.ToLower(a[j]))
-		if strings.HasPrefix(x, "busy_timeout") {
-			return true
-		}
-		if strings.HasPrefix(y, "busy_timeout") {
-			return false
-		}
 
-		return x < y
-	})
-	for _, v := range a {
-		cmd := "pragma " + v
-		_, err := c.exec(context.Background(), cmd, nil)
-		if err != nil {
+	autoVacuumKey, autoVacuum := dsnPick(q, "_auto_vacuum", "_vacuum")
+	if autoVacuum != "" {
+		if err := dsnEnum(autoVacuumKey, autoVacuum, []string{"0", "NONE", "1", "FULL", "2", "INCREMENTAL"}); err != nil {
+			return err
+		}
+	}
+
+	foreignKeysKey, foreignKeys := dsnPick(q, "_foreign_keys", "_fk")
+	if foreignKeys != "" {
+		if err := dsnBool(foreignKeysKey, foreignKeys); err != nil {
+			return err
+		}
+	}
+
+	journalModeKey, journalMode := dsnPick(q, "_journal_mode", "_journal")
+	if journalMode != "" {
+		if err := dsnEnum(journalModeKey, journalMode, []string{"DELETE", "TRUNCATE", "PERSIST", "MEMORY", "WAL", "OFF"}); err != nil {
+			return err
+		}
+		// PRAGMA journal_mode=OFF is one of the operations defensive mode
+		// suppresses, and SQLite suppresses it silently: the statement
+		// succeeds and reports the unchanged mode. Accepting the
+		// combination would mean honouring neither parameter without
+		// telling anyone, so reject it here, alongside the other checks
+		// that run before a single statement is executed.
+		if defensive && strings.EqualFold(journalMode, "OFF") {
+			return fmt.Errorf("conflicting DSN parameters: %s=%s cannot take effect under _defensive", journalModeKey, journalMode)
+		}
+	}
+
+	synchronousKey, synchronous := dsnPick(q, "_synchronous", "_sync")
+	if synchronous != "" {
+		if err := dsnEnum(synchronousKey, synchronous, []string{"0", "OFF", "1", "NORMAL", "2", "FULL", "3", "EXTRA"}); err != nil {
+			return err
+		}
+	}
+
+	queryOnly := q.Get("_query_only")
+	if queryOnly != "" {
+		if err := dsnBool("_query_only", queryOnly); err != nil {
 			return err
 		}
 	}
@@ -289,6 +408,79 @@ func applyQueryParams(c *conn, query string) error {
 		c.textToTime = onoff
 	}
 
+	// Apply phase. The order here is the documented one and is independent of
+	// the order the keys appear in the DSN.
+	//
+	// Busy timeout must be one of the first PRAGMAs set from query params as some
+	// that make changes to the database might otherwise unexpectedly fail with
+	// SQLITE_BUSY.
+	if busyTimeout != "" {
+		if _, err := c.exec(context.Background(), "pragma busy_timeout = "+busyTimeout, nil); err != nil {
+			return err
+		}
+	}
+
+	// auto_vacuum must be applied while the database is still new: a journal_mode
+	// change or the first table materialises page 1 and locks the setting in, so
+	// it runs before the _pragma list and the other shorthand keys.
+	if autoVacuum != "" {
+		if _, err := c.exec(context.Background(), "pragma auto_vacuum = "+autoVacuum, nil); err != nil {
+			return err
+		}
+	}
+
+	var a []string
+	for _, v := range q["_pragma"] {
+		a = append(a, v)
+	}
+	// Push 'busy_timeout' first, the rest in lexicographic order, case insenstive.
+	// See https://gitlab.com/cznic/sqlite/-/issues/198#note_2233423463 for
+	// discussion.
+	sort.Slice(a, func(i, j int) bool {
+		x, y := strings.TrimSpace(strings.ToLower(a[i])), strings.TrimSpace(strings.ToLower(a[j]))
+		if strings.HasPrefix(x, "busy_timeout") {
+			return true
+		}
+		if strings.HasPrefix(y, "busy_timeout") {
+			return false
+		}
+
+		return x < y
+	})
+	for _, v := range a {
+		cmd := "pragma " + v
+		_, err := c.exec(context.Background(), cmd, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	if foreignKeys != "" {
+		if _, err := c.exec(context.Background(), "pragma foreign_keys = "+foreignKeys, nil); err != nil {
+			return err
+		}
+	}
+
+	if journalMode != "" {
+		if _, err := c.exec(context.Background(), "pragma journal_mode = "+journalMode, nil); err != nil {
+			return err
+		}
+	}
+
+	if synchronous != "" {
+		if _, err := c.exec(context.Background(), "pragma synchronous = "+synchronous, nil); err != nil {
+			return err
+		}
+	}
+
+	// query_only is applied last: it makes the connection read-only, so it must
+	// not precede the write-capable pragmas above (notably auto_vacuum).
+	if queryOnly != "" {
+		if _, err := c.exec(context.Background(), "pragma query_only = "+queryOnly, nil); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -319,8 +511,8 @@ type FunctionImpl struct {
 	// for more details.
 	Deterministic bool
 
-	// Scalar is called when a scalar function is invoked in SQL. The
-	// argument Values are not valid past the return of the function.
+	// Scalar is called when a scalar function is invoked in SQL. Neither ctx
+	// nor the argument Values are valid past the return of the function.
 	Scalar func(ctx *FunctionContext, args []driver.Value) (driver.Value, error)
 
 	// MakeAggregate is called at the beginning of each evaluation of an
@@ -375,8 +567,8 @@ type FunctionImpl struct {
 // [application-defined window functions]: https://www.sqlite.org/windowfunctions.html#user_defined_aggregate_window_functions
 type AggregateFunction interface {
 	// Step is called for each row of an aggregate function's SQL
-	// invocation. The argument Values are not valid past the return of the
-	// function. When the aggregate was registered with
+	// invocation. Neither ctx nor the argument Values are valid past the
+	// return of the function. When the aggregate was registered with
 	// [FunctionImpl.VolatileArgs] set to true, string and []byte arguments
 	// in rowArgs are zero-copy views into SQLite-owned memory and retaining
 	// them produces silent data corruption — see [FunctionImpl.VolatileArgs]
@@ -385,20 +577,21 @@ type AggregateFunction interface {
 
 	// WindowInverse is called to remove the oldest presently aggregated
 	// result of Step from the current window. The arguments are those
-	// passed to Step for the row being removed. The argument Values are not
-	// valid past the return of the function. The same
+	// passed to Step for the row being removed. Neither ctx nor the argument
+	// Values are valid past the return of the function. The same
 	// [FunctionImpl.VolatileArgs] caveat applies as for Step.
 	WindowInverse(ctx *FunctionContext, rowArgs []driver.Value) error
 
 	// WindowValue is called to get the current value of an aggregate
 	// function. This is used to return the final value of the function,
-	// whether it is used as a window function or not.
+	// whether it is used as a window function or not. The ctx is not valid
+	// past the return of the function.
 	WindowValue(ctx *FunctionContext) (driver.Value, error)
 
 	// Final is called after all of the aggregate function's input rows have
 	// been stepped through. No other methods will be called on the
 	// AggregateFunction after calling Final. WindowValue returns the value
-	// from the function.
+	// from the function. The ctx is not valid past the return of Final.
 	Final(ctx *FunctionContext)
 }
 
@@ -423,13 +616,13 @@ type collation struct {
 // - if A<B, then B>A
 // - if A<B and B<C, then A<C.
 //
-// The new collation will be available to all new connections opened after
-// executing RegisterCollationUtf8.
+// The new collation will be available to all new connections the driver
+// registered as "sqlite" opens after executing RegisterCollationUtf8.
 func RegisterCollationUtf8(
 	zName string,
 	impl func(left, right string) int,
 ) error {
-	return registerCollation(zName, impl, sqlite3.SQLITE_UTF8)
+	return d.registerCollation(zName, impl, sqlite3.SQLITE_UTF8)
 }
 
 // MustRegisterCollationUtf8 is like RegisterCollationUtf8 but panics on error.
@@ -442,11 +635,17 @@ func MustRegisterCollationUtf8(
 	}
 }
 
-func registerCollation(
+func (d *Driver) registerCollation(
 	zName string,
 	impl func(left, right string) int,
 	enc int32,
 ) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if d.collations == nil {
+		d.collations = map[string]*collation{}
+	}
 	if _, ok := d.collations[zName]; ok {
 		return fmt.Errorf("a collation %q is already registered", zName)
 	}
@@ -490,7 +689,12 @@ type ConnectionHookFn func(
 ) error
 
 // FunctionContext represents the context user defined functions execute in.
-// Fields and/or methods of this type may get addedd in the future.
+// Fields and/or methods of this type may get added in the future.
+//
+// The *FunctionContext passed to [FunctionImpl.Scalar] and to the
+// [AggregateFunction] methods is owned by the driver and reused across
+// invocations: it is valid only for the duration of the call it is passed to
+// and must not be retained past its return.
 type FunctionContext struct {
 	tls *libc.TLS
 	ctx uintptr
@@ -504,13 +708,13 @@ const sqliteValPtrSize = unsafe.Sizeof(&sqlite3.Sqlite3_value{})
 // scalar function (when Scalar is defined) or an aggregate function (when
 // Scalar is not defined and MakeAggregate is defined).
 //
-// The new function will be available to all new connections opened after
-// executing RegisterFunction.
+// The new function will be available to all new connections the driver
+// registered as "sqlite" opens after executing RegisterFunction.
 func RegisterFunction(
 	zFuncName string,
 	impl *FunctionImpl,
 ) error {
-	return registerFunction(zFuncName, impl)
+	return d.registerFunction(zFuncName, impl)
 }
 
 // MustRegisterFunction is like RegisterFunction but panics on error.
@@ -526,8 +730,8 @@ func MustRegisterFunction(
 // RegisterScalarFunction registers a scalar function named zFuncName with nArg
 // arguments. Passing -1 for nArg indicates the function is variadic.
 //
-// The new function will be available to all new connections opened after
-// executing RegisterScalarFunction.
+// The new function will be available to all new connections the driver
+// registered as "sqlite" opens after executing RegisterScalarFunction.
 func RegisterScalarFunction(
 	zFuncName string,
 	nArg int32,
@@ -538,7 +742,7 @@ func RegisterScalarFunction(
 			dmesg("zFuncName %q, nArg %v, xFunc %p: err %v", zFuncName, nArg, xFunc, err)
 		}()
 	}
-	return registerFunction(zFuncName, &FunctionImpl{NArgs: nArg, Scalar: xFunc, Deterministic: false})
+	return d.registerFunction(zFuncName, &FunctionImpl{NArgs: nArg, Scalar: xFunc, Deterministic: false})
 }
 
 // MustRegisterScalarFunction is like RegisterScalarFunction but panics on
@@ -576,8 +780,9 @@ func MustRegisterDeterministicScalarFunction(
 // the function is variadic. A deterministic function means that the function
 // always gives the same output when the input parameters are the same.
 //
-// The new function will be available to all new connections opened after
-// executing RegisterDeterministicScalarFunction.
+// The new function will be available to all new connections the driver
+// registered as "sqlite" opens after executing
+// RegisterDeterministicScalarFunction.
 func RegisterDeterministicScalarFunction(
 	zFuncName string,
 	nArg int32,
@@ -588,14 +793,19 @@ func RegisterDeterministicScalarFunction(
 			dmesg("zFuncName %q, nArg %v, xFunc %p: err %v", zFuncName, nArg, xFunc, err)
 		}()
 	}
-	return registerFunction(zFuncName, &FunctionImpl{NArgs: nArg, Scalar: xFunc, Deterministic: true})
+	return d.registerFunction(zFuncName, &FunctionImpl{NArgs: nArg, Scalar: xFunc, Deterministic: true})
 }
 
-func registerFunction(
+func (d *Driver) registerFunction(
 	zFuncName string,
 	impl *FunctionImpl,
 ) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
+	if d.udfs == nil {
+		d.udfs = map[string]*userDefinedFunction{}
+	}
 	if _, ok := d.udfs[zFuncName]; ok {
 		return fmt.Errorf("a function named %q is already registered", zFuncName)
 	}
@@ -640,8 +850,10 @@ func registerFunction(
 	return nil
 }
 
-// RegisterConnectionHook registers a function to be called after each connection
-// is opened. This is called after all the connection has been set up.
+// RegisterConnectionHook registers a function to be called after each
+// connection the driver registered as "sqlite" opens. This is called after all
+// the connection has been set up. Use [Driver.RegisterConnectionHook] to hook
+// the connections of a caller-constructed Driver instead.
 func RegisterConnectionHook(fn ConnectionHookFn) {
 	d.RegisterConnectionHook(fn)
 }
@@ -671,53 +883,64 @@ func errorResultFunction(tls *libc.TLS, ctx uintptr) func(error) {
 	}
 }
 
-// udfArgsPool reuses []driver.Value slices passed to user-defined functions.
-// The driver's contract (documented on FunctionImpl.Scalar and
-// AggregateFunction.Step/WindowInverse) states that the args values are not
-// valid past the return of the user function, which makes the slice itself
-// safe to reuse. See https://gitlab.com/cznic/sqlite/-/issues/226.
-var udfArgsPool = sync.Pool{
+// udfCall is the per-invocation scratch state handed to a user-defined
+// function, aggregate or virtual table callback: the argument slice and the
+// FunctionContext. Both are reused across invocations through udfCallPool, so
+// a callback costs no heap allocation for either. The driver's contract
+// (documented on FunctionContext, FunctionImpl.Scalar and the
+// AggregateFunction methods) states that neither the args values nor the
+// context are valid past the return of the user callback, which is what makes
+// the reuse safe. See https://gitlab.com/cznic/sqlite/-/issues/226.
+type udfCall struct {
+	args []driver.Value
+	ctx  FunctionContext
+}
+
+var udfCallPool = sync.Pool{
 	New: func() any {
-		s := make([]driver.Value, 0, 8)
-		return &s
+		return &udfCall{args: make([]driver.Value, 0, 8)}
 	},
 }
 
-// acquireUDFArgs returns a pooled *[]driver.Value with len == n. The caller
-// must invoke releaseUDFArgs after the user function has returned.
-func acquireUDFArgs(n int) *[]driver.Value {
-	sp := udfArgsPool.Get().(*[]driver.Value)
-	if cap(*sp) < n {
-		*sp = make([]driver.Value, n)
+// acquireUDFCall returns a pooled udfCall whose args has len == n and whose
+// ctx refers to the sqlite3_context ctx on tls. The caller must invoke
+// releaseUDFCall after the user callback has returned.
+func acquireUDFCall(tls *libc.TLS, ctx uintptr, n int) *udfCall {
+	c := udfCallPool.Get().(*udfCall)
+	if cap(c.args) < n {
+		c.args = make([]driver.Value, n)
 	} else {
-		*sp = (*sp)[:n]
+		c.args = c.args[:n]
 	}
-	return sp
+	c.ctx = FunctionContext{tls: tls, ctx: ctx}
+	return c
 }
 
-// releaseUDFArgs returns the slice to the pool after clearing each entry so
-// any heap references held in the previous invocation can be reclaimed.
-func releaseUDFArgs(sp *[]driver.Value) {
-	s := *sp
-	for i := range s {
-		s[i] = nil
+// releaseUDFCall returns c to the pool after clearing it so any heap
+// references held by the previous invocation can be reclaimed.
+func releaseUDFCall(c *udfCall) {
+	for i := range c.args {
+		c.args[i] = nil
 	}
-	*sp = s[:0]
-	udfArgsPool.Put(sp)
+	c.args = c.args[:0]
+	c.ctx = FunctionContext{}
+	udfCallPool.Put(c)
 }
 
-// functionArgs prepares a []driver.Value for one user-function invocation.
-// The returned slice is owned by the driver and must be released via
-// releaseUDFArgs once the user function returns.
+// functionArgs prepares the pooled udfCall for one user-callback invocation,
+// filling its args from argv. The returned call is owned by the driver and
+// must be released via releaseUDFCall once the user callback returns. ctx is
+// the sqlite3_context of the invocation, or 0 for virtual table callbacks,
+// which have none.
 //
 // When volatile is true, SQLITE_TEXT and SQLITE_BLOB arguments are returned as
 // zero-copy views into SQLite-owned memory (see [FunctionImpl.VolatileArgs]
 // for the user-facing safety contract). When false (the default for all
 // existing call sites), text and blob payloads are copied into Go-owned
 // memory and stay valid for the lifetime of the slice.
-func functionArgs(tls *libc.TLS, argc int32, argv uintptr, volatile bool) *[]driver.Value {
-	sp := acquireUDFArgs(int(argc))
-	args := *sp
+func functionArgs(tls *libc.TLS, ctx uintptr, argc int32, argv uintptr, volatile bool) *udfCall {
+	call := acquireUDFCall(tls, ctx, int(argc))
+	args := call.args
 	for i := int32(0); i < argc; i++ {
 		valPtr := *(*uintptr)(unsafe.Pointer(argv + uintptr(i)*sqliteValPtrSize))
 
@@ -761,7 +984,7 @@ func functionArgs(tls *libc.TLS, argc int32, argv uintptr, volatile bool) *[]dri
 		}
 	}
 
-	return sp
+	return call
 }
 
 func functionReturnValue(tls *libc.TLS, ctx uintptr, res driver.Value) error {
@@ -960,9 +1183,9 @@ func funcTrampoline(tls *libc.TLS, ctx uintptr, argc int32, argv uintptr) {
 	xFuncs.mu.RUnlock()
 
 	setErrorResult := errorResultFunction(tls, ctx)
-	sp := functionArgs(tls, argc, argv, entry.volatile)
-	defer releaseUDFArgs(sp)
-	res, err := entry.fn(&FunctionContext{}, *sp)
+	call := functionArgs(tls, ctx, argc, argv, entry.volatile)
+	defer releaseUDFCall(call)
+	res, err := entry.fn(&call.ctx, call.args)
 
 	if err != nil {
 		setErrorResult(err)
@@ -997,9 +1220,9 @@ func stepTrampoline(tls *libc.TLS, ctx uintptr, argc int32, argv uintptr) {
 	}
 
 	setErrorResult := errorResultFunction(tls, ctx)
-	sp := functionArgs(tls, argc, argv, volatile)
-	defer releaseUDFArgs(sp)
-	err := impl.Step(&FunctionContext{}, *sp)
+	call := functionArgs(tls, ctx, argc, argv, volatile)
+	defer releaseUDFCall(call)
+	err := impl.Step(&call.ctx, call.args)
 	if err != nil {
 		setErrorResult(err)
 	}
@@ -1012,9 +1235,9 @@ func inverseTrampoline(tls *libc.TLS, ctx uintptr, argc int32, argv uintptr) {
 	}
 
 	setErrorResult := errorResultFunction(tls, ctx)
-	sp := functionArgs(tls, argc, argv, volatile)
-	defer releaseUDFArgs(sp)
-	err := impl.WindowInverse(&FunctionContext{}, *sp)
+	call := functionArgs(tls, ctx, argc, argv, volatile)
+	defer releaseUDFCall(call)
+	err := impl.WindowInverse(&call.ctx, call.args)
 	if err != nil {
 		setErrorResult(err)
 	}
@@ -1027,7 +1250,9 @@ func valueTrampoline(tls *libc.TLS, ctx uintptr) {
 	}
 
 	setErrorResult := errorResultFunction(tls, ctx)
-	res, err := impl.WindowValue(&FunctionContext{})
+	call := acquireUDFCall(tls, ctx, 0)
+	defer releaseUDFCall(call)
+	res, err := impl.WindowValue(&call.ctx)
 	if err != nil {
 		setErrorResult(err)
 	} else {
@@ -1045,7 +1270,9 @@ func finalTrampoline(tls *libc.TLS, ctx uintptr) {
 	}
 
 	setErrorResult := errorResultFunction(tls, ctx)
-	res, err := impl.WindowValue(&FunctionContext{})
+	call := acquireUDFCall(tls, ctx, 0)
+	defer releaseUDFCall(call)
+	res, err := impl.WindowValue(&call.ctx)
 	if err != nil {
 		setErrorResult(err)
 	} else {
@@ -1054,7 +1281,7 @@ func finalTrampoline(tls *libc.TLS, ctx uintptr) {
 			setErrorResult(err)
 		}
 	}
-	impl.Final(&FunctionContext{})
+	impl.Final(&call.ctx)
 
 	xAggregateContext.mu.Lock()
 	defer xAggregateContext.mu.Unlock()

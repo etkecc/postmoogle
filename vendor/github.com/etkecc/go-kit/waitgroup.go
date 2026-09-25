@@ -2,42 +2,28 @@ package kit
 
 import "sync"
 
-// WaitGroup is a wrapper around sync.WaitGroup that provides ergonomic improvements
-// for concurrent goroutine management.
+// WaitGroup wraps sync.WaitGroup so you hand it funcs instead of juggling Add and Done by hand.
+// The one thing to keep in your head: Do launches and returns immediately, it does NOT block,
+// so you still call Wait yourself.
 //
-// Unlike sync.WaitGroup, WaitGroup's Do method accepts functions directly and
-// automatically manages Add and Done calls, eliminating boilerplate. However, Do
-// does not block until goroutines complete — the caller must explicitly call Wait
-// after launching goroutines.
-//
-// The zero value is NOT usable; always construct with NewWaitGroup.
-//
-// Example:
+// The zero value is NOT usable; construct with NewWaitGroup.
 //
 //	wg := kit.NewWaitGroup()
-//	wg.Do(f1, f2, f3)  // launches goroutines but does not block
-//	wg.Wait()          // blocks until all goroutines complete
+//	wg.Do(f1, f2, f3)  // launches, doesn't block
+//	wg.Wait()          // now you block
 type WaitGroup struct {
 	wg *sync.WaitGroup
 }
 
-// NewWaitGroup constructs a new WaitGroup ready for use.
+// NewWaitGroup returns a WaitGroup ready to use.
 func NewWaitGroup() *WaitGroup {
 	return &WaitGroup{wg: &sync.WaitGroup{}}
 }
 
-// Do launches the given functions concurrently in separate goroutines and returns
-// immediately without blocking.
-//
-// Each function f is wrapped with automatic Add and Done calls, so the caller
-// need not manage the sync.WaitGroup counter manually. Passing zero functions is
-// a no-op.
-//
-// Do may be called multiple times before Wait; each call adds to the same counter,
-// so Wait will not return until all goroutines launched across all Do calls have
-// completed.
-//
-// The caller must explicitly call Wait() to block until all goroutines finish.
+// Do launches each f in its own goroutine and returns right away, wrapping the Add/Done so you
+// never touch the counter. Zero funcs is a no-op; a nil func in the list panics when its goroutine
+// runs, same as calling nil() yourself. Call Do as many times as you like before Wait, every call
+// feeds the same counter, so Wait won't return until all of them have finished.
 func (w *WaitGroup) Do(f ...func()) {
 	w.wg.Add(len(f))
 	for _, fn := range f {
@@ -48,11 +34,8 @@ func (w *WaitGroup) Do(f ...func()) {
 	}
 }
 
-// Get returns the underlying *sync.WaitGroup.
-//
-// This allows callers to perform advanced operations directly on the underlying
-// WaitGroup, such as calling TryWait, or to pass the pointer to other code that
-// expects *sync.WaitGroup for interoperability with the standard library.
+// Get returns the underlying *sync.WaitGroup, for when you need something Do doesn't wrap (a
+// TryWait) or have to hand a real *sync.WaitGroup to stdlib-shaped code.
 func (w *WaitGroup) Get() *sync.WaitGroup {
 	return w.wg
 }

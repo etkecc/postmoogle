@@ -8,22 +8,12 @@
 // This package is intended to be used by SMTP servers to implement SPF
 // validation.
 //
-// All mechanisms and modifiers are supported:
-//   all
-//   include
-//   a
-//   mx
-//   ptr
-//   ip4
-//   ip6
-//   exists
-//   redirect
-//   exp (ignored)
-//   Macros
+// All SPF mechanisms, modifiers, and macros are supported.
 //
 // References:
-//   https://tools.ietf.org/html/rfc7208
-//   https://en.wikipedia.org/wiki/Sender_Policy_Framework
+//
+//	https://tools.ietf.org/html/rfc7208
+//	https://en.wikipedia.org/wiki/Sender_Policy_Framework
 package spf // import "blitiri.com.ar/go/spf"
 
 import (
@@ -33,6 +23,7 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -42,7 +33,7 @@ import (
 type Result string
 
 // Valid results.
-var (
+const (
 	// https://tools.ietf.org/html/rfc7208#section-8.1
 	// Not able to reach any conclusion.
 	None = Result("none")
@@ -83,6 +74,9 @@ var qualToResult = map[byte]Result{
 // situations may change over time, and new ones may be added. Be careful
 // about over-relying on these.
 var (
+	// Errors related to the arguments given to the check functions.
+	ErrInvalidIPAddress = errors.New("invalid IP address")
+
 	// Errors related to an invalid SPF record.
 	ErrUnknownField  = errors.New("unknown field")
 	ErrInvalidIP     = errors.New("invalid ipX value")
@@ -121,10 +115,10 @@ const (
 )
 
 // TraceFunc is the type of tracing functions.
-type TraceFunc func(f string, a ...interface{})
+type TraceFunc func(f string, a ...any)
 
 var (
-	nullTrace    = func(f string, a ...interface{}) {}
+	nullTrace    = func(f string, a ...any) {}
 	defaultTrace = nullTrace
 )
 
@@ -142,6 +136,8 @@ type Option func(*resolution)
 // the check as per RFC, as well as an error for debugging purposes. Note that
 // the error may be non-nil even on successful checks.
 //
+// If `ip` is not a valid IP address, the result is PermError.
+//
 // Reference: https://tools.ietf.org/html/rfc7208#section-4
 //
 // Deprecated: use CheckHostWithSender instead.
@@ -152,11 +148,26 @@ func CheckHost(ip net.IP, domain string) (Result, error) {
 		maxvoidcount: defaultMaxVoidLookups,
 		helo:         domain,
 		sender:       "@" + domain,
-		ctx:          context.TODO(),
+		ctx:          context.Background(),
 		resolver:     defaultResolver,
 		trace:        defaultTrace,
 	}
+
+	if !validIP(ip) {
+		r.trace("invalid ip %v", ip)
+		return PermError, ErrInvalidIPAddress
+	}
+
 	return r.Check(domain)
+}
+
+// validIP checks that the given IP address is valid. Because net.IP is a byte
+// slice, it can hold values that are not valid addresses, including nil
+// (which is what net.ParseIP returns on error).
+func validIP(ip net.IP) bool {
+	// To16 returns nil unless the address is a valid IP address (4 or 16
+	// bytes long).
+	return ip.To16() != nil
 }
 
 // CheckHostWithSender fetches SPF records for `sender`'s domain, parses them,
@@ -169,6 +180,8 @@ func CheckHost(ip net.IP, domain string) (Result, error) {
 // The function returns a Result, which corresponds with the SPF result for
 // the check as per RFC, as well as an error for debugging purposes. Note that
 // the error may be non-nil even on successful checks.
+//
+// If `ip` is not a valid IP address, the result is PermError.
 //
 // Reference: https://tools.ietf.org/html/rfc7208#section-4
 func CheckHostWithSender(ip net.IP, helo, sender string, opts ...Option) (Result, error) {
@@ -183,13 +196,18 @@ func CheckHostWithSender(ip net.IP, helo, sender string, opts ...Option) (Result
 		maxvoidcount: defaultMaxVoidLookups,
 		helo:         helo,
 		sender:       sender,
-		ctx:          context.TODO(),
+		ctx:          context.Background(),
 		resolver:     defaultResolver,
 		trace:        defaultTrace,
 	}
 
 	for _, opt := range opts {
 		opt(r)
+	}
+
+	if !validIP(ip) {
+		r.trace("invalid ip %v", ip)
+		return PermError, ErrInvalidIPAddress
 	}
 
 	return r.Check(domain)
@@ -300,6 +318,30 @@ type resolution struct {
 	trace TraceFunc
 }
 
+// A modifier is a name and a value, separated by "=":
+//
+//	modifier = redirect / explanation / unknown-modifier
+//	unknown-modifier = name "=" macro-string
+//	name = ALPHA *( ALPHA / DIGIT / "-" / "_" / "." )
+//
+// Note the "=" comes before any ":" or "/", which is what tells modifiers
+// apart from mechanisms.
+// https://tools.ietf.org/html/rfc7208#section-4.6.1
+var modifierRegexp = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9._-]*=`)
+
+// isNamedModifier returns whether the given term is the modifier with the
+// given name, like "redirect" or "exp".
+//
+// Modifier names are case-insensitive (on ASCII, as per the ABNF), and take
+// no qualifier, so this must be given the term before any qualifier has been
+// stripped from it.
+// https://tools.ietf.org/html/rfc7208#section-4.6.1
+func isNamedModifier(field, name string) bool {
+	return len(field) > len(name) &&
+		field[len(name)] == '=' &&
+		asciiEqualFold(field[:len(name)], name)
+}
+
 var aField = regexp.MustCompile(`^(a$|a:|a/)`)
 var mxField = regexp.MustCompile(`^(mx$|mx:|mx/)`)
 var ptrField = regexp.MustCompile(`^(ptr$|ptr:)`)
@@ -339,9 +381,12 @@ func (r *resolution) Check(domain string) (Result, error) {
 
 	// Redirects must be handled after the rest; instead of having two loops,
 	// we just move them to the end.
+	// Note this has to be consistent with how we recognize the modifier
+	// below, otherwise a redirect could be evaluated in place, and bypass the
+	// check for duplicates.
 	var newfields, redirects []string
 	for _, field := range fields {
-		if strings.HasPrefix(field, "redirect=") {
+		if isNamedModifier(field, "redirect") {
 			redirects = append(redirects, field)
 		} else {
 			newfields = append(newfields, field)
@@ -367,17 +412,14 @@ func (r *resolution) Check(domain string) (Result, error) {
 			continue
 		}
 
-		// Limit the number of resolutions.
-		// https://tools.ietf.org/html/rfc7208#section-4.6.4
-		if r.count > r.maxcount {
-			r.trace("lookup limit reached")
-			return PermError, ErrLookupLimitReached
-		}
-
-		if r.voidcount > r.maxvoidcount {
-			r.trace("void lookup limit reached")
-			return PermError, ErrVoidLookupLimitReached
-		}
+		// Is this a modifier? Note we check these before stripping the
+		// qualifier below, because modifiers don't take one:
+		//   directive = [ qualifier ] mechanism
+		//   modifier  = redirect / explanation / unknown-modifier
+		// https://tools.ietf.org/html/rfc7208#section-4.6.1
+		isExp := isNamedModifier(field, "exp")
+		isRedirect := isNamedModifier(field, "redirect")
+		isModifier := modifierRegexp.MatchString(field)
 
 		// See if we have a qualifier, defaulting to + (pass).
 		// https://tools.ietf.org/html/rfc7208#section-4.6.2
@@ -426,13 +468,19 @@ func (r *resolution) Check(domain string) (Result, error) {
 				r.trace("%q %v, %v", field, res, err)
 				return res, err
 			}
-		} else if strings.HasPrefix(lfield, "exp=") {
+		} else if isExp {
 			r.trace("exp= ignored")
 			continue
-		} else if strings.HasPrefix(lfield, "redirect=") {
+		} else if isRedirect {
 			res, err := r.redirectField(field, domain)
 			r.trace("%q: %v, %v", field, res, err)
 			return res, err
+		} else if isModifier {
+			// Unrecognized modifiers must be ignored, so that records
+			// using modifiers defined elsewhere still work.
+			// https://tools.ietf.org/html/rfc7208#section-6
+			r.trace("unknown modifier, ignoring")
+			continue
 		} else {
 			r.trace("unknown field, permerror")
 			return PermError, ErrUnknownField
@@ -476,13 +524,14 @@ func (r *resolution) getDNSRecord(domain string) (string, error) {
 	// 1 record is what we expect, return the record.
 	// More than that, it's a permanent error:
 	// https://tools.ietf.org/html/rfc7208#section-4.5
-	l := len(records)
-	if l == 0 {
+	switch len(records) {
+	case 0:
 		return "", nil
-	} else if l == 1 {
+	case 1:
 		return records[0], nil
+	default:
+		return "", ErrMultipleRecords
 	}
-	return "", ErrMultipleRecords
 }
 
 func isTemporary(err error) bool {
@@ -495,24 +544,40 @@ func isNotFound(err error) bool {
 	return ok && derr.IsNotFound
 }
 
+// Account for a DNS lookup, and return an error if the limit was already
+// reached. Fields which do a DNS lookup must call this before doing it, so we
+// never go over the limit.
+// https://tools.ietf.org/html/rfc7208#section-4.6.4
+func (r *resolution) countLookup() error {
+	if r.count >= r.maxcount {
+		r.trace("lookup limit reached")
+		return ErrLookupLimitReached
+	}
+	r.count++
+	return nil
+}
+
 // Check if the given DNS error is a "void lookup" (0 answers, or nxdomain),
-// and if so increment the void lookup counter.
-func (r *resolution) checkVoidLookup(nanswers int, err error) {
+// and return an error if the limit was exceeded.
+// Unlike countLookup, we can only tell a lookup was void after doing it, so
+// fields must call this right after the lookup, and stop the evaluation if it
+// returns an error.
+// https://tools.ietf.org/html/rfc7208#section-4.6.4
+func (r *resolution) countVoidLookup(nanswers int, err error) error {
+	derr, isDNSErr := err.(*net.DNSError)
 	if err == nil && nanswers == 0 {
 		r.voidcount++
 		r.trace("void lookup: no answers")
-		return
-	}
-
-	derr, ok := err.(*net.DNSError)
-	if !ok {
-		return
-	}
-
-	if derr.IsNotFound {
+	} else if isDNSErr && derr.IsNotFound {
 		r.voidcount++
 		r.trace("void lookup: nxdomain")
 	}
+
+	if r.voidcount > r.maxvoidcount {
+		r.trace("void lookup limit reached")
+		return ErrVoidLookupLimitReached
+	}
+	return nil
 }
 
 // ipField processes an "ip" field.
@@ -558,17 +623,30 @@ func (r *resolution) ptrField(res Result, field, domain string) (bool, Result, e
 		return true, PermError, ErrInvalidDomain
 	}
 
+	// Each "ptr" term counts against the lookup limit, even if we already have
+	// the names from a previous one and don't need to query DNS again: the RFC
+	// limits the number of terms that cause DNS lookups, not the number of
+	// queries we end up making.
+	// https://tools.ietf.org/html/rfc7208#section-4.6.4
+	if err := r.countLookup(); err != nil {
+		return true, PermError, err
+	}
+
 	if r.ipNames == nil {
 		r.ipNames = []string{}
-		r.count++
 		ns, err := r.resolver.LookupAddr(r.ctx, r.ip.String())
-		r.checkVoidLookup(len(ns), err)
+		if verr := r.countVoidLookup(len(ns), err); verr != nil {
+			return true, PermError, verr
+		}
 		if err != nil {
-			// https://tools.ietf.org/html/rfc7208#section-5
-			if isNotFound(err) {
-				return false, "", err
-			}
-			return true, TempError, err
+			// Any DNS error here makes the mechanism fail to match, instead
+			// of the temperror that section 5 prescribes for the other
+			// mechanisms. The reverse zone is controlled by the operator of
+			// the connecting IP, not by the domain publishing the record, so
+			// errors in it must not affect the result.
+			// https://tools.ietf.org/html/rfc7208#section-5.5
+			r.trace("ptr reverse lookup error, no match: %v", err)
+			return false, "", err
 		}
 
 		// Only take the first 10 names, ignore the rest.
@@ -581,32 +659,94 @@ func (r *resolution) ptrField(res Result, field, domain string) (bool, Result, e
 		}
 
 		for _, n := range ns {
-			// Validate the record by doing a forward resolution: it has to
-			// have some A/AAAA.
+			// Validate the name by doing a forward resolution: it is only
+			// validated if it resolves back to the IP we are checking.
+			// https://tools.ietf.org/html/rfc7208#section-5.5
 			addrs, err := r.resolver.LookupIPAddr(r.ctx, n)
 			if err != nil {
 				// RFC explicitly says to skip domains which error here.
 				continue
 			}
 			r.trace("ptr forward resolution %q -> %q", n, addrs)
-			if len(addrs) > 0 {
-				// Append the lower-case variants so we do a case-insensitive
-				// lookup below.
-				r.ipNames = append(r.ipNames, strings.ToLower(n))
+			for _, addr := range addrs {
+				if addr.IP.Equal(r.ip) {
+					r.ipNames = append(r.ipNames, n)
+					break
+				}
 			}
 		}
 	}
 
 	r.trace("ptr evaluating %q in %q", ptrDomain, r.ipNames)
-	ptrDomain = strings.ToLower(ptrDomain)
 	for _, n := range r.ipNames {
-		if strings.HasSuffix(n, ptrDomain+".") {
+		if isSubdomain(n, ptrDomain) {
 			r.trace("ptr match: %q", n)
 			return true, res, ErrMatchedPTR
 		}
 	}
 
 	return false, "", nil
+}
+
+// isSubdomain returns whether the given name is the domain itself, or a
+// subdomain of it. A trailing dot on either of them is ignored, so it can be
+// used to compare the fully qualified names we get from DNS against the ones
+// that appear in a record.
+//
+// Note the match has to be on a label boundary: "notexample.com" is NOT a
+// subdomain of "example.com".
+// https://tools.ietf.org/html/rfc7208#section-5.5
+func isSubdomain(name, domain string) bool {
+	nameLabels := labels(name)
+	domainLabels := labels(domain)
+
+	// The name has to have at least as many labels as the domain.
+	if len(nameLabels) < len(domainLabels) {
+		return false
+	}
+
+	// And its trailing labels have to be the domain's.
+	nameLabels = nameLabels[len(nameLabels)-len(domainLabels):]
+	return slices.EqualFunc(nameLabels, domainLabels, asciiEqualFold)
+}
+
+// labels splits a domain name into its labels, ignoring the trailing dot.
+func labels(domain string) []string {
+	return strings.Split(strings.TrimSuffix(domain, "."), ".")
+}
+
+// asciiEqualFold is like strings.EqualFold, but it only considers ASCII
+// letters to be case-insensitive.
+//
+// DNS names are octet strings, compared octet by octet, and only ASCII
+// letters are case-insensitive; so comparing bytes is exactly the DNS rule,
+// and it holds even if the name is not valid UTF-8.
+//
+// An Unicode-aware comparison would be incorrect: it can consider equal two
+// names that DNS considers different (for example, strings.ToLower turns the
+// U+212A KELVIN SIGN into an ASCII "k"). Note we don't enforce that records
+// are 7-bit ASCII, so non-ASCII names do reach this.
+//
+// Folding only ASCII is safe to do byte by byte because no byte of a
+// multi-byte UTF-8 sequence is < 0x80, so we can never alter one by mistake.
+// https://tools.ietf.org/html/rfc4343
+func asciiEqualFold(a, b string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range len(a) {
+		if asciiToLower(a[i]) != asciiToLower(b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func asciiToLower(c byte) byte {
+	if 'A' <= c && c <= 'Z' {
+		return c + ('a' - 'A')
+	}
+	return c
 }
 
 // existsField processes a "exists" field.
@@ -623,9 +763,13 @@ func (r *resolution) existsField(res Result, field, domain string) (bool, Result
 		return true, PermError, ErrInvalidDomain
 	}
 
-	r.count++
+	if err := r.countLookup(); err != nil {
+		return true, PermError, err
+	}
 	ips, err := r.resolver.LookupIPAddr(r.ctx, eDomain)
-	r.checkVoidLookup(len(ips), err)
+	if verr := r.countVoidLookup(len(ips), err); verr != nil {
+		return true, PermError, verr
+	}
 	if err != nil {
 		// https://tools.ietf.org/html/rfc7208#section-5
 		if isNotFound(err) {
@@ -652,7 +796,9 @@ func (r *resolution) includeField(res Result, field, domain string) (bool, Resul
 	if err != nil {
 		return true, PermError, ErrInvalidMacro
 	}
-	r.count++
+	if err := r.countLookup(); err != nil {
+		return true, PermError, err
+	}
 	ir, err := r.Check(incdomain)
 	switch ir {
 	case Pass:
@@ -709,32 +855,37 @@ var mxRegexp = regexp.MustCompile(`^[mM][xX](:([^/]+))?(/(\w+))?(//(\w+))?$`)
 func domainAndMask(re *regexp.Regexp, field, domain string) (string, dualMasks, error) {
 	masks := dualMasks{}
 	groups := re.FindStringSubmatch(field)
-	if groups != nil {
-		if groups[2] != "" {
-			domain = groups[2]
+	if groups == nil {
+		// In the regexp we enforce that if ":" is used, there must be a
+		// domain after it, and if "/" is used, there must be at least one
+		// character after it. So if we found no groups, it must be malformed.
+		// For example, "a:", "mx:/24", "a//", "a:x/".
+		// We use the presence of "/" to decide which error to return.
+		// https://tools.ietf.org/html/rfc7208#section-5.3
+		if strings.Contains(field, "/") {
+			return "", masks, ErrInvalidMask
 		}
-		if groups[4] != "" {
-			i, err := strconv.Atoi(groups[4])
-			mask4 := net.CIDRMask(i, 32)
-			if err != nil || mask4 == nil {
-				return "", masks, ErrInvalidMask
-			}
-			masks.v4 = mask4
-		}
-		if groups[6] != "" {
-			i, err := strconv.Atoi(groups[6])
-			mask6 := net.CIDRMask(i, 128)
-			if err != nil || mask6 == nil {
-				return "", masks, ErrInvalidMask
-			}
-			masks.v6 = mask6
-		}
+		return "", masks, ErrInvalidDomain
 	}
 
-	// Test to catch malformed entries: if there's a /, there must be at least
-	// one mask.
-	if strings.Contains(field, "/") && masks.v4 == nil && masks.v6 == nil {
-		return "", masks, ErrInvalidMask
+	if groups[2] != "" {
+		domain = groups[2]
+	}
+	if groups[4] != "" {
+		i, err := strconv.Atoi(groups[4])
+		mask4 := net.CIDRMask(i, 32)
+		if err != nil || mask4 == nil {
+			return "", masks, ErrInvalidMask
+		}
+		masks.v4 = mask4
+	}
+	if groups[6] != "" {
+		i, err := strconv.Atoi(groups[6])
+		mask6 := net.CIDRMask(i, 128)
+		if err != nil || mask6 == nil {
+			return "", masks, ErrInvalidMask
+		}
+		masks.v6 = mask6
 	}
 
 	return domain, masks, nil
@@ -753,9 +904,13 @@ func (r *resolution) aField(res Result, field, domain string) (bool, Result, err
 		return true, PermError, ErrInvalidMacro
 	}
 
-	r.count++
+	if err := r.countLookup(); err != nil {
+		return true, PermError, err
+	}
 	ips, err := r.resolver.LookupIPAddr(r.ctx, aDomain)
-	r.checkVoidLookup(len(ips), err)
+	if verr := r.countVoidLookup(len(ips), err); verr != nil {
+		return true, PermError, verr
+	}
 	if err != nil {
 		// https://tools.ietf.org/html/rfc7208#section-5
 		if isNotFound(err) {
@@ -786,9 +941,13 @@ func (r *resolution) mxField(res Result, field, domain string) (bool, Result, er
 		return true, PermError, ErrInvalidMacro
 	}
 
-	r.count++
+	if err := r.countLookup(); err != nil {
+		return true, PermError, err
+	}
 	mxs, err := r.resolver.LookupMX(r.ctx, mxDomain)
-	r.checkVoidLookup(len(mxs), err)
+	if verr := r.countVoidLookup(len(mxs), err); verr != nil {
+		return true, PermError, verr
+	}
 
 	// If we get some results, use them even if we get an error alongisde.
 	// This happens when one of the records is invalid, because Go library can
@@ -849,7 +1008,9 @@ func (r *resolution) redirectField(field, domain string) (Result, error) {
 	}
 
 	// https://tools.ietf.org/html/rfc7208#section-6.1
-	r.count++
+	if err := r.countLookup(); err != nil {
+		return PermError, err
+	}
 	result, err := r.Check(rDomain)
 	if result == None {
 		result = PermError
@@ -858,9 +1019,11 @@ func (r *resolution) redirectField(field, domain string) (Result, error) {
 }
 
 // Group extraction of macro-string from the formal specification.
+// Note this is anchored: the macro body must match it entirely, otherwise we
+// would accept invalid characters around a valid macro letter.
 // https://tools.ietf.org/html/rfc7208#section-7.1
 var macroRegexp = regexp.MustCompile(
-	`([slodiphcrtvSLODIPHCRTV])([0-9]+)?([rR])?([-.+,/_=]+)?`)
+	`^([slodiphcrtvSLODIPHCRTV])([0-9]+)?([rR])?([-.+,/_=]+)?$`)
 
 // Expand macros, return the expanded string.
 // This expects to be passed the domain-spec within a field, not an entire
@@ -890,19 +1053,19 @@ func (r *resolution) expandMacros(s, domain string) (string, error) {
 	macroS := ""
 
 	var err error
-	n := ""
+	var n strings.Builder
 	for _, c := range s {
 		if afterPercent {
 			afterPercent = false
 			switch c {
 			case '%':
-				n += "%"
+				n.WriteString("%")
 				continue
 			case '_':
-				n += " "
+				n.WriteString(" ")
 				continue
 			case '-':
-				n += "%20"
+				n.WriteString("%20")
 				continue
 			case '{':
 				inMacroDefinition = true
@@ -986,14 +1149,12 @@ func (r *resolution) expandMacros(s, domain string) (string, error) {
 
 			// Reverse if requested.
 			if reverse {
-				reverseStrings(split)
+				slices.Reverse(split)
 			}
 
 			// Leave the last $digits fields, if given.
 			if digits > 0 {
-				if digits > len(split) {
-					digits = len(split)
-				}
+				digits = min(digits, len(split))
 				split = split[len(split)-digits:]
 			}
 
@@ -1007,24 +1168,26 @@ func (r *resolution) expandMacros(s, domain string) (string, error) {
 				str = url.QueryEscape(str)
 			}
 
-			n += str
+			n.WriteString(str)
 			continue
 		}
 		if c == '%' {
 			afterPercent = true
 			continue
 		}
-		n += string(c)
+		n.WriteString(string(c))
 	}
 
-	r.trace("macro expanded %q to %q", s, n)
-	return n, nil
-}
-
-func reverseStrings(a []string) {
-	for left, right := 0, len(a)-1; left < right; left, right = left+1, right-1 {
-		a[left], a[right] = a[right], a[left]
+	// If we got to the end of the string in the middle of a macro, it is
+	// unterminated and therefore invalid. Otherwise we would silently return
+	// a truncated value.
+	if afterPercent || inMacroDefinition {
+		r.trace("macro not terminated")
+		return "", ErrInvalidMacro
 	}
+
+	r.trace("macro expanded %q to %q", s, n.String())
+	return n.String(), nil
 }
 
 func ipToMacroStr(ip net.IP) string {
@@ -1039,6 +1202,10 @@ func ipToMacroStr(ip net.IP) string {
 	for _, b := range ip.To16() {
 		fmt.Fprintf(&sb, "%x.%x.", b>>4, b&0xf)
 	}
+
 	// Return the string without the trailing ".".
-	return sb.String()[:sb.Len()-1]
+	// Note that on an invalid address To16 returns nil, and the loop above
+	// writes nothing; the entry points reject those, but we take care not to
+	// assume the string is non-empty anyway.
+	return strings.TrimSuffix(sb.String(), ".")
 }

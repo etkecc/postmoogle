@@ -1,19 +1,18 @@
 package kit
 
-import (
-	"net"
-	"strings"
-)
+import "net"
 
-// AnonymizeIP returns an anonymized form of the given IP address for GDPR-compliant logging.
+// AnonymizeIP masks the host part of an IP for GDPR-friendlier logging: IPv4 keeps the /24
+// (1.2.3.4 becomes 1.2.3.0), IPv6 keeps the /48 (2001:db8:85a3::1 becomes 2001:db8:85a3::).
+// Enough to keep a coarse network and rough geo without writing down a whole person. Empty string
+// stays empty; anything that isn't an IP comes back unchanged (not an error), so untrusted input
+// passes through without blowing up.
 //
-// For IPv4 addresses, it replaces the last octet with 0 (e.g., 1.2.3.4 becomes 1.2.3.0).
-// For IPv6 addresses, it replaces the last group with 0 (e.g., 2001:db8::1 becomes 2001:db8::0).
+// The /48 on IPv6 is real de-identification: it drops the bottom 80 bits, the interface identifier
+// and the subnet a single machine sits in, so you can't walk a log back to one box.
 //
-// The function handles three cases:
-//   - Empty string: returns empty string unchanged.
-//   - Non-IP string (invalid format): returns the input string unchanged (not an error).
-//   - Valid IP (IPv4 or IPv6): returns the anonymized form with the last segment zeroed.
+// Feed it a bare IP, not a "host:port" or an "addr%zone": net.ParseIP doesn't parse those, so they
+// fall through the not-an-IP path and come back verbatim, un-anonymized. Strip the port first.
 func AnonymizeIP(ip string) string {
 	if ip == "" {
 		return ""
@@ -23,24 +22,14 @@ func AnonymizeIP(ip string) string {
 		return ip // not an ip
 	}
 
-	// IPv4
-	if parsedIP.To4() != nil {
-		ipParts := strings.Split(parsedIP.String(), ".")
-		if len(ipParts) == 4 {
-			ipParts[3] = "0"
-			return strings.Join(ipParts, ".")
-		}
+	if v4 := parsedIP.To4(); v4 != nil {
+		return v4.Mask(net.CIDRMask(24, 32)).String()
 	}
-
-	// IPv6
-	ipParts := strings.Split(parsedIP.String(), ":")
-	ipParts[len(ipParts)-1] = "0"
-	return strings.Join(ipParts, ":")
+	return parsedIP.Mask(net.CIDRMask(48, 128)).String()
 }
 
-// IsValidIP reports whether ipStr is a valid public IPv4 or IPv6 address suitable for general use.
-//
-// It parses ipStr as either IPv4 or IPv6 and explicitly rejects the following address categories:
+// IsValidIP reports whether ipStr is a routable public address: it has to parse as IPv4 or IPv6
+// AND not be one of the categories you don't want a user quietly handing you:
 //   - Unspecified addresses (0.0.0.0 for IPv4, :: for IPv6)
 //   - Loopback addresses (127.x.x.x for IPv4, ::1 for IPv6)
 //   - Private addresses (RFC 1918 for IPv4: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16; RFC 4193 for IPv6: fc00::/7)

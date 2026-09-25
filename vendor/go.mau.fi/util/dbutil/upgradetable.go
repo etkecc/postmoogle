@@ -14,6 +14,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -26,38 +27,47 @@ const (
 	TxnModeSQLiteForeignKeysOff TxnMode = "sqlite-fkey-off"
 )
 
-type UpgradeTable []upgrade
+type WIPUpgradeTable []Upgrade
 
-func (ut *UpgradeTable) extend(toSize int) {
-	if cap(*ut) >= toSize {
-		*ut = (*ut)[:toSize]
-	} else {
-		resized := make([]upgrade, toSize)
-		copy(resized, *ut)
-		*ut = resized
-	}
+func BuildUpgradeTable() WIPUpgradeTable {
+	return WIPUpgradeTable{}
 }
 
-func (ut *UpgradeTable) Register(from, to, compat int, message string, txn TxnMode, fn upgradeFunc) {
+func (ut WIPUpgradeTable) Finish() UpgradeTable {
+	return UpgradeTable(ut)
+}
+
+type UpgradeTable []Upgrade
+
+func WrapUpgrade(from, to, compat int, message string, txn TxnMode, fn upgradeFunc) Upgrade {
 	if from < 0 {
 		from += to
 	}
 	if from < 0 {
-		panic("invalid from value in UpgradeTable.Register() call")
+		panic(fmt.Errorf("dbutil: invalid from value in With() call"))
 	}
 	if compat <= 0 {
 		compat = to
 	}
-	upg := upgrade{message: message, fn: fn, upgradesTo: to, compatVersion: compat, transaction: txn}
-	if len(*ut) == from {
-		*ut = append(*ut, upg)
-		return
-	} else if len(*ut) < from {
-		ut.extend(from + 1)
-	} else if (*ut)[from].fn != nil {
-		panic(fmt.Errorf("tried to override upgrade at %d ('%s') with '%s'", from, (*ut)[from].message, upg.message))
+	return Upgrade{message: message, fn: fn, from: from, upgradesTo: to, compatVersion: compat, transaction: txn}
+}
+
+func (ut WIPUpgradeTable) WithRaw(from, to, compat int, message string, txn TxnMode, fn upgradeFunc) WIPUpgradeTable {
+	return ut.With(WrapUpgrade(from, to, compat, message, txn, fn))
+}
+
+func (ut WIPUpgradeTable) With(upg Upgrade) WIPUpgradeTable {
+	from := upg.from
+	if len(ut) == from {
+		ut = append(ut, upg)
+		return ut
+	} else if len(ut) < from {
+		ut = slices.Grow(ut, from+1)[:from+1]
+	} else if (ut)[from].fn != nil {
+		panic(fmt.Errorf("dbutil: tried to override upgrade at %d (%q) with %q", from, ut[from].message, upg.message))
 	}
-	(*ut)[from] = upg
+	ut[from] = upg
+	return ut
 }
 
 var upgradeHeaderRegex = regexp.MustCompile(`^-- (?:v(\d+) -> )?v(\d+)(?: \(compatible with v(\d+)\+\))?: (.+)$`)
@@ -271,11 +281,11 @@ type fullFS interface {
 
 var splitFileNameRegex = regexp.MustCompile(`^(.+)\.(postgres|sqlite)\.sql$`)
 
-func (ut *UpgradeTable) RegisterFS(fs fullFS) {
-	ut.RegisterFSPath(fs, ".")
+func (ut WIPUpgradeTable) WithFS(fs fullFS) WIPUpgradeTable {
+	return ut.WithFSPath(fs, ".")
 }
 
-func (ut *UpgradeTable) RegisterFSPath(fs fullFS, dir string) {
+func (ut WIPUpgradeTable) WithFSPath(fs fullFS, dir string) WIPUpgradeTable {
 	files, err := fs.ReadDir(dir)
 	if err != nil {
 		panic(err)
@@ -288,13 +298,14 @@ func (ut *UpgradeTable) RegisterFSPath(fs fullFS, dir string) {
 			// also do nothing
 		} else if splitName := splitFileNameRegex.FindStringSubmatch(file.Name()); splitName != nil {
 			from, to, compat, message, txn, fn := parseSplitSQLUpgrade(splitName[1], fs, skipNames)
-			ut.Register(from, to, compat, message, txn, fn)
+			ut = ut.With(WrapUpgrade(from, to, compat, message, txn, fn))
 		} else if data, err := fs.ReadFile(filepath.Join(dir, file.Name())); err != nil {
 			panic(err)
 		} else if from, to, compat, message, txn, lines, err := parseFileHeader(data); err != nil {
-			panic(fmt.Errorf("failed to parse header in %s: %w", file.Name(), err))
+			panic(fmt.Errorf("dbutil: failed to parse header in %s: %w", file.Name(), err))
 		} else {
-			ut.Register(from, to, compat, message, txn, sqlUpgradeFunc(file.Name(), lines))
+			ut = ut.With(WrapUpgrade(from, to, compat, message, txn, sqlUpgradeFunc(file.Name(), lines)))
 		}
 	}
+	return ut
 }

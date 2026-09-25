@@ -28,11 +28,11 @@ import (
 //go:embed *.sql
 var rawUpgrades embed.FS
 
-var UpgradeTable dbutil.UpgradeTable
-
-func init() {
-	UpgradeTable.RegisterFS(rawUpgrades)
-}
+var UpgradeTable = dbutil.BuildUpgradeTable().
+	WithFS(rawUpgrades).
+	With(upgradeV5).
+	With(upgradeV6).
+	Finish()
 
 const VersionTableName = "mx_version"
 
@@ -241,7 +241,7 @@ func (store *SQLStateStore) IsConfusableName(ctx context.Context, roomID id.Room
 		return nil, nil
 	}
 	skeleton := confusable.SkeletonHash(name)
-	rows, err := store.Query(ctx, "SELECT user_id FROM mx_user_profile WHERE room_id=$1 AND name_skeleton=$2 AND user_id<>$3", roomID, skeleton[:], currentUser)
+	rows, err := store.Query(ctx, "SELECT user_id FROM mx_user_profile WHERE room_id=$1 AND name_skeleton=$2 AND user_id<>$3 AND membership='join'", roomID, skeleton[:], currentUser)
 	return dbutil.NewRowIterWithError(rows, dbutil.ScanSingleColumn[id.UserID], err).AsList()
 }
 
@@ -489,6 +489,29 @@ func (store *SQLStateStore) GetJoinRules(ctx context.Context, roomID id.RoomID) 
 		Scan(&dbutil.JSON{Data: &levels})
 	if errors.Is(err, sql.ErrNoRows) {
 		levels = nil
+		err = nil
+	}
+	return
+}
+
+func (store *SQLStateStore) SetHistoryVisibility(ctx context.Context, roomID id.RoomID, content *event.HistoryVisibilityEventContent) error {
+	if roomID == "" {
+		return fmt.Errorf("room ID is empty")
+	}
+	_, err := store.Exec(ctx, `
+		INSERT INTO mx_room_state (room_id, history_visibility) VALUES ($1, $2)
+		ON CONFLICT (room_id) DO UPDATE SET history_visibility=excluded.history_visibility
+	`, roomID, dbutil.JSON{Data: content})
+	return err
+}
+
+func (store *SQLStateStore) GetHistoryVisibility(ctx context.Context, roomID id.RoomID) (content *event.HistoryVisibilityEventContent, err error) {
+	content = &event.HistoryVisibilityEventContent{}
+	err = store.
+		QueryRow(ctx, "SELECT history_visibility FROM mx_room_state WHERE room_id=$1 AND history_visibility IS NOT NULL", roomID).
+		Scan(&dbutil.JSON{Data: &content})
+	if errors.Is(err, sql.ErrNoRows) {
+		content = nil
 		err = nil
 	}
 	return

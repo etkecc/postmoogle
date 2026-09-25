@@ -1,3 +1,107 @@
+## v0.31.0 (2026-09-16)
+
+* Bumped minimum Go version to 1.26.
+* *(client)* Added support for creating pushers (including [MSC4174] web push).
+* *(client)* Added support for [MSC4491]: invite reasons in room creation
+  (thanks to [@timedoutuk] in [#515]).
+* *(event)* Added helper for getting poll question text.
+* *(event)* Added support for parsing custom fields in per-message profiles.
+* *(bridgev2)* Added mechanism for unresolved media messages that can be
+  resolved using a provisioning API call.
+* *(bridgev2)* Added mechanism for canceling a single login step to go back
+  and choose another option. This can be used for things like 2FA flows that
+  the user can choose.
+* *(bridgev2)* Added min/max length hints to login input fields.
+* *(bridgev2)* Added config option to wait a few seconds for the login to be
+  connected before failing when handling messages from Matrix.
+* *(bridgev2)* Added disappearing message mode that starts after the recipient
+  reads the message.
+* *(bridgev2)* Added support for remaining pprof endpoints when debug endpoints
+  are enabled.
+* *(bridgev2)* Added custom error interface to let downstream libraries define
+  human-readable error messages for message send failures without having to wrap
+  errors in the message status struct.
+* *(bridgev2)* Added hacky ghost profile reconciliation to handle cases where
+  the profile on the homeserver doesn't match the profile in the bridge DB.
+* *(bridgev2)* Improved various error responses in the provisioning API backfill
+  endpoint.
+* *(crypto)* Added support for [MSC4385]: pushing secrets to other devices.
+  * Note that the support won't do anything with received secrets unless a
+    secret push callback is set.
+* *(crypto)* Fixed OTK corruption when running with jsonv2 enabled.
+* *(crypto)* Added `RepairOneTimeKeys` for clearing all one-time keys on the
+  server and uploading new ones.
+* *(crypto)* Fixed receiving Megolm sessions after initially storing a withheld
+  code for the session ID.
+* *(crypto)* Fixed Megolm session requests not being accepted if the original
+  share failed due to an Olm session establishment failure.
+* *(crypto)* Fixed devices being marked as deleted if validation fails for a
+  device that was previously successfully validated.
+* *(bridgev2)* Fixed DM room avatars not being cleared in some cases after
+  ghost avatar is cleared when using `direct_chat_portal_meta`.
+* *(federation/pdu)* Fixed MSC4354 sticky events not being signed correctly.
+* *(event)* Fixed per-message profile fallback regex not handling `=""` as the
+  attribute value correctly.
+
+[MSC4491]: https://github.com/matrix-org/matrix-spec-proposals/pull/4491
+[MSC4385]: https://github.com/matrix-org/matrix-spec-proposals/pull/4385
+[MSC4174]: https://github.com/matrix-org/matrix-spec-proposals/pull/4174
+[#515]: https://github.com/mautrix/go/pull/515
+
+## v0.30.0 (2026-08-16)
+
+* *(crypto)* Added support for room history sharing.
+* *(crypto)* Added more consistent Megolm session saving and locking.
+* *(federation)* Added option to block outgoing requests by server name.
+* *(federation/eventauth)* Added option to provide precomputed auth events to
+  make it easier to use the method for state resolution.
+* *(federation/pdu)* Added MSC4354 sticky field to federation PDUs.
+* *(event)* Added types for latest v3 revision of [MSC4461].
+* *(bridgev2)* Added check to prevent starting the bridge if `split_portals` is
+  unset after being set before.
+* *(bridgev2)* Added interface for providing alternate target message IDs for
+  things like replies and reactions. This is used for WhatsApp where the message
+  ID is ambiguous due to an ongoing migration to a different user ID format.
+* *(bridgev2)* Added configurable debounce for transient disconnects to avoid
+  sending unnecessary bridge state updates.
+* *(bridgev2)* Added distinguisher option to relay message formatting
+  (thanks to [@Katze-942] in [#536]).
+* *(bridgev2)* Added optional interface for suppressing pending message timeouts.
+* *(bridgev2)* Added bridge capability flag to use the immediate parent instead
+  of the top-level parent for the `network` field in the `m.bridge` event.
+* *(bridgev2/provisioning)* Added client HTTP to provisioning API logins, which
+  allows proxying requests via the user's device.
+* *(bridgev2/provisioning)* Added config options to customize request ID logging
+  and passthrough.
+* *(bridgev2/matrix)* Added `FormatGhostMXID` to Matrix connector interface.
+* *(bridgev2)* Fixed room capabilities not being updated correctly in some cases.
+* *(bridgev2)* Fixed backfill message cutoff leaving existing messages in some
+  edge cases where multiple messages have the same timestamp.
+* *(bridgev2)* Fixed backfill queue done flag not being cleared properly when
+  marking a portal as having more data to backfill.
+* *(bridgev2)* Fixed DM portal info updates failing due to context cancellation
+  if triggered by another portal being created.
+* *(bridgev2)* Fixed `m.space.parent` event not being removed when portal parent
+  space changes.
+* *(client)* Fixed automatic OAuth token refresh to only happen on proper
+  `M_UNKNOWN_TOKEN` errors instead of any 401 response.
+* *(format)* Fixed duplicate user IDs in `m.mentions` when generating it based
+  on mentions in HTML.
+
+[@Katze-942]: https://github.com/Katze-942
+[#536]: https://github.com/mautrix/go/pull/536
+[MSC4461]: https://github.com/matrix-org/matrix-spec-proposals/pull/4461
+
+## v0.29.0 (2026-07-16)
+
+* *(client)* Added support for OAuth login and refresh tokens.
+* *(bridgev2)* Added WebAuthn login type.
+* *(bridgev2)* Added hook for fetching full portal key when uncertain portal
+  key isn't found.
+* *(bridgev2)* Added option to force sending edit as the original sender.
+* *(bridgev2)* Changed send message error to use latest bridge state message
+  instead of a generic "you're not logged in" if applicable.
+
 ## v0.28.1 (2026-06-16)
 
 * *(pushrules)* Removed deprecated `NotifySpecified` field in `Should()`.
@@ -68,7 +172,7 @@
   (thanks to [@timedoutuk] in [#496]).
 * *(crypto/goolm)* Fixed various small issues.
 
-[MSC445]: https://github.com/matrix-org/matrix-spec-proposals/pull/4459
+[MSC4459]: https://github.com/matrix-org/matrix-spec-proposals/pull/4459
 [#491]: https://github.com/mautrix/go/pull/491
 [#496]: https://github.com/mautrix/go/pull/496
 [#497]: https://github.com/mautrix/go/pull/497

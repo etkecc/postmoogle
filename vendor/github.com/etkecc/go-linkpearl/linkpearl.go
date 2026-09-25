@@ -139,10 +139,7 @@ func New(cfg *Config) (*Linkpearl, error) {
 	return lp, nil
 }
 
-// resolveCredentials returns the Olm-store passphrase localpart and the
-// *mautrix.ReqLogin to pass to cryptohelper. For token auth, it sets
-// client.AccessToken/UserID/DeviceID via /account/whoami and returns a nil
-// ReqLogin so cryptohelper skips the /login step.
+// resolveCredentials returns the Olm passphrase and ReqLogin for cryptohelper; token auth fetches creds via whoami.
 func resolveCredentials(ctx context.Context, cfg *Config, api *mautrix.Client) (string, *mautrix.ReqLogin, error) {
 	if cfg.Token != "" {
 		api.AccessToken = cfg.Token

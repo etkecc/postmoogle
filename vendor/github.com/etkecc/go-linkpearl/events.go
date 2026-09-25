@@ -15,7 +15,7 @@ type RespThreads struct {
 	NextBatch string         `json:"next_batch"`
 }
 
-// RespRelations is response of https://spec.matrix.org/v1.8/client-server-api/#get_matrixclientv1roomsroomidrelationseventidreltype
+// RespRelations is response of GET /_matrix/client/v1/rooms/{roomId}/relations/{eventId}/{relType}.
 type RespRelations struct {
 	Chunk     []*event.Event `json:"chunk"`
 	NextBatch string         `json:"next_batch"`

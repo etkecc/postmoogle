@@ -72,12 +72,13 @@ var TypeMap = map[Type]reflect.Type{
 	BeeperAcceptMessageRequest: reflect.TypeOf(BeeperAcceptMessageRequestEventContent{}),
 	BeeperSendState:            reflect.TypeOf(BeeperSendStateEventContent{}),
 
-	AccountDataRoomTags:        reflect.TypeOf(TagEventContent{}),
-	AccountDataDirectChats:     reflect.TypeOf(DirectChatsEventContent{}),
-	AccountDataFullyRead:       reflect.TypeOf(FullyReadEventContent{}),
-	AccountDataIgnoredUserList: reflect.TypeOf(IgnoredUserListEventContent{}),
-	AccountDataMarkedUnread:    reflect.TypeOf(MarkedUnreadEventContent{}),
-	AccountDataBeeperMute:      reflect.TypeOf(BeeperMuteEventContent{}),
+	AccountDataRoomTags:           reflect.TypeOf(TagEventContent{}),
+	AccountDataDirectChats:        reflect.TypeOf(DirectChatsEventContent{}),
+	AccountDataFullyRead:          reflect.TypeOf(FullyReadEventContent{}),
+	AccountDataIgnoredUserList:    reflect.TypeOf(IgnoredUserListEventContent{}),
+	AccountDataMarkedUnread:       reflect.TypeOf(MarkedUnreadEventContent{}),
+	AccountDataBeeperMute:         reflect.TypeOf(BeeperMuteEventContent{}),
+	AccountDataPerMessageProfiles: reflect.TypeOf(PerMessageProfilesEventContent{}),
 
 	AccountDataImagePackRooms:         reflect.TypeOf(ImagePackRoomsEventContent{}),
 	AccountDataUnstableImagePackRooms: reflect.TypeOf(ImagePackRoomsEventContent{}),
@@ -97,11 +98,13 @@ var TypeMap = map[Type]reflect.Type{
 
 	ToDeviceRoomKey:          reflect.TypeOf(RoomKeyEventContent{}),
 	ToDeviceForwardedRoomKey: reflect.TypeOf(ForwardedRoomKeyEventContent{}),
+	ToDeviceRoomKeyBundle:    reflect.TypeOf(RoomKeyBundleEventContent{}),
 	ToDeviceRoomKeyRequest:   reflect.TypeOf(RoomKeyRequestEventContent{}),
 	ToDeviceEncrypted:        reflect.TypeOf(EncryptedEventContent{}),
 	ToDeviceRoomKeyWithheld:  reflect.TypeOf(RoomKeyWithheldEventContent{}),
 	ToDeviceSecretRequest:    reflect.TypeOf(SecretRequestEventContent{}),
 	ToDeviceSecretSend:       reflect.TypeOf(SecretSendEventContent{}),
+	ToDeviceSecretPush:       reflect.TypeOf(SecretPushEventContent{}),
 	ToDeviceDummy:            reflect.TypeOf(DummyEventContent{}),
 
 	ToDeviceVerificationRequest: reflect.TypeOf(VerificationRequestEventContent{}),

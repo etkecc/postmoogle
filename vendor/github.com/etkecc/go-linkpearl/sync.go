@@ -10,8 +10,7 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
-// OnEventType allows callers to be notified when there are new events for the given event type.
-// There are no duplicate checks.
+// OnEventType notifies callers of new events for the given type; no duplicate checks are performed.
 func (l *Linkpearl) OnEventType(eventType event.Type, callback mautrix.EventHandler) {
 	l.api.Syncer.(mautrix.ExtensibleSyncer).OnEventType(eventType, callback) //nolint:forcetypeassert,errcheck // we know it's an ExtensibleSyncer
 }

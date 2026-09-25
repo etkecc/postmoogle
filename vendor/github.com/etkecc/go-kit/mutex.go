@@ -16,7 +16,7 @@ type keyMutex struct {
 }
 
 // Mutex is a key-based mutex that allows independent locking of different keys.
-// Different keys can be locked simultaneously without blocking each other —
+// Different keys can be locked simultaneously without blocking each other,
 // only goroutines contending on the exact same key block.
 //
 // # Memory management
@@ -35,7 +35,7 @@ type keyMutex struct {
 type Mutex struct {
 	// mu protects the locks map and the refcount field of every keyMutex in it.
 	// It is a plain Mutex (not RWMutex) because every Lock call must both read
-	// and write refcount atomically — a read lock would not be sufficient.
+	// and write refcount atomically, a read lock would not be sufficient.
 	mu sync.Mutex
 
 	// locks maps each key to its per-key mutex and reference count.
@@ -82,7 +82,7 @@ func (km *Mutex) Lock(key string) {
 // The operation proceeds in two steps:
 //  1. The global lock is acquired, the reference count is decremented, and the entry
 //     is deleted from the map if the count reaches zero. A count of zero guarantees
-//     no other goroutine is waiting — because Lock increments refcount before waiting —
+//     no other goroutine is waiting, because Lock increments refcount before waiting,
 //     so removing the entry is safe. The global lock is then released.
 //  2. The per-key mutex is unlocked. This happens after the entry may have been removed
 //     from the map; that is safe because the local variable m still holds a reference

@@ -9,8 +9,7 @@ import (
 	"github.com/etkecc/go-kit/crypter"
 )
 
-// Crypter encrypts account data with a secret key, apart from Matrix' standard
-// encryption. It writes go-kit's ENCv1[...] and reads that plus the old StdBase64 format.
+// Crypter encrypts account data with a key, apart from Matrix encryption; writes ENCv1[...], reads legacy StdBase64.
 type Crypter struct {
 	gokit     *crypter.Crypter // writes/reads ENCv1[...]
 	legacy    cipher.AEAD      // old StdBase64 AES-GCM, decrypt-only
@@ -20,8 +19,7 @@ type Crypter struct {
 // ErrInvalidData is returned when the provided encrypted data (ciphertext) is invalid.
 var ErrInvalidData = errors.New("invalid data")
 
-// NewCrypter creates new Crypter. go-kit validates the 16/24/32-byte key first, so the
-// legacy AEAD cannot fail on length.
+// NewCrypter creates a new Crypter; go-kit validates the 16/24/32-byte key first, so legacy AEAD can't fail on length.
 func NewCrypter(secretkey string) (*Crypter, error) {
 	gokit, err := crypter.New(secretkey)
 	if err != nil {
@@ -38,8 +36,7 @@ func NewCrypter(secretkey string) (*Crypter, error) {
 	return &Crypter{gokit: gokit, legacy: legacy, nonceSize: legacy.NonceSize()}, nil
 }
 
-// Decrypt data. Route via go-kit's own IsEncrypted, never a hand-rolled prefix check:
-// a gate one byte looser waves "ENCv1[" through as fake plaintext with a straight face.
+// Decrypt routes via go-kit's IsEncrypted; a looser hand-rolled prefix check would wave ENCv1[ through as plaintext.
 func (c *Crypter) Decrypt(data string) (string, error) {
 	if c.gokit.IsEncrypted(data) {
 		plain, err := c.gokit.Decrypt(data)

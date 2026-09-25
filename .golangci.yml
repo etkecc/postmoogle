@@ -126,6 +126,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - views/node_modules
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
@@ -144,7 +145,8 @@ formatters:
         - pattern: a[b:len(a)]
           replacement: a[b:]
     gofumpt:
-      extra-rules: true
+      extra:
+        group-params: true
   exclusions:
     generated: lax
     paths:

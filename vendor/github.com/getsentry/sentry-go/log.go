@@ -51,7 +51,7 @@ type logEntry struct {
 	shouldFatal bool
 }
 
-// NewLogger returns a Logger that emits logs to Sentry. If logging is turned off, all logs get discarded.
+// NewLogger returns a Logger that emits logs to Sentry.
 func NewLogger(ctx context.Context) Logger { // nolint: dupl
 	var hub *Hub
 	hub = GetHubFromContext(ctx)
@@ -60,7 +60,7 @@ func NewLogger(ctx context.Context) Logger { // nolint: dupl
 	}
 
 	client := hub.Client()
-	if client != nil && !client.options.DisableLogs {
+	if client != nil {
 		// Build default attrs
 		serverAddr := client.options.ServerName
 		if serverAddr == "" {
@@ -91,7 +91,7 @@ func NewLogger(ctx context.Context) Logger { // nolint: dupl
 		}
 	}
 
-	debuglog.Println("fallback to noopLogger: SDK not initialized or logs disabled")
+	debuglog.Println("fallback to noopLogger: SDK not initialized")
 	return &noopLogger{}
 }
 
@@ -101,7 +101,7 @@ func (l *sentryLogger) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (l *sentryLogger) log(ctx context.Context, level LogLevel, severity int, message string, entryAttrs map[string]attribute.Value, args ...interface{}) {
+func (l *sentryLogger) log(ctx context.Context, level LogLevel, severity int, message string, entryAttrs map[string]attribute.Value, format bool, args ...interface{}) {
 	if message == "" {
 		return
 	}
@@ -138,6 +138,11 @@ func (l *sentryLogger) log(ctx context.Context, level LogLevel, severity int, me
 		attrs[k] = v
 	}
 
+	body := message
+	if format {
+		body = fmt.Sprintf(message, args...)
+	}
+
 	if len(args) > 0 {
 		attrs["sentry.message.template"] = attribute.StringValue(message)
 		for i, p := range args {
@@ -151,14 +156,14 @@ func (l *sentryLogger) log(ctx context.Context, level LogLevel, severity int, me
 		SpanID:     spanID,
 		Level:      level,
 		Severity:   severity,
-		Body:       fmt.Sprintf(message, args...),
+		Body:       body,
 		Attributes: attrs,
 	}
 	log.approximateSize = computeLogSize(log)
 
 	client.captureLog(log, scope)
 	if client.options.Debug {
-		debuglog.Printf(message, args...)
+		debuglog.Print(body)
 	}
 }
 
@@ -327,7 +332,7 @@ func (e *logEntry) Uint64(key string, value uint64) LogEntry {
 }
 
 func (e *logEntry) Emit(args ...interface{}) {
-	e.logger.log(e.ctx, e.level, e.severity, fmt.Sprint(args...), e.attributes)
+	e.logger.log(e.ctx, e.level, e.severity, fmt.Sprint(args...), e.attributes, false)
 
 	if e.level == LogLevelFatal {
 		if e.shouldPanic {
@@ -340,7 +345,7 @@ func (e *logEntry) Emit(args ...interface{}) {
 }
 
 func (e *logEntry) Emitf(format string, args ...interface{}) {
-	e.logger.log(e.ctx, e.level, e.severity, format, e.attributes, args...)
+	e.logger.log(e.ctx, e.level, e.severity, format, e.attributes, true, args...)
 
 	if e.level == LogLevelFatal {
 		if e.shouldPanic {

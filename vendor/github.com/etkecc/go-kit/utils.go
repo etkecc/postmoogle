@@ -5,38 +5,29 @@ import (
 	"reflect"
 )
 
-// Eq checks if 2 strings are equal in constant time.
+// Eq compares two strings in constant time. Use it when the strings are secrets.
 //
-// This function uses constant-time comparison to prevent timing attacks.
-// Unlike the == operator, which short-circuits and leaks timing information
-// character by character, Eq compares both the length and content in constant
-// time. This prevents attackers from inferring secret values (such as tokens,
-// passwords, or HMACs) by measuring how long the comparison takes.
-//
-// When comparing secrets, always use Eq instead of s1 == s2. For non-secret
-// string comparisons where timing doesn't matter, == is fine.
+// Plain == bails on the first byte that differs, and that timing difference is a real side
+// channel: measure enough comparisons and an attacker walks a token, password, or HMAC out of
+// you one byte at a time. Eq checks length and content in constant time and gives that tell
+// away. For anything that isn't a secret, == is fine and faster.
 func Eq(s1, s2 string) bool {
 	b1 := []byte(s1)
 	b2 := []byte(s2)
 	return subtle.ConstantTimeEq(int32(len(b1)), int32(len(b2))) == 1 && subtle.ConstantTimeCompare(b1, b2) == 1 //nolint:gosec // that's ok
 }
 
-// IsNil checks if the given value is nil, including interfaces holding nil pointers.
-//
-// Go has a subtle pitfall with interfaces: a typed nil pointer wrapped in an
-// interface{} is NOT equal to nil via a plain == check. For example:
+// IsNil reports whether v is nil, including the interface that wraps a typed-nil pointer and
+// then swears blind it isn't:
 //
 //	var p *int = nil
 //	var i any = p
-//	i == nil          // false (interface{} holds a non-nil interface value)
-//	IsNil(i)          // true (correctly identifies the nil pointer)
+//	i == nil   // false, the classic Go faceplant
+//	IsNil(i)   // true
 //
-// IsNil handles all nilable kinds: pointers, channels, functions, maps, slices,
-// and unsafe pointers. It also traverses through pointer layers to detect nil at
-// any depth. For non-nilable types (int, string, struct, etc.), it returns false.
-//
-// Use this function when you need to check for nil in a way that accounts for
-// interface{} wrapping and polymorphic types.
+// It covers every nilable kind (pointer, channel, func, map, slice, unsafe pointer) and follows
+// pointers down to the bottom. Non-nilable types (int, string, struct) can't be nil, so they
+// return false.
 func IsNil(i any) bool {
 	// standard nil check
 	if i == nil {

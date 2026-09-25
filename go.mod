@@ -1,43 +1,43 @@
 module github.com/etkecc/postmoogle
 
-go 1.26
+go 1.26.0
 
 require (
 	github.com/emersion/go-msgauth v0.7.0
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
-	github.com/emersion/go-smtp v0.24.0
-	github.com/etkecc/go-env v1.2.1
+	github.com/emersion/go-smtp v0.25.0
+	github.com/etkecc/go-env v1.3.1
 	github.com/etkecc/go-fswatcher v1.0.1
 	github.com/etkecc/go-healthchecks/v2 v2.4.1
-	github.com/etkecc/go-kit v1.12.4
-	github.com/etkecc/go-linkpearl v0.0.0-20260707212514-851f210634dd
+	github.com/etkecc/go-kit v1.12.5
+	github.com/etkecc/go-linkpearl v0.0.0-20260905184311-183067684359
 	github.com/etkecc/go-mxidwc v1.0.1
 	github.com/etkecc/go-secgen v1.4.0
 	github.com/etkecc/go-validator/v2 v2.2.6
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/gabriel-vasile/mimetype v1.4.13
-	github.com/getsentry/sentry-go v0.47.0
-	github.com/jhillyerd/enmime/v2 v2.4.1
+	github.com/gabriel-vasile/mimetype v1.4.15
+	github.com/getsentry/sentry-go v0.49.0
+	github.com/jhillyerd/enmime/v2 v2.5.0
 	github.com/kvannotten/mailstrip v0.0.0-20200711213611-0002f5c0467e
 	github.com/lib/pq v1.12.3
 	github.com/mcnijman/go-emailaddress v1.1.1
 	github.com/raja/argon2pw v1.0.2-0.20210910183755-a391af63bd39
 	github.com/rs/zerolog v1.35.1
 	github.com/swaggo/swag v1.16.6
-	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
-	maunium.net/go/mautrix v0.28.1
-	modernc.org/sqlite v1.53.0
+	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba
+	maunium.net/go/mautrix v0.31.0
+	modernc.org/sqlite v1.59.0
 )
 
 require (
-	blitiri.com.ar/go/spf v1.5.1 // indirect
+	blitiri.com.ar/go/spf v1.6.0 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/etkecc/go-trysmtp v1.1.5 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/go-openapi/jsonpointer v0.22.5 // indirect
@@ -57,16 +57,16 @@ require (
 	github.com/inbucket/html2text v1.0.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
-	github.com/mattn/go-runewidth v0.0.24 // indirect
-	github.com/mattn/go-sqlite3 v1.14.47 // indirect
+	github.com/mattn/go-isatty v0.0.24 // indirect
+	github.com/mattn/go-runewidth v0.0.30 // indirect
+	github.com/mattn/go-sqlite3 v1.14.52 // indirect
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
 	github.com/olekukonko/errors v1.3.0 // indirect
 	github.com/olekukonko/ll v0.1.8 // indirect
-	github.com/olekukonko/tablewriter v1.1.4 // indirect
-	github.com/petermattis/goid v0.0.0-20260701081913-4f67fd55d3b4 // indirect
+	github.com/olekukonko/tablewriter v1.1.5 // indirect
+	github.com/petermattis/goid v0.0.0-20260918085751-abfca077860b // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
@@ -74,17 +74,17 @@ require (
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	github.com/yuin/goldmark v1.8.2 // indirect
-	go.mau.fi/util v0.9.10 // indirect
+	github.com/yuin/goldmark v1.8.6 // indirect
+	go.mau.fi/util v0.10.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/mod v0.37.0 // indirect
-	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
-	golang.org/x/tools v0.47.0 // indirect
-	modernc.org/libc v1.74.1 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/tools v0.50.0 // indirect
+	modernc.org/libc v1.77.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.11.0 // indirect
+	modernc.org/memory v1.12.1 // indirect
 )

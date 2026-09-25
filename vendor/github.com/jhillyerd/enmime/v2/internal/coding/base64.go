@@ -1,8 +1,9 @@
 package coding
 
 import (
-	"fmt"
 	"io"
+
+	"github.com/pkg/errors"
 )
 
 // base64CleanerTable notes byte values that should be stripped (-2), stripped w/ error (-1).
@@ -42,19 +43,16 @@ func NewBase64Cleaner(r io.Reader) *Base64Cleaner {
 // Read method for io.Reader interface.
 func (bc *Base64Cleaner) Read(p []byte) (n int, err error) {
 	// Size our buf to smallest of len(p) or len(bc.buffer).
-	size := len(bc.buffer)
-	if size > len(p) {
-		size = len(p)
-	}
+	size := min(len(bc.buffer), len(p))
 	buf := bc.buffer[:size]
 	bn, err := bc.r.Read(buf)
-	for i := 0; i < bn; i++ {
+	for i := range bn {
 		switch base64CleanerTable[buf[i]&0x7f] {
 		case -2:
 			// Strip these silently: tab, \n, \r, space, equals sign.
 		case -1:
 			// Strip these, but warn the client.
-			bc.Errors = append(bc.Errors, fmt.Errorf("unexpected %q in base64 stream", buf[i]))
+			bc.Errors = append(bc.Errors, errors.Errorf("unexpected %q in base64 stream", buf[i]))
 		default:
 			p[n] = buf[i]
 			n++

@@ -15,16 +15,17 @@ import (
 
 type upgradeFunc func(context.Context, *Database) error
 
-type upgrade struct {
+type Upgrade struct {
 	message string
 	fn      upgradeFunc
 
+	from          int
 	upgradesTo    int
 	compatVersion int
 	transaction   TxnMode
 }
 
-func (u *upgrade) DangerouslyRun(ctx context.Context, db *Database) (upgradesTo, compat int, err error) {
+func (u *Upgrade) DangerouslyRun(ctx context.Context, db *Database) (upgradesTo, compat int, err error) {
 	return u.upgradesTo, u.compatVersion, u.fn(ctx, db)
 }
 

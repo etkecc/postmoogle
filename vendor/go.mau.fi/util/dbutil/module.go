@@ -31,8 +31,7 @@
 //		if err != nil {
 //			return err
 //		}
-//		table := dbutil.UpgradeTable{}
-//		table.RegisterFS(upgrades)
+//		db.UpgradeTable = dbutil.BuildUpgradeTable().WithFS(upgrades).Finish()
 //		err = db.Upgrade(ctx)
 //		if err != nil {
 //			return err

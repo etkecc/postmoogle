@@ -50,7 +50,7 @@
 //	plain, err := c.Decrypt(enc)
 //	// plain == "my-database-password"
 //
-// Decrypt is safe to call on values that may or may not be encrypted — plaintext
+// Decrypt is safe to call on values that may or may not be encrypted, plaintext
 // passes through unchanged, which makes it suitable as a transparent layer over
 // config maps:
 //
@@ -80,7 +80,7 @@ const (
 	// StartTag is the prefix that identifies a string as encrypted by this package.
 	// It encodes the format version ("v1") so future format changes can use a different prefix.
 	// Any string passed to Encrypt that already begins with StartTag is assumed to be
-	// encrypted and returned unchanged — callers must ensure plaintext values never start
+	// encrypted and returned unchanged, callers must ensure plaintext values never start
 	// with this prefix.
 	//
 	// Full format: ENCv1[<base64url-raw(nonce||ciphertext||tag)>]
@@ -103,7 +103,7 @@ var (
 
 	// ErrInvalidKeyLength is returned by New when the provided secret is not 16, 24, or 32 bytes.
 	// AES requires one of these exact key lengths (AES-128, AES-192, AES-256 respectively).
-	// The length is measured in bytes, not Unicode code points — a 32-rune string with
+	// The length is measured in bytes, not Unicode code points, a 32-rune string with
 	// multi-byte characters may be more than 32 bytes and will be rejected.
 	ErrInvalidKeyLength = errors.New("crypter: invalid key length")
 
@@ -114,7 +114,7 @@ var (
 
 	// ErrNewCipher is returned (wrapping the underlying error) when aes.NewCipher fails.
 	// In practice this only happens if the key length is invalid, which New already
-	// validates — so this error should never be seen in normal usage.
+	// validates, so this error should never be seen in normal usage.
 	ErrNewCipher = errors.New("crypter: aes.NewCipher failed")
 
 	// ErrNewGCM is returned (wrapping the underlying error) when cipher.NewGCM fails.
@@ -172,7 +172,7 @@ type Crypter struct {
 // New initializes a Crypter with the provided AES key.
 //
 // The secret must be exactly 16, 24, or 32 bytes, selecting AES-128, AES-192, or AES-256
-// respectively. The bytes are used directly as the AES key — no hashing or stretching is
+// respectively. The bytes are used directly as the AES key, no hashing or stretching is
 // applied. Provide a cryptographically random key (e.g. from pwgen -s 32 or crypto/rand),
 // not a human-memorable passphrase.
 //
@@ -212,7 +212,7 @@ func New(secret string) (*Crypter, error) {
 // It is a fast heuristic: it checks only that s begins with StartTag and has at least
 // one byte after it. No base64 decoding or cryptographic verification is performed.
 // A false positive (a plaintext value that happens to start with "ENCv1[") will cause
-// Encrypt to skip encryption and Decrypt to attempt — and fail — decryption.
+// Encrypt to skip encryption and Decrypt to attempt (and fail) decryption.
 //
 // Contract: plaintext values must never begin with StartTag. This is the caller's
 // responsibility; the package does not enforce it.
@@ -233,7 +233,7 @@ func (c *Crypter) StartTag() string {
 
 // Encrypt encrypts data using AES-GCM and returns the result wrapped in ENCv1[...].
 //
-// If data is already tagged (IsEncrypted returns true), it is returned unchanged —
+// If data is already tagged (IsEncrypted returns true), it is returned unchanged:
 // Encrypt is idempotent. Otherwise a fresh 12-byte random nonce is drawn from
 // crypto/rand, the plaintext is sealed with AES-GCM, and the result is encoded as:
 //
@@ -264,7 +264,7 @@ func (c *Crypter) Encrypt(data string) (string, error) {
 		return "", fmt.Errorf("%w: %w", ErrReadNonce, err)
 	}
 	// Copy random bytes into an owned slice, then return the pool buffer immediately.
-	// Seal and all code below only touch this owned slice — the pool buffer is
+	// Seal and all code below only touch this owned slice, the pool buffer is
 	// unreachable from this point, eliminating any concern about pool lifetime or
 	// concurrent reuse of its backing array.
 	nonce := make([]byte, c.nonceSize)
@@ -272,7 +272,7 @@ func (c *Crypter) Encrypt(data string) (string, error) {
 	c.noncePool.Put(noncep)
 
 	// Pre-allocate raw with nonce prefix, then let Seal append ciphertext+tag in place.
-	// dst (raw) and nonce are distinct allocations — no aliasing.
+	// dst (raw) and nonce are distinct allocations, no aliasing.
 	raw := make([]byte, 0, c.nonceSize+len(data)+c.aead.Overhead())
 	raw = append(raw, nonce...)
 	raw = c.aead.Seal(raw, nonce, []byte(data), nil)
@@ -288,7 +288,7 @@ func (c *Crypter) Encrypt(data string) (string, error) {
 // Decrypt decrypts a tagged value and returns the original plaintext.
 //
 // If data is not tagged (IsEncrypted returns false), it is returned unchanged without
-// error — this is intentional for configs that mix plaintext and encrypted values.
+// error, this is intentional for configs that mix plaintext and encrypted values.
 // If you need to enforce that a value is always encrypted, check IsEncrypted before calling.
 //
 // For tagged values, the base64 payload is decoded, the 12-byte nonce is extracted from
@@ -299,7 +299,7 @@ func (c *Crypter) Encrypt(data string) (string, error) {
 //     or payload too short to contain the GCM authentication tag.
 //   - ErrEmptyPayload: the tag is present but contains no base64 content ("ENCv1[]").
 //   - ErrBase64Decode: the payload is not valid base64url.
-//   - ErrOpen: AES-GCM authentication failed — wrong key, corrupted ciphertext, or tampered tag.
+//   - ErrOpen: AES-GCM authentication failed: wrong key, corrupted ciphertext, or tampered tag.
 func (c *Crypter) Decrypt(data string) (string, error) {
 	if !c.IsEncrypted(data) {
 		return data, nil

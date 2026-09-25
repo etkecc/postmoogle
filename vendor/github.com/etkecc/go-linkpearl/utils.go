@@ -20,8 +20,7 @@ func EventRelatesTo(evt *event.Event) *event.RelatesTo {
 	return RelatesTo(EventParent(evt.ID, relatable))
 }
 
-// EventReplaceID returns replace_id of a matrix event (if any)
-// i.e. when the evt was replaced by another event, this returns the ID of the replacing event
+// EventReplaceID returns the replace_id of a matrix event: the ID of the event that replaced evt, if any.
 func EventReplaceID(evt *event.Event) id.EventID {
 	ParseContent(evt, nil)
 	relatable, ok := evt.Content.Parsed.(event.Relatable)
@@ -88,7 +87,7 @@ func GetParent(evt *event.Event) id.EventID {
 	return ""
 }
 
-// EventParent returns parent event ID (either from thread or from reply-to relation), like GetRelatesTo(), but with content and default return value
+// EventParent returns parent event ID (thread or reply-to), like GetRelatesTo but with content and a default.
 func EventParent(currentID id.EventID, content event.Relatable) id.EventID {
 	if parentID := GetParent(&event.Event{Content: event.Content{Parsed: content}}); parentID != "" {
 		return parentID

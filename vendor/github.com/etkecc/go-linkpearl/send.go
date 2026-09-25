@@ -18,7 +18,7 @@ const (
 	RetryDelay = 5 * time.Second
 )
 
-// SendMessageEvent sends a message event to the roomID and automatically retries if the server returns a 502 or 404 error
+// SendMessageEvent sends a message event to roomID, retrying automatically on a 502 or 404 from the server.
 func (l *Linkpearl) SendMessageEvent(ctx context.Context, roomID id.RoomID, eventType event.Type, contentJSON any, currentAttempt ...int) (resp *mautrix.RespSendEvent, err error) {
 	attempt := 1
 	if len(currentAttempt) > 0 {

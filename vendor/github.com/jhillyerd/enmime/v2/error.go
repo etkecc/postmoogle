@@ -31,9 +31,9 @@ const (
 
 // Error describes an error encountered while parsing.
 type Error struct {
-	Name   string // The name or type of error encountered, from Error consts.
-	Detail string // Additional detail about the cause of the error, if available.
-	Severe bool   // Indicates that a portion of the message was lost during parsing.
+	Name   string `json:"name"`   // The name or type of error encountered, from Error consts.
+	Detail string `json:"detail"` // Additional detail about the cause of the error, if available.
+	Severe bool   `json:"severe"` // Indicates that a portion of the message was lost during parsing.
 }
 
 // Error formats the enmime.Error as a string.
@@ -51,7 +51,7 @@ func (p *Part) addError(name string, detail string) {
 }
 
 // addErrorf builds a severe Error and appends to the Part error slice.
-func (p *Part) addErrorf(name string, detailFmt string, args ...interface{}) {
+func (p *Part) addErrorf(name string, detailFmt string, args ...any) {
 	p.addProblem(&Error{
 		name,
 		fmt.Sprintf(detailFmt, args...),
@@ -65,7 +65,7 @@ func (p *Part) addWarning(name string, detail string) {
 }
 
 // addWarningf builds a non-severe Error and appends to the Part error slice.
-func (p *Part) addWarningf(name string, detailFmt string, args ...interface{}) {
+func (p *Part) addWarningf(name string, detailFmt string, args ...any) {
 	p.addProblem(&Error{
 		name,
 		fmt.Sprintf(detailFmt, args...),

@@ -5,10 +5,10 @@ import (
 	"sync"
 )
 
-// List is a concurrency-safe ordered unique set that stores elements of type T without duplicates.
-// T must be cmp.Ordered so elements can be sorted; V is a type parameter used only to satisfy
-// the AddMapKeys method signature (which accepts map[T]V). The List is safe for concurrent use
-// across all methods. The zero value is not usable — always construct a List with NewList or NewListFrom.
+// List is a concurrency-safe set that remembers nothing about insertion order and hands you its
+// contents back sorted. T must be cmp.Ordered so Slice can sort; V is a phantom type parameter that
+// only exists so AddMapKeys can take a map[T]V. Every method is safe to call from any goroutine. The
+// zero value is not usable, build one with NewList or NewListFrom.
 type List[T cmp.Ordered, V any] struct {
 	mu   *sync.Mutex
 	data map[T]struct{}
@@ -77,7 +77,7 @@ func (l *List[T, V]) Remove(item T) {
 }
 
 // Len returns the number of items in the List.
-// Note: this method does not acquire the mutex — it reads the map length directly.
+// Note: this method does not acquire the mutex, it reads the map length directly.
 // While Go map length reads are atomic for reading purposes, the returned value may be stale
 // if called concurrently with Add or Remove operations.
 func (l *List[T, V]) Len() int {

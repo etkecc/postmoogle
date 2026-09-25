@@ -9,11 +9,10 @@ import (
 	"unicode/utf8"
 )
 
-// Truncate truncates a string to a specified length measured in Unicode code points (runes),
-// appending "..." if truncation occurs. Length is measured in runes, not bytes.
-// Returns empty string if length <= 0 or s is empty. The ellipsis is appended only when
-// actual truncation occurs; if the string is already shorter than length, it is returned unchanged.
-// Example: Truncate("hello world", 5) returns "hello...".
+// Truncate cuts s to length runes (runes, not bytes, so it won't slice a multibyte character in
+// half) and appends "..." only when it actually cut something. length <= 0 or empty s gives "".
+// A string already within length comes back untouched, no ellipsis. Truncate("hello world", 5)
+// returns "hello...".
 func Truncate(s string, length int) string {
 	if length <= 0 || s == "" {
 		return ""
@@ -44,10 +43,9 @@ func Truncate(s string, length int) string {
 	return truncated
 }
 
-// Unquote handles Go-style quoted strings by wrapping strconv.Unquote.
-// It decodes escape sequences in quoted strings (e.g., "hello\nworld" becomes hello with a newline).
-// Returns the original string unchanged if the input is not properly quoted or if any escape
-// sequence is invalid. Never returns an error; always returns a string.
+// Unquote is strconv.Unquote with the error swallowed: it decodes a Go-quoted string, and hands
+// the original back unchanged when the input wasn't properly quoted or an escape was bad. Always
+// returns a string, never an error.
 func Unquote(s string) string {
 	unquoted, err := strconv.Unquote(s)
 	if err != nil {
@@ -56,18 +54,16 @@ func Unquote(s string) string {
 	return unquoted
 }
 
-// Hash computes the SHA-256 hash of a string and returns it as a lowercase hex-encoded string.
-// The result is always 64 characters long. This is a one-way cryptographic hash, not encryption.
+// Hash returns the SHA-256 of str as lowercase hex, always 64 characters. One-way digest, not
+// encryption: there's no getting str back out of it.
 func Hash(str string) string {
 	h := sha256.New()
 	h.Write([]byte(str))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// StringToInt converts a string to an integer. Leading and trailing whitespace is trimmed
-// before parsing. Returns the provided default value (or 0 if not provided) on empty string
-// or parse failure. Accepts an optional variadic parameter for the default value;
-// if multiple defaults are provided, only the first is used.
+// StringToInt parses value as an int, trimming surrounding whitespace first. Empty or unparseable
+// falls back to the optional default, or 0 if you didn't pass one. Only the first default counts.
 func StringToInt(value string, optionalDefaultValue ...int) int {
 	defaultValue := 0
 	if len(optionalDefaultValue) > 0 {
@@ -87,11 +83,9 @@ func StringToInt(value string, optionalDefaultValue ...int) int {
 	return vInt
 }
 
-// StringToSlice converts a comma-separated string into a slice of strings.
-// Each element is whitespace-trimmed. Accepts an optional variadic parameter for a default value.
-// An empty input (after trimming) returns []string{defaultValue}.
-// A non-empty input with no comma returns []string{value} — the value itself, not the default.
-// A comma-separated input is split and each element is trimmed individually.
+// StringToSlice splits a comma-separated value into trimmed parts. Two edge cases worth knowing:
+// empty input (after trimming) gives []string{default}, and a non-empty value with no comma gives
+// []string{value}, the value itself, not the default. Everything else is split-and-trim.
 func StringToSlice(value string, optionalDefaultValue ...string) []string {
 	var defaultValue string
 	if len(optionalDefaultValue) > 0 {
@@ -114,10 +108,8 @@ func StringToSlice(value string, optionalDefaultValue ...string) []string {
 	return parts
 }
 
-// SliceToString joins a slice of strings into a single string using the provided delimiter.
-// An optional hook function can be applied to transform each element before joining.
-// Pass nil for the hook parameter to skip transformation. Returns an empty string if
-// the slice is empty.
+// SliceToString joins slice with delimiter, optionally running each element through hook first
+// (pass nil to skip it). Empty slice gives "".
 func SliceToString(slice []string, delimiter string, hook func(string) string) string {
 	if len(slice) == 0 {
 		return ""

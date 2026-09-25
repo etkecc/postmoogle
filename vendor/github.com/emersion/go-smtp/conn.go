@@ -1247,7 +1247,7 @@ func (c *Conn) handleDataLMTP() {
 		c.writeResponse(code, enchCode, "<"+rcpt+"> "+msg)
 	}
 
-	// If done gets false, the panic occured in LMTPData and the connection
+	// If done gets false, the panic occurred in LMTPData and the connection
 	// should be closed.
 	if !<-done {
 		c.Close()
@@ -1340,6 +1340,9 @@ func (c *Conn) reset() {
 	}
 	c.bdatStatus = nil
 	c.bytesReceived = 0
+
+	// BDAT disables the line limit while reading a chunk, the transaction is over now.
+	c.lineLimitReader.LineLimit = c.server.MaxLineLength
 
 	if c.session != nil {
 		c.session.Reset()
