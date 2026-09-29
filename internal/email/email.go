@@ -9,9 +9,7 @@ import (
 	"github.com/emersion/go-msgauth/dkim"
 	"github.com/etkecc/go-linkpearl"
 	"github.com/jhillyerd/enmime/v2"
-	"github.com/kvannotten/mailstrip"
 	"maunium.net/go/mautrix/event"
-	"maunium.net/go/mautrix/format"
 	"maunium.net/go/mautrix/id"
 
 	"github.com/etkecc/postmoogle/internal/utils"
@@ -24,6 +22,7 @@ type Email struct {
 	InReplyTo   string
 	References  string
 	From        string
+	FromName    string
 	To          string
 	RcptTo      string
 	CC          []string
@@ -32,6 +31,10 @@ type Email struct {
 	HTML        string
 	Files       []*utils.File
 	InlineFiles []*utils.File
+	Images      map[string]*Image // uploaded images by their source in the HTML, see SetImage
+
+	originalHTML string // HTML as received, before any cleanup
+	truncated    bool   // the last rendered content was shortened, see Truncated
 }
 
 // New constructs Email object
@@ -79,26 +82,47 @@ func FromEnvelope(rcptto string, envelope *enmime.Envelope) *Email {
 	inlines := make([]*utils.File, 0, len(envelope.Inlines))
 	for _, inline := range envelope.Inlines {
 		file := utils.NewFile(inline.FileName, inline.Content)
+		file.ContentID = inline.ContentID
+		inlines = append(inlines, file)
+	}
+	// images of multipart/related emails often have a Content-ID but no Content-Disposition
+	for _, part := range envelope.OtherParts {
+		if part.ContentID == "" {
+			continue
+		}
+		file := utils.NewFile(part.FileName, part.Content)
+		file.ContentID = part.ContentID
 		inlines = append(inlines, file)
 	}
 
 	email := &Email{
-		Date:        date,
-		MessageID:   envelope.GetHeader("Message-Id"),
-		InReplyTo:   envelope.GetHeader("In-Reply-To"),
-		References:  envelope.GetHeader("References"),
-		From:        Address(envelope.GetHeader("From")),
-		To:          Address(envelope.GetHeader("To")),
-		RcptTo:      Address(rcptto),
-		CC:          AddressList(envelope.GetHeader("Cc")),
-		Subject:     envelope.GetHeader("Subject"),
-		Text:        envelope.Text,
-		HTML:        html,
-		Files:       files,
-		InlineFiles: inlines,
+		Date:         date,
+		MessageID:    envelope.GetHeader("Message-Id"),
+		InReplyTo:    envelope.GetHeader("In-Reply-To"),
+		References:   envelope.GetHeader("References"),
+		From:         Address(envelope.GetHeader("From")),
+		FromName:     senderName(envelope),
+		To:           Address(envelope.GetHeader("To")),
+		RcptTo:       Address(rcptto),
+		CC:           AddressList(envelope.GetHeader("Cc")),
+		Subject:      envelope.GetHeader("Subject"),
+		Text:         envelope.Text,
+		HTML:         html,
+		Files:        files,
+		InlineFiles:  inlines,
+		originalHTML: envelope.HTML,
 	}
 
 	return email
+}
+
+// senderName returns the display name of the email sender, e.g. "Jane Doe" for "Jane Doe" <jane@example.com>
+func senderName(envelope *enmime.Envelope) string {
+	from, err := envelope.AddressList("From")
+	if err != nil || len(from) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(from[0].Name)
 }
 
 // Mailbox returns postmoogle's mailbox, parsing it from FROM (if incoming=false) or TO (incoming=true)
@@ -109,83 +133,20 @@ func (e *Email) Mailbox(incoming bool) string {
 	return utils.Mailbox(e.From)
 }
 
-func (e *Email) contentHeader(threadID id.EventID, text *strings.Builder, options *ContentOptions) {
-	if options.Sender {
-		text.WriteString(e.From)
-	}
-	if options.Recipient {
-		mailbox, sub, host := utils.EmailParts(e.To)
-		text.WriteString(" ➡️ ")
-		text.WriteString(mailbox)
-		text.WriteString("@")
-		text.WriteString(host)
-		if sub != "" {
-			text.WriteString(" (")
-			text.WriteString(sub)
-			text.WriteString(")")
-		}
-	}
-	if options.CC && len(e.CC) > 0 {
-		text.WriteString("\ncc: ")
-		text.WriteString(strings.Join(e.CC, ", "))
-	}
-	if options.Sender || options.Recipient || options.CC {
-		text.WriteString("\n\n")
-	}
-	if options.Subject && threadID == "" {
-		if options.Threadify {
-			text.WriteString("**")
-			text.WriteString(e.Subject)
-			text.WriteString("**")
-		} else {
-			text.WriteString("# ")
-			text.WriteString(e.Subject)
-
-		}
-		text.WriteString("\n\n")
-	}
-}
-
 // Content converts the email object to a Matrix event content
 func (e *Email) Content(threadID id.EventID, options *ContentOptions) *event.Content {
-	var text strings.Builder
-
-	e.contentHeader(threadID, &text, options)
-
-	if threadID != "" || (threadID == "" && !options.Threadify) {
-		if e.HTML != "" && options.HTML {
-			text.WriteString(format.HTMLToMarkdown(e.HTML))
-		} else {
-			text.WriteString(e.Text)
-		}
+	msg := &message{
+		raw:       e.raw(options),
+		relatesTo: linkpearl.RelatesTo(threadID, !options.Threads),
+	}
+	msg.headerHTML, msg.headerText = e.header(threadID, options)
+	if threadID != "" || !options.Threadify {
+		msg.body = e.body(options, options.Stripify && threadID != "") // strip only in thread replies
 	}
 
-	body := text.String()
-	if options.Stripify && threadID != "" { // strip only in thread replies
-		body = mailstrip.Parse(body).String()
-	}
-	parsed := format.RenderMarkdown(body, true, true)
-	parsed.RelatesTo = linkpearl.RelatesTo(threadID, !options.Threads)
-
-	var cc string
-	if len(e.CC) > 0 {
-		cc = strings.Join(e.CC, ", ")
-	}
-
-	content := event.Content{
-		Raw: map[string]any{
-			options.MessageIDKey:  e.MessageID,
-			options.InReplyToKey:  e.InReplyTo,
-			options.ReferencesKey: e.References,
-			options.SubjectKey:    e.Subject,
-			options.RcptToKey:     e.RcptTo,
-			options.FromKey:       e.From,
-			options.ToKey:         e.To,
-			options.CcKey:         cc,
-		},
-		Parsed: &parsed,
-	}
-	return &content
+	var content *event.Content
+	content, e.truncated = msg.render()
+	return content
 }
 
 // ContentBody converts the email to Matrix event content with only the body; nil if threadify is disabled
@@ -193,24 +154,49 @@ func (e *Email) ContentBody(threadID id.EventID, options *ContentOptions) *event
 	if !options.Threadify {
 		return nil
 	}
-	var text string
-	if e.HTML != "" && options.HTML {
-		text = format.HTMLToMarkdown(e.HTML)
-	} else {
-		text = e.Text
+	msg := &message{
+		body:      e.body(options, options.Stripify),
+		relatesTo: linkpearl.RelatesTo(threadID, !options.Threads),
 	}
 
-	if options.Stripify {
-		text = mailstrip.Parse(text).String()
+	var content *event.Content
+	content, e.truncated = msg.render()
+	return content
+}
+
+// Truncated reports whether the last content returned by Content or ContentBody was shortened to fit Matrix limits
+func (e *Email) Truncated() bool {
+	return e.truncated
+}
+
+// FullVersion returns the complete email body as a file, to be sent along with a truncated message
+func (e *Email) FullVersion() *utils.File {
+	if e.originalHTML != "" {
+		return utils.NewFile("email.html", []byte(e.originalHTML))
+	}
+	if e.HTML != "" {
+		return utils.NewFile("email.html", []byte(e.HTML))
+	}
+	return utils.NewFile("email.txt", []byte(e.Text))
+}
+
+// raw returns the email metadata stored in the event, used to reply and to thread emails
+func (e *Email) raw(options *ContentOptions) map[string]any {
+	var cc string
+	if len(e.CC) > 0 {
+		cc = strings.Join(e.CC, ", ")
 	}
 
-	parsed := format.RenderMarkdown(text, true, true)
-	parsed.RelatesTo = linkpearl.RelatesTo(threadID, !options.Threads)
-
-	content := event.Content{
-		Parsed: &parsed,
+	return map[string]any{
+		options.MessageIDKey:  e.MessageID,
+		options.InReplyToKey:  e.InReplyTo,
+		options.ReferencesKey: e.References,
+		options.SubjectKey:    e.Subject,
+		options.RcptToKey:     e.RcptTo,
+		options.FromKey:       e.From,
+		options.ToKey:         e.To,
+		options.CcKey:         cc,
 	}
-	return &content
 }
 
 // Compose converts the email object to a string (to be used for delivery via SMTP) and possibly DKIM-signs it

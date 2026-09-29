@@ -43,6 +43,8 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] Matrix bot
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms
+- [x] Readable HTML emails: layout tables, buttons, and hidden preview texts are converted into clean messages
+- [x] Show email images inside messages (both inline attachments and images linked from the web)
 - [x] Receive attachments
 - [x] Subaddressing support
 - [x] Mailbox aliases support
@@ -215,7 +217,8 @@ If you want to change them - check available options in the help message (`!pm h
 * **`!pm nohtml`** - Get or set `nohtml` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)
 * **`!pm nothreads`** - Get or set `nothreads` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)
 * **`!pm nofiles`** - Get or set `nofiles` of the room (`true` - ignore email attachments; `false` - upload email attachments)
-* **`!pm noinlines`** - Get or set `noinlines` of the room (`true` - ignore inline attachments; `false` - upload inline attachments)
+* **`!pm noinlines`** - Get or set `noinlines` of the room (`true` - ignore inline attachments; `false` - show inline images inside the message and upload other inline attachments)
+* **`!pm noremoteimages`** - Get or set `noremoteimages` of the room (`true` - do not download images linked in emails; `false` - download linked images and show them inside the message)
 
 ---
 

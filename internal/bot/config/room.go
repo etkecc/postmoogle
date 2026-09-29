@@ -27,18 +27,19 @@ const (
 	RoomAutoreply = "autoreply"
 	RoomRelay     = "relay"
 
-	RoomThreadify   = "threadify"
-	RoomStripify    = "stripify"
-	RoomNoCC        = "nocc"
-	RoomNoFiles     = "nofiles"
-	RoomNoHTML      = "nohtml"
-	RoomNoInlines   = "noinlines"
-	RoomNoRecipient = "norecipient"
-	RoomNoReplies   = "noreplies"
-	RoomNoSend      = "nosend"
-	RoomNoSender    = "nosender"
-	RoomNoSubject   = "nosubject"
-	RoomNoThreads   = "nothreads"
+	RoomThreadify      = "threadify"
+	RoomStripify       = "stripify"
+	RoomNoCC           = "nocc"
+	RoomNoFiles        = "nofiles"
+	RoomNoHTML         = "nohtml"
+	RoomNoInlines      = "noinlines"
+	RoomNoRemoteImages = "noremoteimages"
+	RoomNoRecipient    = "norecipient"
+	RoomNoReplies      = "noreplies"
+	RoomNoSend         = "nosend"
+	RoomNoSender       = "nosender"
+	RoomNoSubject      = "nosubject"
+	RoomNoThreads      = "nothreads"
 
 	RoomSpamcheckRBL  = "spamcheck:rbl"
 	RoomSpamcheckDKIM = "spamcheck:dkim"
@@ -153,6 +154,10 @@ func (s Room) NoInlines() bool {
 	return utils.Bool(s.Get(RoomNoInlines))
 }
 
+func (s Room) NoRemoteImages() bool {
+	return utils.Bool(s.Get(RoomNoRemoteImages))
+}
+
 func (s Room) SpamcheckRBL() bool {
 	return utils.Bool(s.Get(RoomSpamcheckRBL))
 }
@@ -225,14 +230,16 @@ func (s Room) MigrateSpamlistSettings() {
 // ContentOptions converts room display settings to content options
 func (s Room) ContentOptions() *email.ContentOptions {
 	return &email.ContentOptions{
-		CC:        !s.NoCC(),
-		HTML:      !s.NoHTML(),
-		Sender:    !s.NoSender(),
-		Recipient: !s.NoRecipient(),
-		Subject:   !s.NoSubject(),
-		Threads:   !s.NoThreads(),
-		Stripify:  s.Stripify(),
-		Threadify: s.Threadify(),
+		CC:           !s.NoCC(),
+		HTML:         !s.NoHTML(),
+		Sender:       !s.NoSender(),
+		Recipient:    !s.NoRecipient(),
+		Subject:      !s.NoSubject(),
+		Threads:      !s.NoThreads(),
+		Stripify:     s.Stripify(),
+		Threadify:    s.Threadify(),
+		InlineImages: !s.NoInlines(),
+		RemoteImages: !s.NoRemoteImages(),
 
 		ToKey:         "cc.etke.postmoogle.to",
 		CcKey:         "cc.etke.postmoogle.cc",

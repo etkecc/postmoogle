@@ -15,6 +15,7 @@ import (
 
 	"github.com/etkecc/postmoogle/internal/bot/config"
 	"github.com/etkecc/postmoogle/internal/bot/queue"
+	"github.com/etkecc/postmoogle/internal/utils"
 )
 
 // Mailboxes config
@@ -42,6 +43,7 @@ type Bot struct {
 	lp                      *linkpearl.Linkpearl
 	mu                      *kit.Mutex
 	q                       *queue.Queue
+	images                  *utils.ImageFetcher
 	handledMembershipEvents sync.Map
 }
 
@@ -69,6 +71,7 @@ func New(
 		lp:         lp,
 		mu:         kit.NewMutex(),
 		q:          q,
+		images:     utils.NewImageFetcher(maxImageSize),
 	}
 	users, err := b.initBotUsers(context.Background())
 	if err != nil {
