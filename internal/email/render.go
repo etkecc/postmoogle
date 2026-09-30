@@ -61,23 +61,46 @@ type (
 		lineStart bool
 		pre       bool
 		depth     int
+		top       bool // renders the whole document, not a list item, quote, or table cell
+		quoteAt   int  // index of the first block of quoted earlier messages, -1 if there are none
+		inQuote   int  // how many quote elements are being rendered
+		quoteRest bool // the quote goes on to the end of the email, as in Outlook
+		quoteDone bool // the email goes on after its quote, like replies written between quotes, so nothing is folded
 	}
+)
+
+// quote kinds, see quoteKind
+const (
+	quoteNone  = iota
+	quoteBlock // the element holds the quoted messages
+	quoteRest  // the quoted messages start with the element and go on to the end of the email
 )
 
 // renderHTML converts email HTML into Matrix-compatible HTML blocks; flatTables renders data tables as lines
 func renderHTML(source string, resolve imageResolver, flatTables bool) []string {
+	blocks, _ := renderDocument(source, resolve, flatTables)
+	return blocks
+}
+
+// renderDocument is renderHTML that also returns the index of the first block of quoted earlier messages, or -1
+func renderDocument(source string, resolve imageResolver, flatTables bool) (blocks []string, quoteAt int) {
 	doc, err := xhtml.ParseWithOptions(strings.NewReader(source), xhtml.ParseOptionEnableScripting(false))
 	if err != nil {
-		return nil
+		return nil, -1
 	}
 	state := &renderState{resolve: resolve, flatTables: flatTables, info: map[*xhtml.Node]nodeInfo{}}
-	r := &renderer{renderState: state, wrapper: "p"}
+	r := &renderer{renderState: state, wrapper: "p", top: true, quoteAt: -1}
 	r.walk(doc)
-	return r.finish()
+	blocks = r.finish()
+	// a quote with nothing before it is the whole email, e.g. a forward, and a quote with nothing in it is no quote
+	if r.quoteAt <= 0 || r.quoteAt >= len(blocks) {
+		return blocks, -1
+	}
+	return blocks, r.quoteAt
 }
 
 func (r *renderer) sub() *renderer {
-	return &renderer{renderState: r.renderState, wrapper: "p", depth: r.depth}
+	return &renderer{renderState: r.renderState, wrapper: "p", depth: r.depth, quoteAt: -1}
 }
 
 func (r *renderer) finish() []string {
@@ -86,6 +109,19 @@ func (r *renderer) finish() []string {
 		r.blocks = r.blocks[:len(r.blocks)-1]
 	}
 	return r.blocks
+}
+
+// startQuote marks the start of quoted earlier messages, taking in a line like "On Monday, John wrote:" before them
+func (r *renderer) startQuote() {
+	r.closeLeaf()
+	r.breaks = 0
+	for len(r.blocks) > 0 && r.blocks[len(r.blocks)-1] == "<hr>" {
+		r.blocks = r.blocks[:len(r.blocks)-1]
+	}
+	r.quoteAt = len(r.blocks)
+	if r.quoteAt > 0 && isAttribution(r.blocks[r.quoteAt-1]) {
+		r.quoteAt--
+	}
 }
 
 func (r *renderer) walk(n *xhtml.Node) {
@@ -115,6 +151,12 @@ func (r *renderer) node(n *xhtml.Node) {
 func (r *renderer) element(n *xhtml.Node) {
 	if skippedElements[n.DataAtom] || isHidden(n) {
 		return
+	}
+	if r.top {
+		if kind := r.quoteKind(n); kind != quoteNone {
+			r.enterQuote(kind)
+			defer func() { r.inQuote-- }()
+		}
 	}
 	switch n.DataAtom {
 	case atom.Br:
@@ -235,6 +277,7 @@ func (r *renderer) breakAtLeast(level int) {
 
 // write adds an HTML fragment to the current paragraph, opening the paragraph and pending inline tags if needed
 func (r *renderer) write(fragment string) {
+	r.outsideQuote()
 	r.flushBreaks()
 	if r.leaf.Len() == 0 {
 		r.leaf.WriteString("<" + r.wrapper + ">")
@@ -286,10 +329,31 @@ func (r *renderer) closeLeaf() {
 
 // addBlock adds a complete block element (list, quote, table, etc.) after the current paragraph
 func (r *renderer) addBlock(block string) {
+	r.outsideQuote()
+	r.appendBlock(block)
+}
+
+func (r *renderer) appendBlock(block string) {
 	r.closeLeaf()
 	r.breaks = 0
 	r.space = false
 	r.blocks = append(r.blocks, block)
+}
+
+func (r *renderer) enterQuote(kind int) {
+	if r.quoteAt < 0 && !r.quoteDone {
+		r.startQuote()
+	}
+	r.quoteRest = r.quoteRest || kind == quoteRest
+	r.inQuote++
+}
+
+// outsideQuote stops folding the quote when the email goes on after it
+func (r *renderer) outsideQuote() {
+	if r.top && r.quoteAt >= 0 && r.inQuote == 0 && !r.quoteRest {
+		r.quoteAt = -1
+		r.quoteDone = true
+	}
 }
 
 // push opens an inline element; nested duplicates (e.g. bold inside bold, link inside link) are ignored
@@ -311,12 +375,13 @@ func (r *renderer) pop() {
 	}
 }
 
+// rule adds a separator line, unless it would start the text, the quote, or follow another line
 func (r *renderer) rule() {
 	r.closeLeaf()
-	if len(r.blocks) == 0 || r.blocks[len(r.blocks)-1] == "<hr>" {
+	if len(r.blocks) == 0 || r.blocks[len(r.blocks)-1] == "<hr>" || r.quoteAt == len(r.blocks) {
 		return
 	}
-	r.addBlock("<hr>")
+	r.appendBlock("<hr>")
 }
 
 func (r *renderer) heading(n *xhtml.Node, tag string) {
@@ -428,7 +493,7 @@ func (r *renderer) quote(n *xhtml.Node) {
 
 // preformatted renders code as a code block, and other preformatted text as text with its line breaks
 func (r *renderer) preformatted(n *xhtml.Node) {
-	if hasDescendant(n, atom.Code, 0) {
+	if hasDescendant(n, atom.Code, 0) || isCode(n) || (n.Parent != nil && isCode(n.Parent)) {
 		var code strings.Builder
 		textContent(n, &code, 0)
 		text := strings.Trim(strings.ReplaceAll(code.String(), "\r\n", "\n"), "\n")

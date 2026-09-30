@@ -23,6 +23,7 @@ type ContentOptions struct {
 	Stripify     bool
 	InlineImages bool
 	RemoteImages bool
+	Collapse     bool // fold quoted earlier messages and the end of very long emails
 
 	// Keys
 	MessageIDKey  string

@@ -217,13 +217,13 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 		files = append(files, eml.FullVersion())
 	}
 
-	// inline images that are shown inside the message are not sent again as separate files
+	// inline images shown inside the message are not sent again, except photos
 	if !cfg.NoInlines() {
-		b.sendFiles(ctx, roomID, eml.UnembeddedInlines(bodies...), cfg.NoThreads(), threadID)
+		b.sendFiles(ctx, roomID, eml, eml.InlinesToSend(bodies...), cfg.NoThreads(), threadID)
 	}
 
 	if !cfg.NoFiles() {
-		b.sendFiles(ctx, roomID, files, cfg.NoThreads(), threadID)
+		b.sendFiles(ctx, roomID, eml, files, cfg.NoThreads(), threadID)
 	}
 
 	if newThread && cfg.Autoreply() != "" {
@@ -603,13 +603,37 @@ func formattedBody(content *event.Content) string {
 	return msg.FormattedBody
 }
 
-func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.File, noThreads bool, parentID id.EventID) {
+func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, eml *email.Email, files []*utils.File, noThreads bool, parentID id.EventID) {
 	for _, file := range files {
+		// images uploaded to be shown inside the message are posted without uploading them again
+		if img := eml.UploadedImage(file); img != nil {
+			b.sendImage(ctx, roomID, file, img, linkpearl.RelatesTo(parentID, noThreads))
+			continue
+		}
 		req := file.Convert()
 		err := b.lp.SendFile(ctx, roomID, req, file.MsgType, linkpearl.RelatesTo(parentID, noThreads))
 		if err != nil {
 			b.Error(ctx, "cannot upload file %s: %v", req.FileName, err)
 		}
+	}
+}
+
+func (b *Bot) sendImage(ctx context.Context, roomID id.RoomID, file *utils.File, img *email.Image, relatesTo *event.RelatesTo) {
+	content := &event.MessageEventContent{
+		MsgType:  event.MsgImage,
+		Body:     file.Name,
+		FileName: file.Name,
+		URL:      id.ContentURIString(img.URI),
+		Info: &event.FileInfo{
+			MimeType: file.Type,
+			Size:     file.Length,
+			Width:    img.Width,
+			Height:   img.Height,
+		},
+		RelatesTo: relatesTo,
+	}
+	if _, err := b.lp.Send(ctx, roomID, content); err != nil {
+		b.Error(ctx, "cannot send image %s: %v", file.Name, err)
 	}
 }
 

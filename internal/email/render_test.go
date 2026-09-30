@@ -251,3 +251,85 @@ func TestDisplaySize(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderDocument_Quotes(t *testing.T) {
+	tests := map[string]struct {
+		input   string
+		quoteAt int
+	}{
+		"gmail": {
+			input: `<div>Yes</div><br><div class="gmail_quote"><div class="gmail_attr">On Monday, John wrote:<br></div>` +
+				`<blockquote class="gmail_quote">question</blockquote></div>`,
+			quoteAt: 1,
+		},
+		"gmail forward has no quote": {
+			input: `<div>FYI</div><div class="gmail_quote"><div class="gmail_attr">---------- Forwarded message ---------<br>` +
+				`From: John</div><p>the mail</p></div>`,
+			quoteAt: -1,
+		},
+		"apple mail": {
+			input: `<div>Paid.</div><div><br><blockquote type="cite">On 29 Sep 2026, at 11:40, John wrote:<br><br></blockquote></div>` +
+				`<blockquote type="cite"><div>Invoice</div></blockquote>`,
+			quoteAt: 1,
+		},
+		"attribution line before the quote": {
+			input:   `<p>Paid.</p><p>On 29 Sep 2026, John wrote:</p><blockquote type="cite"><p>Invoice</p></blockquote>`,
+			quoteAt: 1,
+		},
+		"thunderbird": {
+			input:   `<p>Done.</p><div class="moz-cite-prefix">On 9/29/26 10:00, John wrote:<br></div><blockquote type="cite">Is it done?</blockquote>`,
+			quoteAt: 1,
+		},
+		"outlook desktop": {
+			input: `<p class="MsoNormal">Updated.</p><div style="border:none;border-top:solid #E1E1E1 1.0pt;padding:3.0pt 0cm 0cm 0cm">` +
+				`<p class="MsoNormal"><b>From:</b> John<br><b>Sent:</b> Monday<br><b>Subject:</b> Date</p></div>` +
+				`<p class="MsoNormal">Did it change?</p>`,
+			quoteAt: 1,
+		},
+		"outlook web": {
+			input: `<div>Updated.</div><div id="appendonsend"></div><hr style="display:inline-block;width:98%">` +
+				`<div id="divRplyFwdMsg"><b>From:</b> John<br><b>Sent:</b> Monday</div><div>Did it change?</div>`,
+			quoteAt: 1,
+		},
+		"a top border without a reply header is a line": {
+			input:   `<p>Order</p><div style="border-top:1px solid #ccc"><p>Total: 5</p></div>`,
+			quoteAt: -1,
+		},
+		"answers between quotes": {
+			input: `<div class="moz-cite-prefix">John wrote:</div><blockquote type="cite">Ready?</blockquote><p>Yes.</p>` +
+				`<blockquote type="cite">Approved?</blockquote><p>Not yet.</p>`,
+			quoteAt: -1,
+		},
+		"a reply below the quote": {
+			input:   `<p>Hi,</p><blockquote type="cite">Ready?</blockquote><p>Yes, all done.</p>`,
+			quoteAt: -1,
+		},
+		"a quote of the whole email": {
+			input:   `<blockquote type="cite"><p>Ready?</p></blockquote>`,
+			quoteAt: -1,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			blocks, quoteAt := renderDocument(test.input, testResolver, false)
+			if quoteAt != test.quoteAt {
+				t.Errorf("expected the quote at %d, got %d: %q", test.quoteAt, quoteAt, blocks)
+			}
+			if quoteAt > 0 && strings.Contains(strings.Join(blocks[:quoteAt], ""), "<hr>") {
+				t.Errorf("the line above the quote should be dropped: %q", blocks)
+			}
+		})
+	}
+}
+
+func TestRenderHTML_CodeByClass(t *testing.T) {
+	input := `<div class="highlight highlight-source-go"><pre>const x = 1 // one</pre></div>` +
+		`<pre class="language-sh">ls -la</pre><pre>plain` + "\n" + `text</pre>`
+
+	output := strings.Join(renderHTML(input, nil, false), "")
+
+	expected := `<pre><code>const x = 1 // one</code></pre><pre><code>ls -la</code></pre><p>plain<br>text</p>`
+	if output != expected {
+		t.Errorf("\nexpected: %s\n  output: %s", expected, output)
+	}
+}

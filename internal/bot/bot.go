@@ -23,6 +23,7 @@ type MBXConfig struct {
 	Reserved   []string
 	Forwarded  []string
 	Activation string
+	Setup      string // JSON list of mailboxes the bot sets up by itself, see docs/mailboxes.md
 }
 
 // Bot represents matrix bot
@@ -45,6 +46,7 @@ type Bot struct {
 	q                       *queue.Queue
 	images                  *utils.ImageFetcher
 	handledMembershipEvents sync.Map
+	setup                   []*mailboxSetup
 }
 
 // New creates a new matrix bot
@@ -89,6 +91,12 @@ func New(
 	}
 	b.allowedAdmins = allowedAdmins
 
+	// a mistake here must not stop the mail of the mailboxes that already work
+	b.setup, err = parseMailboxSetup(mbxc.Setup, domains)
+	if err != nil {
+		log.Error().Err(err).Msg("mailboxes will not be set up")
+	}
+
 	b.commands = b.initCommands()
 
 	return b, nil
@@ -132,6 +140,7 @@ func (b *Bot) Start(statusMsg string) error {
 	if err := b.syncRooms(ctx); err != nil {
 		return err
 	}
+	b.setupMailboxes(ctx)
 
 	b.initSync()
 	b.log.Info().Msg("Postmoogle has been started")

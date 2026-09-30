@@ -105,7 +105,7 @@ func (b *Bot) loadImage(ctx context.Context, eml *email.Email, src string) *emai
 func (b *Bot) imageFile(ctx context.Context, eml *email.Email, src string) (*utils.File, error) {
 	switch email.ImageKind(src) {
 	case email.ImageInline:
-		file := eml.InlineFile(src)
+		file := eml.CIDFile(src)
 		if file == nil || !file.IsWebImage() || file.Length > maxImageSize {
 			return nil, errImageUnavailable
 		}

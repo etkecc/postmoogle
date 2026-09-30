@@ -30,6 +30,7 @@ const (
 	RoomThreadify      = "threadify"
 	RoomStripify       = "stripify"
 	RoomNoCC           = "nocc"
+	RoomNoCollapse     = "nocollapse"
 	RoomNoFiles        = "nofiles"
 	RoomNoHTML         = "nohtml"
 	RoomNoInlines      = "noinlines"
@@ -158,6 +159,10 @@ func (s Room) NoRemoteImages() bool {
 	return utils.Bool(s.Get(RoomNoRemoteImages))
 }
 
+func (s Room) NoCollapse() bool {
+	return utils.Bool(s.Get(RoomNoCollapse))
+}
+
 func (s Room) SpamcheckRBL() bool {
 	return utils.Bool(s.Get(RoomSpamcheckRBL))
 }
@@ -240,6 +245,7 @@ func (s Room) ContentOptions() *email.ContentOptions {
 		Threadify:    s.Threadify(),
 		InlineImages: !s.NoInlines(),
 		RemoteImages: !s.NoRemoteImages(),
+		Collapse:     !s.NoCollapse(),
 
 		ToKey:         "cc.etke.postmoogle.to",
 		CcKey:         "cc.etke.postmoogle.cc",

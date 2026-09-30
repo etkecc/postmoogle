@@ -14,12 +14,20 @@ const (
 	ImageRemote = "remote" // http(s) URL
 )
 
+// minPhotoSize is the shortest longer side of a photo in pixels, smaller images are logos, icons, and signatures
+const minPhotoSize = 400
+
 // Image is an email image uploaded to the Matrix content repository
 type Image struct {
 	URI    string      // mxc:// URI of the uploaded image
 	Width  int         // natural width in pixels, 0 if unknown
 	Height int         // natural height in pixels, 0 if unknown
-	File   *utils.File // inline attachment the image was made from, nil for other images
+	File   *utils.File // attachment the image was made from, nil for other images
+}
+
+// IsPhoto reports whether the image is big enough to be a photo rather than a logo or an icon
+func (img *Image) IsPhoto() bool {
+	return max(img.Width, img.Height) >= minPhotoSize
 }
 
 // ImageKind returns the kind of an image source, or an empty string if it is not supported
@@ -67,8 +75,8 @@ func (e *Email) HasImage(src string) bool {
 	return ok
 }
 
-// InlineFile returns the inline attachment referenced by a cid: image source
-func (e *Email) InlineFile(src string) *utils.File {
+// CIDFile returns the attachment referenced by a cid: image source, inline or not
+func (e *Email) CIDFile(src string) *utils.File {
 	if ImageKind(src) != ImageInline {
 		return nil
 	}
@@ -77,39 +85,50 @@ func (e *Email) InlineFile(src string) *utils.File {
 		cid = unescaped
 	}
 	cid = strings.Trim(strings.TrimSpace(cid), "<>")
-	for _, file := range e.InlineFiles {
-		if file.ContentID == cid {
-			return file
+	lists := [][]*utils.File{e.InlineFiles, e.Files}
+	for _, files := range lists {
+		for _, file := range files {
+			if file.ContentID == cid {
+				return file
+			}
 		}
 	}
-	for _, file := range e.InlineFiles {
-		if file.ContentID != "" && strings.EqualFold(file.ContentID, cid) {
-			return file
+	for _, files := range lists {
+		for _, file := range files {
+			if file.ContentID != "" && strings.EqualFold(file.ContentID, cid) {
+				return file
+			}
 		}
 	}
 	return nil
 }
 
-// UnembeddedInlines returns inline attachments that are not shown inside any of the given formatted bodies
-func (e *Email) UnembeddedInlines(bodies ...string) []*utils.File {
+// UploadedImage returns the image uploaded from the attachment to be shown inside the message, nil if there is none
+func (e *Email) UploadedImage(file *utils.File) *Image {
+	for _, img := range e.Images {
+		if img != nil && img.File == file {
+			return img
+		}
+	}
+	return nil
+}
+
+// InlinesToSend returns inline attachments not shown inside the bodies, and photos, to open them in full size
+func (e *Email) InlinesToSend(bodies ...string) []*utils.File {
 	files := make([]*utils.File, 0, len(e.InlineFiles))
 	for _, file := range e.InlineFiles {
-		if !e.embedded(file, bodies) {
+		img := e.UploadedImage(file)
+		if img == nil || img.IsPhoto() || !shownIn(img, bodies) {
 			files = append(files, file)
 		}
 	}
 	return files
 }
 
-func (e *Email) embedded(file *utils.File, bodies []string) bool {
-	for _, img := range e.Images {
-		if img == nil || img.File != file {
-			continue
-		}
-		for _, body := range bodies {
-			if strings.Contains(body, img.URI) {
-				return true
-			}
+func shownIn(img *Image, bodies []string) bool {
+	for _, body := range bodies {
+		if strings.Contains(body, img.URI) {
+			return true
 		}
 	}
 	return false

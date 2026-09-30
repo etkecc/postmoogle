@@ -246,6 +246,15 @@ func (b *Bot) initCommands() commandList {
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,
 		},
+		{
+			key: config.RoomNoCollapse,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - show quoted earlier messages and very long emails in full; `false` - fold them until opened)",
+				config.RoomNoCollapse,
+			),
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
+		},
 		{allowed: b.allowOwner, description: "mailbox security checks"}, // delimiter
 		{
 			key:         config.RoomSpamcheckMX,

@@ -44,7 +44,10 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms
 - [x] Readable HTML emails: layout tables, buttons, and hidden preview texts are converted into clean messages
-- [x] Show email images inside messages (both inline attachments and images linked from the web)
+- [x] Show email images inside messages (both inline attachments and images linked from the web); photos also go into the thread to open them in full size
+- [x] Fold quoted earlier messages of replies and the end of very long emails until opened (`!pm nocollapse` turns it off)
+- [x] Show when an email was sent if it arrives late, e.g. when old emails are imported
+- [x] Set up mailbox rooms from the configuration, without `!pm` commands ([docs/mailboxes.md](docs/mailboxes.md))
 - [x] Receive attachments
 - [x] Subaddressing support
 - [x] Mailbox aliases support
@@ -108,6 +111,7 @@ env vars
 * **POSTMOOGLE_MAILBOXES_RESERVED** - space separated list of reserved mailboxes, [docs/mailboxes.md](docs/mailboxes.md)
 * **POSTMOOGLE_MAILBOXES_FORWARDED** - space separated list of forwarded from emails that should be ignored when sending replies
 * **POSTMOOGLE_MAILBOXES_ACTIVATION** - activation flow for new mailboxes, [docs/mailboxes.md](docs/mailboxes.md)
+* **POSTMOOGLE_MAILBOXES_SETUP** - JSON list of mailboxes the bot sets up by itself, each gets its own room, [docs/mailboxes.md](docs/mailboxes.md)
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
 * **POSTMOOGLE_ADMINS** - a space-separated list of admin users. See `POSTMOOGLE_USERS` for syntax examples
 * **POSTMOOGLE_RELAY_HOST** - (global) SMTP hostname of relay host (e.g. Sendgrid)

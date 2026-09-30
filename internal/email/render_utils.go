@@ -20,6 +20,10 @@ const (
 	maxImageWidth = 600
 	// maxDimension caps image dimensions parsed from HTML, in pixels
 	maxDimension = 10000
+	// maxAttributionLen is the longest line introducing a quote, like "On Monday, John <john@example.com> wrote:"
+	maxAttributionLen = 300
+	// maxReplyHeaderLen is the longest text of the header Outlook puts above a quoted message
+	maxReplyHeaderLen = 1000
 )
 
 var (
@@ -50,6 +54,19 @@ var (
 	safeSchemes = map[string]bool{"http": true, "https": true, "ftp": true, "mailto": true, "magnet": true}
 
 	buttonClassRegex = regexp.MustCompile(`(?i)(?:^|[\s_-])(?:btn|button|cta)(?:$|[\s_-])`)
+
+	// codeClassRegex matches classes of code blocks, like "highlight" on GitHub or "language-go"
+	codeClassRegex = regexp.MustCompile(`(?i)(?:^|[\s_-])(?:highlight|code|syntax|sourcecode|prettyprint|hljs|language|lang)(?:$|[\s_-])`)
+
+	// quote markers of Gmail, Yahoo, Proton Mail, Thunderbird, and Zoho; a Gmail quote without a blockquote is a forward
+	quoteClassRegex = regexp.MustCompile(`(?i)(?:^|\s)(?:gmail_quote|yahoo_quoted|protonmail_quote|moz-cite-prefix|zmail_extra)(?:$|\s)`)
+	gmailQuoteRegex = regexp.MustCompile(`(?i)(?:^|\s)gmail_quote(?:$|\s)`)
+	// Outlook puts a header above the quoted message, which goes on to the end of the email
+	quoteRestIDRegex = regexp.MustCompile(`(?i)^(?:x_)?(?:divRplyFwdMsg|appendonsend)$`)
+	// Outlook for Mac and the new Outlook wrap the quoted message into one element
+	quoteBlockIDRegex = regexp.MustCompile(`(?i)^(?:x_)?(?:mail-editor-reference-message-container|OLK_SRC_BODY_SECTION)$`)
+
+	tagRegex = regexp.MustCompile(`<[^>]*>`)
 )
 
 // mustElementSet builds a set of HTML elements from space-separated tag names
@@ -218,6 +235,74 @@ func hasTopBorder(n *xhtml.Node) bool {
 		return false
 	}
 	return !slices.ContainsFunc(strings.Fields(border), isZero)
+}
+
+// quoteKind detects where mail apps put the quoted earlier messages of a reply
+func (r *renderer) quoteKind(n *xhtml.Node) int {
+	if n.DataAtom != atom.Div && n.DataAtom != atom.Blockquote {
+		return quoteNone
+	}
+	id := attr(n, "id")
+	class := attr(n, "class")
+	switch {
+	case quoteRestIDRegex.MatchString(id):
+		return quoteRest
+	case quoteBlockIDRegex.MatchString(id):
+		return quoteBlock
+	case n.DataAtom == atom.Blockquote && (strings.EqualFold(attr(n, "type"), "cite") || quoteClassRegex.MatchString(class)):
+		return quoteBlock
+	case n.DataAtom == atom.Div && quoteClassRegex.MatchString(class):
+		if gmailQuoteRegex.MatchString(class) && !hasDescendant(n, atom.Blockquote, 0) {
+			return quoteNone
+		}
+		return quoteBlock
+	case n.DataAtom == atom.Div && hasTopBorder(n) && r.contentInfo(n).text <= maxReplyHeaderLen && countLabels(n, 0) >= 2:
+		return quoteRest
+	default:
+		return quoteNone
+	}
+}
+
+// countLabels counts bold labels, like "From:" and "Sent:" in the header Outlook puts above a quoted message
+func countLabels(n *xhtml.Node, depth int) int {
+	if depth > maxRenderDepth {
+		return 0
+	}
+	count := 0
+	for child := n.FirstChild; child != nil; child = child.NextSibling {
+		if child.Type != xhtml.ElementNode || skippedElements[child.DataAtom] || isHidden(child) {
+			continue
+		}
+		if child.DataAtom == atom.B || child.DataAtom == atom.Strong {
+			var text strings.Builder
+			textContent(child, &text, depth)
+			if strings.HasSuffix(strings.TrimSpace(normalizeSpace(text.String())), ":") {
+				count++
+			}
+			continue
+		}
+		count += countLabels(child, depth+1)
+	}
+	return count
+}
+
+// isAttribution detects a short paragraph ending with a colon, like "On Monday, John <john@example.com> wrote:"
+func isAttribution(block string) bool {
+	inner, ok := unwrapParagraph(block)
+	if !ok || strings.Contains(inner, "<br>") {
+		return false
+	}
+	text := strings.TrimSpace(blockText(inner))
+	return strings.HasSuffix(text, ":") && utf8.RuneCountInString(text) <= maxAttributionLen
+}
+
+// blockText returns the visible text of a rendered block
+func blockText(block string) string {
+	return html.UnescapeString(tagRegex.ReplaceAllString(block, ""))
+}
+
+func isCode(n *xhtml.Node) bool {
+	return n.Type == xhtml.ElementNode && codeClassRegex.MatchString(attr(n, "class"))
 }
 
 // hasNoListStyle detects lists without bullets or numbers, which are usually menus or link rows

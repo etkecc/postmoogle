@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jhillyerd/enmime/v2"
 	"maunium.net/go/mautrix/event"
@@ -67,8 +68,9 @@ func TestContent_Header(t *testing.T) {
 
 	msg := parsed(t, eml.Content("", testOptions()))
 
-	expectedHTML := "<h3>Hello there</h3>" +
-		"<p>From: <strong>Jane Doe</strong> &lt;jane@example.com&gt;<br>To: inbox@example.org (news)<br>Cc: a@example.com, b@example.com</p>" +
+	expectedHTML := "<h3>✉️ Hello there</h3>" +
+		"<p>" + muted("From:") + " <strong>Jane Doe</strong> " + muted("&lt;jane@example.com&gt;") +
+		"<br>" + muted("To:") + " inbox@example.org (news)<br>" + muted("Cc:") + " a@example.com, b@example.com</p>" +
 		"<hr><p>Body</p>"
 	if msg.FormattedBody != expectedHTML {
 		t.Errorf("\nexpected: %s\n  output: %s", expectedHTML, msg.FormattedBody)
@@ -91,7 +93,7 @@ func TestContent_HeaderOptions(t *testing.T) {
 
 	msg := parsed(t, eml.Content("$thread", options))
 
-	expected := "<p>From: <strong>jane@example.com</strong></p><hr><p>Body</p>"
+	expected := `<p><font color="#8D99A5" data-mx-color="#8D99A5">From:</font> <strong>jane@example.com</strong></p><hr><p>Body</p>`
 	if msg.FormattedBody != expected {
 		t.Errorf("\nexpected: %s\n  output: %s", expected, msg.FormattedBody)
 	}
@@ -142,7 +144,7 @@ func TestContent_Threadify(t *testing.T) {
 	root := parsed(t, eml.Content("", options))
 	body := parsed(t, eml.ContentBody("$root", options))
 
-	if strings.Contains(root.FormattedBody, "Body") || !strings.Contains(root.FormattedBody, "<h3>Hello there</h3>") {
+	if strings.Contains(root.FormattedBody, "Body") || !strings.Contains(root.FormattedBody, "<h3>✉️ Hello there</h3>") {
 		t.Errorf("thread root should contain the header only: %s", root.FormattedBody)
 	}
 	if body.FormattedBody != "<p>Body</p>" || body.RelatesTo == nil || body.RelatesTo.EventID != "$root" {
@@ -166,7 +168,7 @@ func TestContent_Stripify(t *testing.T) {
 	stripped := parsed(t, eml.Content("$thread", options))
 	root := parsed(t, eml.Content("", options))
 
-	expected := `<hr>Thanks, <strong>sounds good</strong>! 2*3 &lt;script&gt;<img src="mxc://example.com/smile" alt="smile" width="16" height="16">`
+	expected := `<hr><p>Thanks, <strong>sounds good</strong>! 2*3 &lt;script&gt;<img src="mxc://example.com/smile" alt="smile" width="16" height="16"></p>`
 	if !strings.HasSuffix(stripped.FormattedBody, expected) {
 		t.Errorf("\nexpected suffix: %s\n          output: %s", expected, stripped.FormattedBody)
 	}
@@ -205,7 +207,7 @@ func TestContent_HTMLFallbackToText(t *testing.T) {
 
 			msg := parsed(t, eml.Content("", options))
 
-			if !strings.HasSuffix(msg.FormattedBody, "<hr>text version") {
+			if !strings.HasSuffix(msg.FormattedBody, "<hr><p>text version</p>") {
 				t.Errorf("text part was not used: %s", msg.FormattedBody)
 			}
 		})
@@ -318,27 +320,50 @@ func TestInlineFiles(t *testing.T) {
 	logo.ContentID = "logo+1@example.com"
 	photo := utils.NewFile("photo.png", testPNG(t, 8, 8))
 	photo.ContentID = "Photo@Example.com"
+	broken := utils.NewFile("broken.png", testPNG(t, 8, 8))
+	broken.ContentID = "broken@example.com"
 	other := utils.NewFile("other.png", testPNG(t, 2, 2))
-	eml := testEmail("", `<img src="cid:logo%2B1@example.com"><img src="cid:photo@example.com">`)
-	eml.InlineFiles = []*utils.File{logo, photo, other}
+	attached := utils.NewFile("scan.png", testPNG(t, 8, 8))
+	attached.ContentID = "scan@example.com"
+	eml := testEmail("", `<img src="cid:logo%2B1@example.com"><img src="cid:photo@example.com"><img src="cid:broken@example.com">`)
+	eml.InlineFiles = []*utils.File{logo, photo, broken, other}
+	eml.Files = []*utils.File{attached}
 
-	if eml.InlineFile("cid:logo%2B1@example.com") != logo || eml.InlineFile("cid:photo@example.com") != photo {
+	if eml.CIDFile("cid:logo%2B1@example.com") != logo || eml.CIDFile("cid:photo@example.com") != photo {
 		t.Error("inline files were not found by their content ID")
 	}
-	if eml.InlineFile("cid:unknown@example.com") != nil || eml.InlineFile("https://example.com/logo.png") != nil {
+	if eml.CIDFile("cid:scan@example.com") != attached {
+		t.Error("images sent as attachments were not found by their content ID")
+	}
+	if eml.CIDFile("cid:unknown@example.com") != nil || eml.CIDFile("https://example.com/logo.png") != nil {
 		t.Error("unexpected inline file")
 	}
 
-	eml.SetImage("cid:logo%2B1@example.com", &Image{URI: "mxc://example.com/logo", File: logo})
-	eml.SetImage("cid:photo@example.com", nil)
-	if !eml.HasImage("cid:photo@example.com") || eml.HasImage("cid:unknown@example.com") {
+	eml.SetImage("cid:logo%2B1@example.com", &Image{URI: "mxc://example.com/logo", Width: 4, Height: 4, File: logo})
+	eml.SetImage("cid:photo@example.com", &Image{URI: "mxc://example.com/photo", Width: 1600, Height: 1200, File: photo})
+	eml.SetImage("cid:broken@example.com", nil)
+	if !eml.HasImage("cid:broken@example.com") || eml.HasImage("cid:unknown@example.com") {
 		t.Error("processed images are not tracked")
+	}
+	if eml.UploadedImage(photo) == nil || eml.UploadedImage(other) != nil {
+		t.Error("uploaded images are not found by their file")
 	}
 	msg := parsed(t, eml.Content("", testOptions()))
 
-	unembedded := eml.UnembeddedInlines(msg.FormattedBody)
-	if len(unembedded) != 2 || unembedded[0] != photo || unembedded[1] != other {
-		t.Errorf("only the embedded logo should be skipped, got %d files", len(unembedded))
+	toSend := eml.InlinesToSend(msg.FormattedBody)
+	if len(toSend) != 3 || toSend[0] != photo || toSend[1] != broken || toSend[2] != other {
+		t.Errorf("only the small embedded logo should be skipped, got %d files", len(toSend))
+	}
+}
+
+func TestIsPhoto(t *testing.T) {
+	for _, test := range []struct {
+		width, height int
+		expected      bool
+	}{{1600, 1200, true}, {300, 400, true}, {600, 80, true}, {240, 64, false}, {0, 0, false}} {
+		if photo := (&Image{Width: test.width, Height: test.height}).IsPhoto(); photo != test.expected {
+			t.Errorf("%dx%d: expected %v, got %v", test.width, test.height, test.expected, photo)
+		}
 	}
 }
 
@@ -366,12 +391,35 @@ func TestFromEnvelope(t *testing.T) {
 	if len(eml.InlineFiles) != 1 || eml.InlineFiles[0].ContentID != "logo@example.com" || eml.InlineFiles[0].Name != "image.png" {
 		t.Fatalf("inline image without disposition was not found: %+v", eml.InlineFiles)
 	}
-	if eml.InlineFile("cid:logo@example.com") != eml.InlineFiles[0] {
+	if eml.CIDFile("cid:logo@example.com") != eml.InlineFiles[0] {
 		t.Error("inline image cannot be found by its content ID")
 	}
 	if strings.Contains(eml.HTML, "<style>") || !strings.Contains(eml.FullVersion().Name, "email.html") ||
 		!bytes.Contains(eml.FullVersion().Content, []byte("<style>")) {
 		t.Error("the full version should keep the original HTML")
+	}
+}
+
+func TestFromEnvelope_AttachedImageInText(t *testing.T) {
+	photo := base64.StdEncoding.EncodeToString(testPNG(t, 8, 8))
+	raw := "From: john@example.com\r\nTo: inbox@example.org\r\nSubject: Site photo\r\n" +
+		"Date: Tue, 29 Sep 2026 10:00:00 +0300\r\nMIME-Version: 1.0\r\n" +
+		"Content-Type: multipart/related; boundary=\"b1\"\r\n\r\n" +
+		"--b1\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<p>Today: <img src=\"cid:image001.jpg@01DB\"></p>\r\n" +
+		"--b1\r\nContent-Type: image/png; name=\"image001.png\"\r\nContent-Disposition: attachment; filename=\"image001.png\"\r\n" +
+		"Content-Transfer-Encoding: base64\r\nContent-ID: <image001.jpg@01DB>\r\n\r\n" + photo + "\r\n--b1--\r\n"
+	envelope, err := enmime.ReadEnvelope(strings.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eml := FromEnvelope("inbox@example.org", envelope)
+
+	if len(eml.Files) != 1 || eml.CIDFile("cid:image001.jpg@01DB") != eml.Files[0] {
+		t.Fatalf("an image sent as an attachment cannot be found by its content ID: %+v", eml.Files)
+	}
+	if eml.Sent.IsZero() || eml.Sent.Hour() != 10 {
+		t.Errorf("the date the email was sent is missing: %v", eml.Sent)
 	}
 }
 
@@ -391,11 +439,14 @@ func TestFromEnvelope_UptimeRobot(t *testing.T) {
 		t.Fatalf("expected one image, got %v", sources)
 	}
 	eml.SetImage(sources[0], &Image{URI: "mxc://example.com/logo", Width: 549, Height: 79})
+	defer func(original func() time.Time) { now = original }(now)
+	now = func() time.Time { return eml.Sent.Add(time.Minute) } // arrived right away, so no date is shown
 
 	msg := parsed(t, eml.Content("", testOptions()))
 
 	for _, expected := range []string{
-		"<h3>Monitor is UP: Buscarron</h3><p>From: <strong>UptimeRobot</strong> &lt;alert@uptimerobot.com&gt;<br>To: test@localhost</p><hr>",
+		"<h3>✉️ Monitor is UP: Buscarron</h3><p>" + muted("From:") + " <strong>UptimeRobot</strong> " +
+			muted("&lt;alert@uptimerobot.com&gt;") + "</p><hr>",
 		`<img src="mxc://example.com/logo" alt="UptimeRobot" width="180" height="25"></a> <a href=`,
 		"<h3>Buscarron is up.</h3><p>Hello etke.cc,</p>",
 		"<p>Monitor name</p><h4>Buscarron</h4><hr><p>Checked URL</p>",

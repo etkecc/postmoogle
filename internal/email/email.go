@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"strings"
+	"time"
 
 	"github.com/emersion/go-msgauth/dkim"
 	"github.com/etkecc/go-linkpearl"
@@ -18,6 +19,7 @@ import (
 // Email object
 type Email struct {
 	Date        string
+	Sent        time.Time // time from the Date header, zero if unknown
 	MessageID   string
 	InReplyTo   string
 	References  string
@@ -76,6 +78,8 @@ func FromEnvelope(rcptto string, envelope *enmime.Envelope) *Email {
 	files := make([]*utils.File, 0, len(envelope.Attachments))
 	for _, attachment := range envelope.Attachments {
 		file := utils.NewFile(attachment.FileName, attachment.Content)
+		// some mail apps mark images shown in the text as attachments, the HTML still links them by cid:
+		file.ContentID = attachment.ContentID
 		files = append(files, file)
 	}
 
@@ -97,6 +101,7 @@ func FromEnvelope(rcptto string, envelope *enmime.Envelope) *Email {
 
 	email := &Email{
 		Date:         date,
+		Sent:         datetime,
 		MessageID:    envelope.GetHeader("Message-Id"),
 		InReplyTo:    envelope.GetHeader("In-Reply-To"),
 		References:   envelope.GetHeader("References"),
