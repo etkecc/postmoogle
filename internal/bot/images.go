@@ -33,7 +33,7 @@ func (b *Bot) embedImages(ctx context.Context, eml *email.Email, cfg config.Room
 	if !options.HTML || (!options.InlineImages && !options.RemoteImages) {
 		return
 	}
-	sources := imagesToLoad(eml, options)
+	sources := b.imagesToLoad(eml, options)
 	if len(sources) == 0 {
 		return
 	}
@@ -62,7 +62,7 @@ func (b *Bot) embedImages(ctx context.Context, eml *email.Email, cfg config.Room
 }
 
 // imagesToLoad returns image sources allowed by the room options that were not processed yet, within limits
-func imagesToLoad(eml *email.Email, options *email.ContentOptions) []string {
+func (b *Bot) imagesToLoad(eml *email.Email, options *email.ContentOptions) []string {
 	var sources []string
 	var total, remote int
 	for _, src := range eml.ImageSources() {
@@ -85,7 +85,13 @@ func imagesToLoad(eml *email.Email, options *email.ContentOptions) []string {
 func (b *Bot) loadImage(ctx context.Context, eml *email.Email, src string) *email.Image {
 	file, err := b.imageFile(ctx, eml, src)
 	if err != nil {
-		b.log.Debug().Err(err).Str("src", shorten(src, 100)).Msg("cannot load email image")
+		b.log.Debug().Err(err).Str("src", utils.Truncate(src, 100)).Msg("cannot load email image")
+		return nil
+	}
+	// the whole image is decoded, so only real images are uploaded, with their real size
+	width, height, err := file.ImageSize()
+	if err != nil {
+		b.log.Debug().Err(err).Str("src", utils.Truncate(src, 100)).Msg("email image is not valid")
 		return nil
 	}
 	resp, err := b.lp.GetClient().UploadMedia(ctx, *file.Convert())
@@ -94,7 +100,6 @@ func (b *Bot) loadImage(ctx context.Context, eml *email.Email, src string) *emai
 		return nil
 	}
 
-	width, height := file.ImageSize()
 	img := &email.Image{URI: string(resp.ContentURI.CUString()), Width: width, Height: height}
 	if email.ImageKind(src) == email.ImageInline {
 		img.File = file
@@ -120,11 +125,4 @@ func (b *Bot) imageFile(ctx context.Context, eml *email.Email, src string) (*uti
 	default:
 		return nil, errImageUnavailable
 	}
-}
-
-func shorten(text string, length int) string {
-	if len(text) <= length {
-		return text
-	}
-	return text[:length] + "..."
 }

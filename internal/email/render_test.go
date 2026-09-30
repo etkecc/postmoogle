@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+// renderBlocks renders the source with a new renderer and returns its blocks
+func renderBlocks(source string, resolve imageResolver, flatTables bool) []string {
+	blocks, _ := newRenderer(resolve, flatTables).render(source)
+	return blocks
+}
+
 func testResolver(src string) *Image {
 	if strings.Contains(src, "missing") {
 		return nil
@@ -151,7 +157,7 @@ func TestRenderHTML(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			output := strings.Join(renderHTML(test.input, testResolver, false), "")
+			output := strings.Join(renderBlocks(test.input, testResolver, false), "")
 			if output != test.expected {
 				t.Errorf("\nexpected: %s\n  output: %s", test.expected, output)
 			}
@@ -162,7 +168,7 @@ func TestRenderHTML(t *testing.T) {
 func TestRenderHTML_TinyNaturalSize(t *testing.T) {
 	resolve := func(string) *Image { return &Image{URI: "mxc://example.com/pixel", Width: 1, Height: 1} }
 
-	output := strings.Join(renderHTML(`<p>text <img src="https://example.com/open.gif"></p>`, resolve, false), "")
+	output := strings.Join(renderBlocks(`<p>text <img src="https://example.com/open.gif"></p>`, resolve, false), "")
 
 	if output != "<p>text</p>" {
 		t.Errorf("tracking pixel was not removed: %s", output)
@@ -172,7 +178,7 @@ func TestRenderHTML_TinyNaturalSize(t *testing.T) {
 func TestRenderHTML_FlatTables(t *testing.T) {
 	input := `<table><tr><th>Item</th><th>Qty</th></tr><tr><td>Apple</td><td>2</td></tr></table>`
 
-	output := strings.Join(renderHTML(input, nil, true), "")
+	output := strings.Join(renderBlocks(input, nil, true), "")
 
 	if output != "<p>Item · Qty<br>Apple · 2</p>" {
 		t.Errorf("unexpected output: %s", output)
@@ -183,7 +189,7 @@ func TestRenderHTML_DeepNesting(t *testing.T) {
 	input := strings.Repeat("<div><table><tr><td>", 90) + "deep" + strings.Repeat("</td></tr></table></div>", 90) + "<p>after</p>"
 	started := time.Now()
 
-	output := strings.Join(renderHTML(input, nil, false), "")
+	output := strings.Join(renderBlocks(input, nil, false), "")
 
 	if output != "<p>deep</p><p>after</p>" {
 		t.Errorf("unexpected output: %s", output)
@@ -196,7 +202,7 @@ func TestRenderHTML_DeepNesting(t *testing.T) {
 func TestRenderHTML_TooDeep(t *testing.T) {
 	input := strings.Repeat("<div>", 1000) + "deep" + strings.Repeat("</div>", 1000)
 
-	output := renderHTML(input, nil, false)
+	output := renderBlocks(input, nil, false)
 
 	if len(output) != 0 {
 		t.Errorf("HTML rejected by the parser should not be rendered, got: %v", output)
@@ -222,7 +228,7 @@ func TestRenderHTML_Transactional(t *testing.T) {
 			`<a href="https://track.example.com/youtube"><img src="mxc://example.com/youtube.png" alt="YouTube" width="20" height="20"></a></p>`,
 	}
 
-	output := renderHTML(string(input), testResolver, false)
+	output := renderBlocks(string(input), testResolver, false)
 
 	if strings.Join(output, "\n") != strings.Join(expected, "\n") {
 		t.Errorf("\nexpected:\n%s\n\noutput:\n%s", strings.Join(expected, "\n"), strings.Join(output, "\n"))
@@ -244,7 +250,8 @@ func TestDisplaySize(t *testing.T) {
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			width, height := displaySize(test.width, test.height, test.naturalWidth, test.naturalHeight)
+			img := &Image{Width: test.naturalWidth, Height: test.naturalHeight}
+			width, height := img.displaySize(test.width, test.height)
 			if width != test.expectedWidth || height != test.expectedHeight {
 				t.Errorf("expected %dx%d, got %dx%d", test.expectedWidth, test.expectedHeight, width, height)
 			}
@@ -311,7 +318,7 @@ func TestRenderDocument_Quotes(t *testing.T) {
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			blocks, quoteAt := renderDocument(test.input, testResolver, false)
+			blocks, quoteAt := newRenderer(testResolver, false).render(test.input)
 			if quoteAt != test.quoteAt {
 				t.Errorf("expected the quote at %d, got %d: %q", test.quoteAt, quoteAt, blocks)
 			}
@@ -326,7 +333,7 @@ func TestRenderHTML_CodeByClass(t *testing.T) {
 	input := `<div class="highlight highlight-source-go"><pre>const x = 1 // one</pre></div>` +
 		`<pre class="language-sh">ls -la</pre><pre>plain` + "\n" + `text</pre>`
 
-	output := strings.Join(renderHTML(input, nil, false), "")
+	output := strings.Join(renderBlocks(input, nil, false), "")
 
 	expected := `<pre><code>const x = 1 // one</code></pre><pre><code>ls -la</code></pre><p>plain<br>text</p>`
 	if output != expected {

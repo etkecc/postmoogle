@@ -30,7 +30,7 @@ func TestContent_Recipient(t *testing.T) {
 
 			msg := parsed(t, eml.Content("", testOptions()))
 
-			if shown := strings.Contains(msg.FormattedBody, muted("To:")); shown != test.shown {
+			if shown := strings.Contains(msg.FormattedBody, eml.muted("To:")); shown != test.shown {
 				t.Errorf("To line shown: %v, expected %v: %s", shown, test.shown, msg.FormattedBody)
 			}
 		})
@@ -39,7 +39,7 @@ func TestContent_Recipient(t *testing.T) {
 
 func TestContent_SentDate(t *testing.T) {
 	defer func(original func() time.Time) { now = original }(now)
-	sent := time.Date(2024, 3, 11, 9, 15, 0, 0, time.Local)
+	sent := time.Date(2024, 3, 11, 11, 15, 0, 0, time.FixedZone("CEST", 2*60*60))
 	eml := testEmail("", "<p>Body</p>")
 	eml.Sent = sent
 
@@ -50,8 +50,8 @@ func TestContent_SentDate(t *testing.T) {
 
 	now = func() time.Time { return sent.Add(48 * time.Hour) }
 	msg := parsed(t, eml.Content("", testOptions()))
-	if !strings.Contains(msg.FormattedBody, muted("Date:")+" Mon, 11 Mar 2024 09:15</p>") ||
-		!strings.Contains(msg.Body, "\nDate: Mon, 11 Mar 2024 09:15\n") {
+	if !strings.Contains(msg.FormattedBody, eml.muted("Date:")+" Mon, 11 Mar 2024 09:15 UTC</p>") ||
+		!strings.Contains(msg.Body, "\nDate: Mon, 11 Mar 2024 09:15 UTC\n") {
 		t.Errorf("an old email should show when it was sent: %s", msg.FormattedBody)
 	}
 }

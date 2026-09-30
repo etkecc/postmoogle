@@ -25,6 +25,7 @@ require (
 	github.com/rs/zerolog v1.35.1
 	github.com/swaggo/swag v1.16.6
 	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba
+	golang.org/x/image v0.46.0
 	golang.org/x/net v0.59.0
 	maunium.net/go/mautrix v0.31.0
 	modernc.org/sqlite v1.59.0

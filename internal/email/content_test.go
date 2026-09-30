@@ -69,8 +69,8 @@ func TestContent_Header(t *testing.T) {
 	msg := parsed(t, eml.Content("", testOptions()))
 
 	expectedHTML := "<h3>✉️ Hello there</h3>" +
-		"<p>" + muted("From:") + " <strong>Jane Doe</strong> " + muted("&lt;jane@example.com&gt;") +
-		"<br>" + muted("To:") + " inbox@example.org (news)<br>" + muted("Cc:") + " a@example.com, b@example.com</p>" +
+		"<p>" + eml.muted("From:") + " <strong>Jane Doe</strong> " + eml.muted("&lt;jane@example.com&gt;") +
+		"<br>" + eml.muted("To:") + " inbox@example.org (news)<br>" + eml.muted("Cc:") + " a@example.com, b@example.com</p>" +
 		"<hr><p>Body</p>"
 	if msg.FormattedBody != expectedHTML {
 		t.Errorf("\nexpected: %s\n  output: %s", expectedHTML, msg.FormattedBody)
@@ -350,7 +350,7 @@ func TestInlineFiles(t *testing.T) {
 	}
 	msg := parsed(t, eml.Content("", testOptions()))
 
-	toSend := eml.InlinesToSend(msg.FormattedBody)
+	toSend := eml.FilesToSend(eml.InlineFiles, msg.FormattedBody)
 	if len(toSend) != 3 || toSend[0] != photo || toSend[1] != broken || toSend[2] != other {
 		t.Errorf("only the small embedded logo should be skipped, got %d files", len(toSend))
 	}
@@ -445,8 +445,8 @@ func TestFromEnvelope_UptimeRobot(t *testing.T) {
 	msg := parsed(t, eml.Content("", testOptions()))
 
 	for _, expected := range []string{
-		"<h3>✉️ Monitor is UP: Buscarron</h3><p>" + muted("From:") + " <strong>UptimeRobot</strong> " +
-			muted("&lt;alert@uptimerobot.com&gt;") + "</p><hr>",
+		"<h3>✉️ Monitor is UP: Buscarron</h3><p>" + eml.muted("From:") + " <strong>UptimeRobot</strong> " +
+			eml.muted("&lt;alert@uptimerobot.com&gt;") + "</p><hr>",
 		`<img src="mxc://example.com/logo" alt="UptimeRobot" width="180" height="25"></a> <a href=`,
 		"<h3>Buscarron is up.</h3><p>Hello etke.cc,</p>",
 		"<p>Monitor name</p><h4>Buscarron</h4><hr><p>Checked URL</p>",

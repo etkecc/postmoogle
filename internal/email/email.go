@@ -89,12 +89,15 @@ func FromEnvelope(rcptto string, envelope *enmime.Envelope) *Email {
 		file.ContentID = inline.ContentID
 		inlines = append(inlines, file)
 	}
-	// images of multipart/related emails often have a Content-ID but no Content-Disposition
+	// multipart/related images may have no Content-Disposition; other parts, like calendar invites, are skipped
 	for _, part := range envelope.OtherParts {
-		if part.ContentID == "" {
+		if part.ContentID == "" || !strings.HasPrefix(strings.ToLower(part.ContentType), "image/") {
 			continue
 		}
 		file := utils.NewFile(part.FileName, part.Content)
+		if !file.IsWebImage() {
+			continue
+		}
 		file.ContentID = part.ContentID
 		inlines = append(inlines, file)
 	}
@@ -106,7 +109,6 @@ func FromEnvelope(rcptto string, envelope *enmime.Envelope) *Email {
 		InReplyTo:    envelope.GetHeader("In-Reply-To"),
 		References:   envelope.GetHeader("References"),
 		From:         Address(envelope.GetHeader("From")),
-		FromName:     senderName(envelope),
 		To:           Address(envelope.GetHeader("To")),
 		RcptTo:       Address(rcptto),
 		CC:           AddressList(envelope.GetHeader("Cc")),
@@ -117,12 +119,13 @@ func FromEnvelope(rcptto string, envelope *enmime.Envelope) *Email {
 		InlineFiles:  inlines,
 		originalHTML: envelope.HTML,
 	}
+	email.FromName = email.senderName(envelope)
 
 	return email
 }
 
 // senderName returns the display name of the email sender, e.g. "Jane Doe" for "Jane Doe" <jane@example.com>
-func senderName(envelope *enmime.Envelope) string {
+func (e *Email) senderName(envelope *enmime.Envelope) string {
 	from, err := envelope.AddressList("From")
 	if err != nil || len(from) == 0 {
 		return ""
@@ -183,25 +186,6 @@ func (e *Email) FullVersion() *utils.File {
 		return utils.NewFile("email.html", []byte(e.HTML))
 	}
 	return utils.NewFile("email.txt", []byte(e.Text))
-}
-
-// raw returns the email metadata stored in the event, used to reply and to thread emails
-func (e *Email) raw(options *ContentOptions) map[string]any {
-	var cc string
-	if len(e.CC) > 0 {
-		cc = strings.Join(e.CC, ", ")
-	}
-
-	return map[string]any{
-		options.MessageIDKey:  e.MessageID,
-		options.InReplyToKey:  e.InReplyTo,
-		options.ReferencesKey: e.References,
-		options.SubjectKey:    e.Subject,
-		options.RcptToKey:     e.RcptTo,
-		options.FromKey:       e.From,
-		options.ToKey:         e.To,
-		options.CcKey:         cc,
-	}
 }
 
 // Compose converts the email object to a string (to be used for delivery via SMTP) and possibly DKIM-signs it

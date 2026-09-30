@@ -59,7 +59,7 @@ func New(
 	prefix string,
 	domains []string,
 	admins []string,
-	mbxc MBXConfig,
+	mbxc *MBXConfig,
 ) (*Bot, error) {
 	b := &Bot{
 		domains:    domains,
@@ -67,7 +67,7 @@ func New(
 		rooms:      sync.Map{},
 		adminRooms: []id.RoomID{},
 		proxies:    proxies,
-		mbxc:       mbxc,
+		mbxc:       *mbxc,
 		cfg:        cfg,
 		log:        log,
 		lp:         lp,
@@ -92,7 +92,7 @@ func New(
 	b.allowedAdmins = allowedAdmins
 
 	// a mistake here must not stop the mail of the mailboxes that already work
-	b.setup, err = parseMailboxSetup(mbxc.Setup, domains)
+	b.setup, err = b.parseMailboxSetup(mbxc.Setup)
 	if err != nil {
 		log.Error().Err(err).Msg("mailboxes will not be set up")
 	}

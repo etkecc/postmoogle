@@ -238,10 +238,10 @@ func (b *Bot) initCommands() commandList {
 			allowed:   b.allowOwner,
 		},
 		{
-			key: config.RoomNoRemoteImages,
+			key: config.RoomRemoteImages,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - do not download images linked in emails; `false` - download linked images and show them inside the message)",
-				config.RoomNoRemoteImages,
+				"Get or set `%s` of the room (`true` - download images linked in emails and show them inside the message; `false` - show their descriptions instead)",
+				config.RoomRemoteImages,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,

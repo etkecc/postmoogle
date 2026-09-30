@@ -24,29 +24,42 @@ func testPNG(t *testing.T, width, height int) []byte {
 
 func TestPublicAddr(t *testing.T) {
 	tests := map[string]bool{
-		"8.8.8.8":              true,
-		"1.1.1.1":              true,
-		"2606:4700:4700::1111": true,
-		"127.0.0.1":            false,
-		"10.1.2.3":             false,
-		"172.16.0.1":           false,
-		"192.168.1.1":          false,
-		"169.254.169.254":      false,
-		"100.64.0.1":           false,
-		"0.0.0.0":              false,
-		"255.255.255.255":      false,
-		"224.0.0.1":            false,
-		"198.18.0.1":           false,
-		"::":                   false,
-		"::1":                  false,
-		"fe80::1":              false,
-		"fc00::1":              false,
-		"ff02::1":              false,
-		"::ffff:127.0.0.1":     false,
-		"::ffff:10.0.0.1":      false,
-		"::127.0.0.1":          false,
-		"64:ff9b::a00:1":       false,
-		"2002:a00:1::1":        false,
+		"8.8.8.8":                  true,
+		"1.1.1.1":                  true,
+		"2606:4700:4700::1111":     true,
+		"127.0.0.1":                false,
+		"10.1.2.3":                 false,
+		"172.16.0.1":               false,
+		"192.168.1.1":              false,
+		"169.254.169.254":          false,
+		"100.64.0.1":               false,
+		"0.0.0.0":                  false,
+		"255.255.255.255":          false,
+		"224.0.0.1":                false,
+		"198.18.0.1":               false,
+		"::":                       false,
+		"::1":                      false,
+		"fe80::1":                  false,
+		"fc00::1":                  false,
+		"ff02::1":                  false,
+		"::ffff:127.0.0.1":         false,
+		"::ffff:10.0.0.1":          false,
+		"::127.0.0.1":              false,
+		"64:ff9b::a00:1":           false,
+		"2002:a00:1::1":            false,
+		"fec0::1":                  false,
+		"2001::a00:1":              false,
+		"2001:1::5efe:7f00:1":      false,
+		"2a01:4f8::200:5efe:a00:1": false,
+		"::ffff:0:127.0.0.1":       false,
+		"192.88.99.1":              false,
+		"2001:2::1":                false,
+		"2001:10::1":               false,
+		"2001:20::1":               false,
+		"3fff::1":                  false,
+		"5f00::1":                  false,
+		"2a01:4f8::1":              true,
+		"2a01:4f8::5efe:1":         true,
 	}
 
 	for input, expected := range tests {
@@ -68,6 +81,27 @@ func TestImageFetcher_RefusesLocalAddresses(t *testing.T) {
 
 	if !errors.Is(err, ErrForbiddenAddress) {
 		t.Errorf("expected ErrForbiddenAddress, got %v", err)
+	}
+}
+
+func TestImageFetcher_RefusesRedirectsToLocalAddresses(t *testing.T) {
+	targets := []string{"http://169.254.169.254/latest/meta-data/", "http://[::1]:8080/image.png", "http://10.0.0.1/image.png"}
+	for _, target := range targets {
+		t.Run(target, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, target, http.StatusFound)
+			}))
+			defer server.Close()
+			serverAddr := netip.MustParseAddrPort(server.Listener.Addr().String()).Addr()
+			// the test server itself is allowed, like a public host, so only the redirect target is checked
+			fetcher := newImageFetcher(1024, func(addr netip.Addr) bool { return addr == serverAddr || PublicAddr(addr) })
+
+			_, err := fetcher.Fetch(context.Background(), server.URL+"/image.png")
+
+			if !errors.Is(err, ErrForbiddenAddress) {
+				t.Errorf("expected ErrForbiddenAddress, got %v", err)
+			}
+		})
 	}
 }
 
@@ -98,8 +132,8 @@ func TestImageFetcher_Fetch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if width, height := file.ImageSize(); file.Name != "logo.png" || file.Type != "image/png" || width != 3 || height != 2 {
-		t.Errorf("unexpected file %s %s %dx%d", file.Name, file.Type, width, height)
+	if width, height, err := file.ImageSize(); file.Name != "logo.png" || file.Type != "image/png" || width != 3 || height != 2 {
+		t.Errorf("unexpected file %s %s %dx%d %v", file.Name, file.Type, width, height, err)
 	}
 
 	for path, expected := range map[string]error{

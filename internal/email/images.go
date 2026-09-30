@@ -1,7 +1,10 @@
 package email
 
 import (
+	"html"
+	"math"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/etkecc/postmoogle/internal/utils"
@@ -14,8 +17,14 @@ const (
 	ImageRemote = "remote" // http(s) URL
 )
 
-// minPhotoSize is the shortest longer side of a photo in pixels, smaller images are logos, icons, and signatures
-const minPhotoSize = 400
+const (
+	// minPhotoSize is the shortest longer side of a photo in pixels, smaller images are logos, icons, and signatures
+	minPhotoSize = 400
+	// maxImageWidth is the widest an embedded image is displayed, in pixels
+	maxImageWidth = 600
+	// maxDimension caps image dimensions parsed from HTML, in pixels
+	maxDimension = 10000
+)
 
 // Image is an email image uploaded to the Matrix content repository
 type Image struct {
@@ -30,14 +39,73 @@ func (img *Image) IsPhoto() bool {
 	return max(img.Width, img.Height) >= minPhotoSize
 }
 
+// tag returns the HTML tag showing the image with the given size; a size below 1 is left to the client
+func (img *Image) tag(alt, title string, width, height int) string {
+	var tag strings.Builder
+	tag.WriteString(`<img src="` + html.EscapeString(img.URI) + `"`)
+	if alt != "" {
+		tag.WriteString(` alt="` + html.EscapeString(alt) + `"`)
+	}
+	if title != "" {
+		tag.WriteString(` title="` + html.EscapeString(title) + `"`)
+	}
+	if width > 0 {
+		tag.WriteString(` width="` + strconv.Itoa(width) + `"`)
+	}
+	if height > 0 {
+		tag.WriteString(` height="` + strconv.Itoa(height) + `"`)
+	}
+	tag.WriteString(">")
+	return tag.String()
+}
+
+// displaySize calculates the size the image is shown at, keeping its aspect ratio; -1 means unknown
+func (img *Image) displaySize(width, height int) (displayWidth, displayHeight int) {
+	if img.Width > 0 && img.Height > 0 {
+		switch {
+		case width < 0 && height < 0:
+			width, height = img.scale(img.Width, 1, 1), img.scale(img.Height, 1, 1)
+		case height < 0:
+			height = img.scale(width, img.Height, img.Width)
+		case width < 0:
+			width = img.scale(height, img.Width, img.Height)
+		}
+	}
+	if width > maxImageWidth {
+		if height > 0 {
+			height = img.scale(height, maxImageWidth, width)
+		}
+		width = maxImageWidth
+	}
+	return width, height
+}
+
+// scale returns value * numerator / denominator, limited to maxDimension to stay safe with huge images
+func (img *Image) scale(value, numerator, denominator int) int {
+	return int(math.Min(float64(value)*float64(numerator)/float64(denominator), maxDimension))
+}
+
+// shownIn reports whether the image is shown inside any of the formatted bodies
+func (img *Image) shownIn(bodies []string) bool {
+	for _, body := range bodies {
+		if strings.Contains(body, img.URI) {
+			return true
+		}
+	}
+	return false
+}
+
 // ImageKind returns the kind of an image source, or an empty string if it is not supported
 func ImageKind(src string) string {
+	prefixed := func(prefix string) bool {
+		return len(src) >= len(prefix) && strings.EqualFold(src[:len(prefix)], prefix)
+	}
 	switch {
-	case hasPrefixFold(src, "cid:"):
+	case prefixed("cid:"):
 		return ImageInline
-	case hasPrefixFold(src, "data:image/"):
+	case prefixed("data:image/"):
 		return ImageData
-	case hasPrefixFold(src, "https://"), hasPrefixFold(src, "http://"), strings.HasPrefix(src, "//"):
+	case prefixed("https://"), prefixed("http://"), strings.HasPrefix(src, "//"):
 		return ImageRemote
 	default:
 		return ""
@@ -51,13 +119,13 @@ func (e *Email) ImageSources() []string {
 	}
 	seen := map[string]bool{}
 	sources := []string{}
-	renderHTML(e.HTML, func(src string) *Image {
+	newRenderer(func(src string) *Image {
 		if !seen[src] && ImageKind(src) != "" {
 			seen[src] = true
 			sources = append(sources, src)
 		}
 		return nil
-	}, false)
+	}, false).render(e.HTML)
 	return sources
 }
 
@@ -113,25 +181,16 @@ func (e *Email) UploadedImage(file *utils.File) *Image {
 	return nil
 }
 
-// InlinesToSend returns inline attachments not shown inside the bodies, and photos, to open them in full size
-func (e *Email) InlinesToSend(bodies ...string) []*utils.File {
-	files := make([]*utils.File, 0, len(e.InlineFiles))
-	for _, file := range e.InlineFiles {
+// FilesToSend drops the files already shown as images inside the bodies, except photos, to open them in full size
+func (e *Email) FilesToSend(files []*utils.File, bodies ...string) []*utils.File {
+	toSend := make([]*utils.File, 0, len(files))
+	for _, file := range files {
 		img := e.UploadedImage(file)
-		if img == nil || img.IsPhoto() || !shownIn(img, bodies) {
-			files = append(files, file)
+		if img == nil || img.IsPhoto() || !img.shownIn(bodies) {
+			toSend = append(toSend, file)
 		}
 	}
-	return files
-}
-
-func shownIn(img *Image, bodies []string) bool {
-	for _, body := range bodies {
-		if strings.Contains(body, img.URI) {
-			return true
-		}
-	}
-	return false
+	return toSend
 }
 
 // imageResolver returns images allowed by the options, to be used for rendering
@@ -151,8 +210,4 @@ func (e *Email) imageResolver(options *ContentOptions) imageResolver {
 		}
 		return e.Images[src]
 	}
-}
-
-func hasPrefixFold(text, prefix string) bool {
-	return len(text) >= len(prefix) && strings.EqualFold(text[:len(prefix)], prefix)
 }

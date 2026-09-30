@@ -31,8 +31,8 @@ type mailboxSetup struct {
 	domain  string
 }
 
-// parseMailboxSetup reads and checks the JSON list of mailboxes to set up
-func parseMailboxSetup(value string, domains []string) ([]*mailboxSetup, error) {
+// parseMailboxSetup reads and checks the JSON list of mailboxes to set up, which must use the bot domains
+func (b *Bot) parseMailboxSetup(value string) ([]*mailboxSetup, error) {
 	if strings.TrimSpace(value) == "" {
 		return nil, nil
 	}
@@ -42,8 +42,8 @@ func parseMailboxSetup(value string, domains []string) ([]*mailboxSetup, error) 
 	}
 	for _, mb := range list {
 		mb.mailbox, _, mb.domain = utils.EmailParts(mb.Address)
-		if !strings.Contains(mb.Address, "@") || mb.mailbox == "" || !slices.Contains(domains, mb.domain) {
-			return nil, fmt.Errorf("mailbox %q needs an address in one of the domains %s", mb.Address, strings.Join(domains, ", "))
+		if !strings.Contains(mb.Address, "@") || mb.mailbox == "" || !slices.Contains(b.domains, mb.domain) {
+			return nil, fmt.Errorf("mailbox %q needs an address in one of the domains %s", mb.Address, strings.Join(b.domains, ", "))
 		}
 		if _, _, err := id.UserID(mb.Owner).Parse(); err != nil {
 			return nil, fmt.Errorf("owner %q of mailbox %q is not a Matrix user ID: %w", mb.Owner, mb.Address, err)

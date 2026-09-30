@@ -27,20 +27,20 @@ const (
 	RoomAutoreply = "autoreply"
 	RoomRelay     = "relay"
 
-	RoomThreadify      = "threadify"
-	RoomStripify       = "stripify"
-	RoomNoCC           = "nocc"
-	RoomNoCollapse     = "nocollapse"
-	RoomNoFiles        = "nofiles"
-	RoomNoHTML         = "nohtml"
-	RoomNoInlines      = "noinlines"
-	RoomNoRemoteImages = "noremoteimages"
-	RoomNoRecipient    = "norecipient"
-	RoomNoReplies      = "noreplies"
-	RoomNoSend         = "nosend"
-	RoomNoSender       = "nosender"
-	RoomNoSubject      = "nosubject"
-	RoomNoThreads      = "nothreads"
+	RoomThreadify    = "threadify"
+	RoomStripify     = "stripify"
+	RoomRemoteImages = "remoteimages"
+	RoomNoCC         = "nocc"
+	RoomNoCollapse   = "nocollapse"
+	RoomNoFiles      = "nofiles"
+	RoomNoHTML       = "nohtml"
+	RoomNoInlines    = "noinlines"
+	RoomNoRecipient  = "norecipient"
+	RoomNoReplies    = "noreplies"
+	RoomNoSend       = "nosend"
+	RoomNoSender     = "nosender"
+	RoomNoSubject    = "nosubject"
+	RoomNoThreads    = "nothreads"
 
 	RoomSpamcheckRBL  = "spamcheck:rbl"
 	RoomSpamcheckDKIM = "spamcheck:dkim"
@@ -155,8 +155,8 @@ func (s Room) NoInlines() bool {
 	return utils.Bool(s.Get(RoomNoInlines))
 }
 
-func (s Room) NoRemoteImages() bool {
-	return utils.Bool(s.Get(RoomNoRemoteImages))
+func (s Room) RemoteImages() bool {
+	return utils.Bool(s.Get(RoomRemoteImages))
 }
 
 func (s Room) NoCollapse() bool {
@@ -244,7 +244,7 @@ func (s Room) ContentOptions() *email.ContentOptions {
 		Stripify:     s.Stripify(),
 		Threadify:    s.Threadify(),
 		InlineImages: !s.NoInlines(),
-		RemoteImages: !s.NoRemoteImages(),
+		RemoteImages: s.RemoteImages(),
 		Collapse:     !s.NoCollapse(),
 
 		ToKey:         "cc.etke.postmoogle.to",

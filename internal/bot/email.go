@@ -176,7 +176,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 
 	content := eml.Content(threadID, cfg.ContentOptions())
 	truncated := eml.Truncated()
-	bodies := []string{formattedBody(content)}
+	bodies := []string{b.formattedBody(content)}
 	eventID, serr := b.lp.Send(ctx, roomID, content)
 	if serr != nil {
 		if !strings.Contains(serr.Error(), "M_UNKNOWN") { // if it's not an unknown event error
@@ -205,7 +205,7 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 		}
 		bodyContent := eml.ContentBody(threadID, cfg.ContentOptions())
 		truncated = truncated || eml.Truncated()
-		bodies = append(bodies, formattedBody(bodyContent))
+		bodies = append(bodies, b.formattedBody(bodyContent))
 		_, berr := b.lp.Send(ctx, roomID, bodyContent)
 		if berr != nil {
 			return berr
@@ -217,13 +217,13 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 		files = append(files, eml.FullVersion())
 	}
 
-	// inline images shown inside the message are not sent again, except photos
+	// images shown inside the message are not sent again, except photos, whether they came inline or attached
 	if !cfg.NoInlines() {
-		b.sendFiles(ctx, roomID, eml, eml.InlinesToSend(bodies...), cfg.NoThreads(), threadID)
+		b.sendFiles(ctx, roomID, eml, eml.FilesToSend(eml.InlineFiles, bodies...), cfg.NoThreads(), threadID)
 	}
 
 	if !cfg.NoFiles() {
-		b.sendFiles(ctx, roomID, eml, files, cfg.NoThreads(), threadID)
+		b.sendFiles(ctx, roomID, eml, eml.FilesToSend(files, bodies...), cfg.NoThreads(), threadID)
 	}
 
 	if newThread && cfg.Autoreply() != "" {

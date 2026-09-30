@@ -44,7 +44,7 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms
 - [x] Readable HTML emails: layout tables, buttons, and hidden preview texts are converted into clean messages
-- [x] Show email images inside messages (both inline attachments and images linked from the web); photos also go into the thread to open them in full size
+- [x] Show email images inside messages: inline attachments always, images linked from the web when `!pm remoteimages` is on; photos also go into the thread to open them in full size
 - [x] Fold quoted earlier messages of replies and the end of very long emails until opened (`!pm nocollapse` turns it off)
 - [x] Show when an email was sent if it arrives late, e.g. when old emails are imported
 - [x] Set up mailbox rooms from the configuration, without `!pm` commands ([docs/mailboxes.md](docs/mailboxes.md))
@@ -222,7 +222,8 @@ If you want to change them - check available options in the help message (`!pm h
 * **`!pm nothreads`** - Get or set `nothreads` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)
 * **`!pm nofiles`** - Get or set `nofiles` of the room (`true` - ignore email attachments; `false` - upload email attachments)
 * **`!pm noinlines`** - Get or set `noinlines` of the room (`true` - ignore inline attachments; `false` - show inline images inside the message and upload other inline attachments)
-* **`!pm noremoteimages`** - Get or set `noremoteimages` of the room (`true` - do not download images linked in emails; `false` - download linked images and show them inside the message)
+* **`!pm remoteimages`** - Get or set `remoteimages` of the room (`true` - download images linked in emails and show them inside the message; `false` - show their descriptions instead). Off by default, because every linked image is downloaded and stored in the media repository
+* **`!pm nocollapse`** - Get or set `nocollapse` of the room (`true` - show quoted earlier messages and very long emails in full; `false` - fold them until opened)
 
 ---
 
