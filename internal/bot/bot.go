@@ -15,6 +15,7 @@ import (
 
 	"github.com/etkecc/postmoogle/internal/bot/config"
 	"github.com/etkecc/postmoogle/internal/bot/queue"
+	"github.com/etkecc/postmoogle/internal/utils"
 )
 
 // Mailboxes config
@@ -22,6 +23,7 @@ type MBXConfig struct {
 	Reserved   []string
 	Forwarded  []string
 	Activation string
+	Setup      string // JSON list of mailboxes the bot sets up by itself, see docs/mailboxes.md
 }
 
 // Bot represents matrix bot
@@ -42,7 +44,9 @@ type Bot struct {
 	lp                      *linkpearl.Linkpearl
 	mu                      *kit.Mutex
 	q                       *queue.Queue
+	images                  *utils.ImageFetcher
 	handledMembershipEvents sync.Map
+	setup                   []*mailboxSetup
 }
 
 // New creates a new matrix bot
@@ -55,7 +59,7 @@ func New(
 	prefix string,
 	domains []string,
 	admins []string,
-	mbxc MBXConfig,
+	mbxc *MBXConfig,
 ) (*Bot, error) {
 	b := &Bot{
 		domains:    domains,
@@ -63,12 +67,13 @@ func New(
 		rooms:      sync.Map{},
 		adminRooms: []id.RoomID{},
 		proxies:    proxies,
-		mbxc:       mbxc,
+		mbxc:       *mbxc,
 		cfg:        cfg,
 		log:        log,
 		lp:         lp,
 		mu:         kit.NewMutex(),
 		q:          q,
+		images:     utils.NewImageFetcher(maxImageSize),
 	}
 	users, err := b.initBotUsers(context.Background())
 	if err != nil {
@@ -85,6 +90,12 @@ func New(
 		return nil, aerr
 	}
 	b.allowedAdmins = allowedAdmins
+
+	// a mistake here must not stop the mail of the mailboxes that already work
+	b.setup, err = b.parseMailboxSetup(mbxc.Setup)
+	if err != nil {
+		log.Error().Err(err).Msg("mailboxes will not be set up")
+	}
 
 	b.commands = b.initCommands()
 
@@ -129,6 +140,7 @@ func (b *Bot) Start(statusMsg string) error {
 	if err := b.syncRooms(ctx); err != nil {
 		return err
 	}
+	b.setupMailboxes(ctx)
 
 	b.initSync()
 	b.log.Info().Msg("Postmoogle has been started")

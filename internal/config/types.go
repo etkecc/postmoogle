@@ -85,6 +85,7 @@ type Mailboxes struct {
 	Reserved   []string
 	Forwarded  []string
 	Activation string
+	Setup      string // JSON list of mailboxes the bot sets up by itself, see docs/mailboxes.md
 }
 
 type PSD struct {

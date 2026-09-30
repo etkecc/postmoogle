@@ -43,6 +43,11 @@ so you can use it to send emails from your apps and scripts as well.
 - [x] Matrix bot
 - [x] Configuration in room's account data
 - [x] Receive emails to matrix rooms
+- [x] Readable HTML emails: layout tables, buttons, and hidden preview texts are converted into clean messages
+- [x] Show email images inside messages: inline attachments always, images linked from the web when `!pm remoteimages` is on; photos also go into the thread to open them in full size
+- [x] Fold quoted earlier messages of replies and the end of very long emails until opened (`!pm nocollapse` turns it off)
+- [x] Show when an email was sent if it arrives late, e.g. when old emails are imported
+- [x] Set up mailbox rooms from the configuration, without `!pm` commands ([docs/mailboxes.md](docs/mailboxes.md))
 - [x] Receive attachments
 - [x] Subaddressing support
 - [x] Mailbox aliases support
@@ -106,6 +111,7 @@ env vars
 * **POSTMOOGLE_MAILBOXES_RESERVED** - space separated list of reserved mailboxes, [docs/mailboxes.md](docs/mailboxes.md)
 * **POSTMOOGLE_MAILBOXES_FORWARDED** - space separated list of forwarded from emails that should be ignored when sending replies
 * **POSTMOOGLE_MAILBOXES_ACTIVATION** - activation flow for new mailboxes, [docs/mailboxes.md](docs/mailboxes.md)
+* **POSTMOOGLE_MAILBOXES_SETUP** - JSON list of mailboxes the bot sets up by itself, each gets its own room, [docs/mailboxes.md](docs/mailboxes.md)
 * **POSTMOOGLE_MAXSIZE** - max email size (including attachments) in megabytes
 * **POSTMOOGLE_ADMINS** - a space-separated list of admin users. See `POSTMOOGLE_USERS` for syntax examples
 * **POSTMOOGLE_RELAY_HOST** - (global) SMTP hostname of relay host (e.g. Sendgrid)
@@ -215,7 +221,9 @@ If you want to change them - check available options in the help message (`!pm h
 * **`!pm nohtml`** - Get or set `nohtml` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)
 * **`!pm nothreads`** - Get or set `nothreads` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)
 * **`!pm nofiles`** - Get or set `nofiles` of the room (`true` - ignore email attachments; `false` - upload email attachments)
-* **`!pm noinlines`** - Get or set `noinlines` of the room (`true` - ignore inline attachments; `false` - upload inline attachments)
+* **`!pm noinlines`** - Get or set `noinlines` of the room (`true` - ignore inline attachments; `false` - show inline images inside the message and upload other inline attachments)
+* **`!pm remoteimages`** - Get or set `remoteimages` of the room (`true` - download images linked in emails and show them inside the message; `false` - show their descriptions instead). Off by default, because every linked image is downloaded and stored in the media repository
+* **`!pm nocollapse`** - Get or set `nocollapse` of the room (`true` - show quoted earlier messages and very long emails in full; `false` - fold them until opened)
 
 ---
 

@@ -231,8 +231,26 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoInlines,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - ignore inline attachments; `false` - upload inline attachments)",
+				"Get or set `%s` of the room (`true` - ignore inline attachments; `false` - show inline images inside the message and upload other inline attachments)",
 				config.RoomNoInlines,
+			),
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
+		},
+		{
+			key: config.RoomRemoteImages,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - download images linked in emails and show them inside the message; `false` - show their descriptions instead)",
+				config.RoomRemoteImages,
+			),
+			sanitizer: utils.SanitizeBoolString,
+			allowed:   b.allowOwner,
+		},
+		{
+			key: config.RoomNoCollapse,
+			description: fmt.Sprintf(
+				"Get or set `%s` of the room (`true` - show quoted earlier messages and very long emails in full; `false` - fold them until opened)",
+				config.RoomNoCollapse,
 			),
 			sanitizer: utils.SanitizeBoolString,
 			allowed:   b.allowOwner,

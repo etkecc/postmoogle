@@ -41,6 +41,21 @@ func SanitizeDomain(domain string) string {
 	return domains[0]
 }
 
+// Truncate shortens text to at most length characters, never cutting a character in half, and marks the cut with "…"
+func Truncate(text string, length int) string {
+	if len(text) <= length {
+		return text
+	}
+	count := 0
+	for i := range text {
+		if count == length {
+			return text[:i] + "…"
+		}
+		count++
+	}
+	return text
+}
+
 // SanitizeURL checks that input URL is valid
 func SanitizeURL(str string) string {
 	parsed, err := url.Parse(str)

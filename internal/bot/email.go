@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -143,6 +144,9 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 		b.Error(ctx, "cannot get settings: %v", err)
 	}
 
+	// images are uploaded before locking the room, so slow image hosts do not delay other emails
+	b.embedImages(ctx, eml, cfg)
+
 	b.mu.Lock(roomID.String())
 	defer b.mu.Unlock(roomID.String())
 
@@ -157,17 +161,22 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 		}
 	}
 
+	// the email may be delivered to several rooms, so files added for this room must not leak into eml.Files
+	files := slices.Clone(eml.Files)
+
 	// stripping may remove something important, so also render unstripped content and save it as a file
 	if cfg.Stripify() && !cfg.Threadify() {
 		contentOpts := cfg.ContentOptions()
 		contentOpts.Stripify = false
 		content := eml.Content(threadID, contentOpts)
-		eml.Files = append(eml.Files, //nolint:forcetypeassert // that's ok
+		files = append(files, //nolint:forcetypeassert // that's ok
 			utils.NewFile("original.md", []byte(content.Parsed.(*event.MessageEventContent).Body)), //nolint:errcheck // that's ok
 		)
 	}
 
 	content := eml.Content(threadID, cfg.ContentOptions())
+	truncated := eml.Truncated()
+	bodies := []string{b.formattedBody(content)}
 	eventID, serr := b.lp.Send(ctx, roomID, content)
 	if serr != nil {
 		if !strings.Contains(serr.Error(), "M_UNKNOWN") { // if it's not an unknown event error
@@ -190,22 +199,31 @@ func (b *Bot) IncomingEmail(ctx context.Context, eml *email.Email) error {
 			contentOpts := cfg.ContentOptions()
 			contentOpts.Stripify = false
 			content := eml.ContentBody(threadID, contentOpts)
-			eml.Files = append(eml.Files, //nolint:forcetypeassert // that's ok
+			files = append(files, //nolint:forcetypeassert // that's ok
 				utils.NewFile("original.md", []byte(content.Parsed.(*event.MessageEventContent).Body)), //nolint:errcheck // that's ok
 			)
 		}
-		_, berr := b.lp.Send(ctx, roomID, eml.ContentBody(threadID, cfg.ContentOptions()))
+		bodyContent := eml.ContentBody(threadID, cfg.ContentOptions())
+		truncated = truncated || eml.Truncated()
+		bodies = append(bodies, b.formattedBody(bodyContent))
+		_, berr := b.lp.Send(ctx, roomID, bodyContent)
 		if berr != nil {
 			return berr
 		}
 	}
 
+	// the message had to be shortened, so the complete email is attached
+	if truncated {
+		files = append(files, eml.FullVersion())
+	}
+
+	// images shown inside the message are not sent again, except photos, whether they came inline or attached
 	if !cfg.NoInlines() {
-		b.sendFiles(ctx, roomID, eml.InlineFiles, cfg.NoThreads(), threadID)
+		b.sendFiles(ctx, roomID, eml, eml.FilesToSend(eml.InlineFiles, bodies...), cfg.NoThreads(), threadID)
 	}
 
 	if !cfg.NoFiles() {
-		b.sendFiles(ctx, roomID, eml.Files, cfg.NoThreads(), threadID)
+		b.sendFiles(ctx, roomID, eml, eml.FilesToSend(files, bodies...), cfg.NoThreads(), threadID)
 	}
 
 	if newThread && cfg.Autoreply() != "" {
@@ -573,13 +591,49 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 	b.setLastEventID(ctx, evt.RoomID, threadID, msgID)
 }
 
-func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, files []*utils.File, noThreads bool, parentID id.EventID) {
+// formattedBody returns the HTML body of a message event content
+func (b *Bot) formattedBody(content *event.Content) string {
+	if content == nil {
+		return ""
+	}
+	msg, ok := content.Parsed.(*event.MessageEventContent)
+	if !ok {
+		return ""
+	}
+	return msg.FormattedBody
+}
+
+func (b *Bot) sendFiles(ctx context.Context, roomID id.RoomID, eml *email.Email, files []*utils.File, noThreads bool, parentID id.EventID) {
 	for _, file := range files {
+		// images uploaded to be shown inside the message are posted without uploading them again
+		if img := eml.UploadedImage(file); img != nil {
+			b.sendImage(ctx, roomID, file, img, linkpearl.RelatesTo(parentID, noThreads))
+			continue
+		}
 		req := file.Convert()
 		err := b.lp.SendFile(ctx, roomID, req, file.MsgType, linkpearl.RelatesTo(parentID, noThreads))
 		if err != nil {
 			b.Error(ctx, "cannot upload file %s: %v", req.FileName, err)
 		}
+	}
+}
+
+func (b *Bot) sendImage(ctx context.Context, roomID id.RoomID, file *utils.File, img *email.Image, relatesTo *event.RelatesTo) {
+	content := &event.MessageEventContent{
+		MsgType:  event.MsgImage,
+		Body:     file.Name,
+		FileName: file.Name,
+		URL:      id.ContentURIString(img.URI),
+		Info: &event.FileInfo{
+			MimeType: file.Type,
+			Size:     file.Length,
+			Width:    img.Width,
+			Height:   img.Height,
+		},
+		RelatesTo: relatesTo,
+	}
+	if _, err := b.lp.Send(ctx, roomID, content); err != nil {
+		b.Error(ctx, "cannot send image %s: %v", file.Name, err)
 	}
 }
 
