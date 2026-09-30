@@ -592,7 +592,7 @@ func (b *Bot) saveSentMetadata(ctx context.Context, queued bool, threadID id.Eve
 }
 
 // formattedBody returns the HTML body of a message event content
-func formattedBody(content *event.Content) string {
+func (b *Bot) formattedBody(content *event.Content) string {
 	if content == nil {
 		return ""
 	}
