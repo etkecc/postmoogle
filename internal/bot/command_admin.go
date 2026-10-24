@@ -220,7 +220,7 @@ func (b *Bot) runCatchAll(ctx context.Context, commandSlice []string) {
 		return
 	}
 
-	b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: `%s` (%s).", mailbox, utils.EmailsList(mailbox, "")), linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Catch-all is set to: %#q (%s).", mailbox, utils.EmailsList(mailbox, "")), linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
@@ -254,7 +254,7 @@ func (b *Bot) runAdminRoom(ctx context.Context, commandSlice []string) {
 
 	b.adminRooms = append([]id.RoomID{id.RoomID(roomID)}, b.adminRooms...) // make it the first room in list on the fly
 
-	b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Admin Room is set to: `%s`.", roomID), linkpearl.RelatesTo(evt.ID))
+	b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Admin Room is set to: %#q.", roomID), linkpearl.RelatesTo(evt.ID))
 }
 
 func (b *Bot) printGreylist(ctx context.Context, roomID id.RoomID) {

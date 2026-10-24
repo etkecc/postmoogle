@@ -300,7 +300,9 @@ func validateIncoming(from, returnPath string, senderAddr net.Addr, log *zerolog
 	}
 
 	vcfg := &validator.Config{
-		Log: log.Warn().Msgf,
+		Log: func(format string, args ...any) {
+			log.Warn().Msgf(format, args...)
+		},
 		Email: validator.Email{
 			Enforce:  true,
 			Spamlist: options.Spamlist(),

@@ -102,7 +102,7 @@ func (b *Bot) setMailbox(ctx context.Context, value string) {
 	evt := eventFromContext(ctx)
 	existingID, ok := b.getMapping(value)
 	if (ok && existingID != "" && existingID != evt.RoomID) || b.isReserved(value) {
-		b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, "")))
+		b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox %#q (%s) already taken, kupo", value, utils.EmailsList(value, "")))
 		return
 	}
 
@@ -127,7 +127,7 @@ func (b *Bot) setMailbox(ctx context.Context, value string) {
 		return
 	}
 
-	msg := fmt.Sprintf("mailbox of this room set to `%s`", value)
+	msg := fmt.Sprintf("mailbox of this room set to %#q", value)
 	b.lp.SendNotice(ctx, evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
@@ -137,7 +137,7 @@ func (b *Bot) setAliases(ctx context.Context, value string) {
 	for _, alias := range aliases {
 		existingID, ok := b.getMapping(alias)
 		if (ok && existingID != "" && existingID != evt.RoomID) || b.isReserved(alias) {
-			b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox `%s` (%s) already taken, kupo", value, utils.EmailsList(value, "")))
+			b.lp.SendNotice(ctx, evt.RoomID, fmt.Sprintf("Mailbox %#q (%s) already taken, kupo", value, utils.EmailsList(value, "")))
 			return
 		}
 	}
@@ -169,7 +169,7 @@ func (b *Bot) setAliases(ctx context.Context, value string) {
 		return
 	}
 
-	msg := fmt.Sprintf("aliases of this room set to `%s`", value)
+	msg := fmt.Sprintf("aliases of this room set to %#q", value)
 	b.lp.SendNotice(ctx, evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 
@@ -256,7 +256,7 @@ func (b *Bot) setOption(ctx context.Context, name, value string) {
 		return
 	}
 
-	msg := fmt.Sprintf("`%s` of this room set to:\n```\n%s\n```", name, value)
+	msg := fmt.Sprintf("%#q of this room set to:\n```\n%s\n```", name, value)
 	b.lp.SendNotice(ctx, evt.RoomID, msg, linkpearl.RelatesTo(evt.ID, cfg.NoThreads()))
 }
 

@@ -132,7 +132,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomThreadify,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - send incoming email body in thread; `false` - send incoming email body as part of the message)",
+				"Get or set %#q of the room (`true` - send incoming email body in thread; `false` - send incoming email body as part of the message)",
 				config.RoomThreadify,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -141,7 +141,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomStripify,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - strip incoming email reply quotes and signatures; `false` - send incoming email as-is)",
+				"Get or set %#q of the room (`true` - strip incoming email reply quotes and signatures; `false` - send incoming email as-is)",
 				config.RoomStripify,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -150,7 +150,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoSend,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - disable email sending; `false` - enable email sending)",
+				"Get or set %#q of the room (`true` - disable email sending; `false` - enable email sending)",
 				config.RoomNoSend,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -159,7 +159,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoReplies,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - ignore matrix replies; `false` - parse matrix replies)",
+				"Get or set %#q of the room (`true` - ignore matrix replies; `false` - parse matrix replies)",
 				config.RoomNoReplies,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -168,7 +168,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoSender,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - hide email sender; `false` - show email sender)",
+				"Get or set %#q of the room (`true` - hide email sender; `false` - show email sender)",
 				config.RoomNoSender,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -177,7 +177,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoRecipient,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - hide recipient; `false` - show recipient)",
+				"Get or set %#q of the room (`true` - hide recipient; `false` - show recipient)",
 				config.RoomNoRecipient,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -186,7 +186,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoCC,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - hide CC; `false` - show CC)",
+				"Get or set %#q of the room (`true` - hide CC; `false` - show CC)",
 				config.RoomNoCC,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -195,7 +195,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoSubject,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - hide email subject; `false` - show email subject)",
+				"Get or set %#q of the room (`true` - hide email subject; `false` - show email subject)",
 				config.RoomNoSubject,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -204,7 +204,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoHTML,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
+				"Get or set %#q of the room (`true` - ignore HTML in email; `false` - parse HTML in emails)",
 				config.RoomNoHTML,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -213,7 +213,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoThreads,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
+				"Get or set %#q of the room (`true` - ignore email threads; `false` - convert email threads into matrix threads)",
 				config.RoomNoThreads,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -222,7 +222,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoFiles,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - ignore email attachments; `false` - upload email attachments)",
+				"Get or set %#q of the room (`true` - ignore email attachments; `false` - upload email attachments)",
 				config.RoomNoFiles,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -231,7 +231,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoInlines,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - ignore inline attachments; `false` - show inline images inside the message and upload other inline attachments)",
+				"Get or set %#q of the room (`true` - ignore inline attachments; `false` - show inline images inside the message and upload other inline attachments)",
 				config.RoomNoInlines,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -240,7 +240,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomRemoteImages,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - download images linked in emails and show them inside the message; `false` - show their descriptions instead)",
+				"Get or set %#q of the room (`true` - download images linked in emails and show them inside the message; `false` - show their descriptions instead)",
 				config.RoomRemoteImages,
 			),
 			sanitizer: utils.SanitizeBoolString,
@@ -249,7 +249,7 @@ func (b *Bot) initCommands() commandList {
 		{
 			key: config.RoomNoCollapse,
 			description: fmt.Sprintf(
-				"Get or set `%s` of the room (`true` - show quoted earlier messages and very long emails in full; `false` - fold them until opened)",
+				"Get or set %#q of the room (`true` - show quoted earlier messages and very long emails in full; `false` - fold them until opened)",
 				config.RoomNoCollapse,
 			),
 			sanitizer: utils.SanitizeBoolString,

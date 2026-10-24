@@ -55,7 +55,7 @@ var (
 
 // mustElementSet builds a set of HTML elements from space-separated tag names, for the package-level sets above
 func mustElementSet(names string) map[atom.Atom]bool {
-	set := map[atom.Atom]bool{}
+	set := make(map[atom.Atom]bool)
 	for _, name := range strings.Fields(names) {
 		element := atom.Lookup([]byte(name))
 		if element == 0 {

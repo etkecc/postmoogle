@@ -64,7 +64,7 @@ linters:
     exhaustive:
       check:
         - switch
-        - map
+        - mapliteral
       default-signifies-exhaustive: true
     gocognit:
       min-complexity: 15
